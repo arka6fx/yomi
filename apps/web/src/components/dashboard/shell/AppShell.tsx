@@ -136,7 +136,7 @@ export function AppShell({
               height={30}
               className="size-[30px] rounded-full"
             />
-            <span className="text-base font-semibold tracking-tight">Yomi</span>
+            <span className="text-base font-bold tracking-[-0.04em]">yomi</span>
           </Link>
 
           <nav

@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next"
+import { SKILL_CATALOG } from "@/lib/skills-catalog"
 
 const BASE = "https://getyomi.in"
 
-// Only canonical, indexable URLs belong here. /features and /pricing redirect to
-// homepage anchors; /contact canonicalises to /support.
+// Only canonical, indexable URLs belong here. /features redirects to a homepage
+// anchor; /contact canonicalises to /support.
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date()
   return [
@@ -12,6 +13,30 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: "weekly",
       priority: 1,
+    },
+    {
+      url: `${BASE}/skills`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    ...SKILL_CATALOG.map((skill) => ({
+      url: `${BASE}/skills/${skill.id}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
+    })),
+    {
+      url: `${BASE}/pricing`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${BASE}/faq`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.6,
     },
     {
       url: `${BASE}/docs`,

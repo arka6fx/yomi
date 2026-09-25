@@ -239,11 +239,7 @@ export function ChatDemo() {
 
           {stage === "done" && (
             <div className="flex justify-center pt-2">
-              <Link
-                href="/signup"
-                className="inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_8px_20px_rgba(34,158,217,0.35)]"
-                style={{ background: "linear-gradient(180deg, #37aee2 0%, #1e96c8 100%)" }}
-              >
+              <Link href="/signup" className="btn-telegram px-5 py-3 text-sm">
                 Continue with Telegram <ArrowRight size={15} />
               </Link>
             </div>

@@ -13,11 +13,11 @@ export default function GlobalError({ reset }: { error: Error; reset: () => void
     <html lang="en">
       <body>
         <title>{pageTitle("Something went wrong")}</title>
-        <div className="landing-light site-texture-bg-light flex min-h-dvh flex-col items-center justify-center px-6 text-foreground">
+        <div className="flex min-h-dvh flex-col items-center justify-center px-6 text-foreground">
           <p className="mb-3 font-mono text-xs font-medium uppercase tracking-widest text-muted-foreground">
             500
           </p>
-          <h1 className="font-accent text-center text-5xl text-foreground sm:text-6xl">
+          <h1 className="text-center font-semibold text-5xl text-foreground sm:text-6xl">
             Something went wrong.
           </h1>
           <p className="mt-5 max-w-xl text-center text-base leading-8 text-muted-foreground">

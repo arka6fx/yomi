@@ -166,9 +166,7 @@ function Section({
       <Eyebrow tone={tone} icon={icon}>
         {eyebrow}
       </Eyebrow>
-      <h2 className="mt-4 font-serif text-3xl tracking-tight text-foreground sm:text-4xl">
-        {title}
-      </h2>
+      <h2 className="mt-4 text-3xl font-semibold text-foreground sm:text-4xl">{title}</h2>
       <div className="mt-5 space-y-4 text-[15px] leading-relaxed text-muted-foreground">
         {children}
       </div>
@@ -202,7 +200,7 @@ function Feature({
 
 export default function DocsPage() {
   return (
-    <div className="landing-light site-texture-bg-light min-h-dvh text-foreground">
+    <div className="min-h-dvh text-foreground">
       <DocsShell banner={<DocsHero />}>
         <Section id="overview" eyebrow="Overview" title="What Yomi is">
           <p>
@@ -441,7 +439,7 @@ export default function DocsPage() {
                   </span>
                   <span className="text-sm text-muted-foreground">{p.price}</span>
                 </div>
-                <p className="mt-2 font-serif text-xl text-foreground">{p.credits}</p>
+                <p className="mt-2 text-xl font-semibold text-foreground">{p.credits}</p>
                 <p className="mt-1 text-sm text-muted-foreground">{p.note}</p>
               </div>
             ))}

@@ -55,6 +55,11 @@ const CHECKS = [
   { path: "/terms", check: async (res) => (res.status === 200 ? null : `got ${res.status}`) },
   { path: "/docs", check: async (res) => (res.status === 200 ? null : `got ${res.status}`) },
   { path: "/support", check: async (res) => (res.status === 200 ? null : `got ${res.status}`) },
+  // /pricing, /skills and /faq are real pages now; /pricing used to redirect to /#pricing
+  ...["/pricing", "/skills", "/skills/morning-brief", "/faq"].map((path) => ({
+    path,
+    check: async (res) => (res.status === 200 ? null : `got ${res.status}`),
+  })),
   {
     path: "/llms.txt",
     check: async (res, body) => {
@@ -139,7 +144,6 @@ const CHECKS = [
   },
   ...[
     ["/features", "/#features"],
-    ["/pricing", "/#pricing"],
     ["/contact", "/support"],
     ["/download", "/"],
   ].map(([path, target]) => ({

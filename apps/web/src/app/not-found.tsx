@@ -1,8 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
-import Nav from "@/components/Nav"
-import LandingFooter from "@/components/landing/LandingFooter"
+import { SitePage } from "@/components/SitePage"
 
 // Unknown URLs used to be soft-redirected to "/" by the asset binding; the worker now
 // answers them with a real 404, so this is what a bad link actually lands on. Without it
@@ -13,51 +12,42 @@ export const metadata: Metadata = {
 }
 
 const LINKS = [
-  { label: "Home", href: "/" },
+  { label: "Skills", href: "/skills" },
   { label: "Docs", href: "/docs" },
   { label: "Support", href: "/support" },
 ]
 
 export default function NotFound() {
   return (
-    <div className="landing-light site-texture-bg-light min-h-screen text-foreground">
-      <Nav />
-      <main className="pt-16">
-        <section className="mx-auto max-w-5xl px-6 py-24 sm:py-32">
-          <p className="mb-3 font-mono text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            404
-          </p>
-          <h1 className="font-accent text-5xl text-foreground sm:text-6xl">
-            This page doesn&apos;t exist.
-          </h1>
-          <p className="mt-5 max-w-xl text-base leading-8 text-muted-foreground">
-            The link may be out of date, or the page may have moved. Yomi itself lives on Telegram —
-            the site is just the dashboard and the docs.
-          </p>
+    <SitePage>
+      <section className="mx-auto max-w-3xl px-4 py-24 text-center sm:py-32">
+        <img
+          src="/android-chrome-192x192.png"
+          alt=""
+          width={112}
+          height={112}
+          className="mx-auto size-28 rounded-full shadow-[0_20px_40px_-16px_rgba(16,24,40,0.5)] ring-8 ring-white"
+        />
+        <p className="eyebrow mt-8">404</p>
+        <h1 className="mt-3 text-5xl font-semibold tracking-[-0.04em] sm:text-6xl">
+          this page doesn&apos;t exist.
+        </h1>
+        <p className="mx-auto mt-5 max-w-md text-[17px] leading-relaxed text-muted-foreground">
+          The link may be out of date, or the page may have moved. Yomi itself lives on Telegram —
+          the site is just the dashboard and the docs.
+        </p>
 
-          <div className="mt-10 flex flex-wrap items-center gap-3">
-            <Link
-              href="/"
-              className="group inline-flex h-12 items-center justify-center gap-2.5 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
-            >
-              Back to home
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-primary-foreground text-primary transition group-hover:translate-x-0.5">
-                <ArrowRight size={14} />
-              </span>
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          <Link href="/" className="btn-ink px-5 py-3 text-sm">
+            back to home <ArrowRight size={15} />
+          </Link>
+          {LINKS.map((link) => (
+            <Link key={link.href} href={link.href} className="btn-key px-5 py-3 text-sm">
+              {link.label}
             </Link>
-            {LINKS.slice(1).map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="inline-flex h-12 items-center justify-center rounded-xl border border-border bg-card/60 px-5 text-sm font-semibold text-foreground backdrop-blur-md transition hover:bg-card/80"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </section>
-      </main>
-      <LandingFooter />
-    </div>
+          ))}
+        </div>
+      </section>
+    </SitePage>
   )
 }

@@ -57,11 +57,7 @@ export function PlanButton({
       <button
         onClick={handleClick}
         disabled={loading}
-        className={`flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium transition-colors disabled:opacity-70 ${
-          popular
-            ? "bg-primary text-primary-foreground hover:bg-primary/90"
-            : "border border-border text-foreground hover:bg-muted/50"
-        }`}
+        className={`w-full py-3 text-sm disabled:opacity-70 ${popular ? "btn-ink" : "btn-key"}`}
       >
         {loading && <Loader2 size={14} className="animate-spin" />}
         {loading ? "Redirecting..." : label}

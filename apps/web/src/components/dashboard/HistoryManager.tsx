@@ -135,7 +135,7 @@ export function HistoryManager({ token }: { token: string }) {
           <p className="text-xs text-destructive">{detailError}</p>
         ) : detail ? (
           <>
-            <h2 className="font-serif text-2xl leading-tight text-foreground">
+            <h2 className="text-2xl font-semibold leading-tight text-foreground">
               {detail.title ?? "Conversation"}
             </h2>
             {detail.closedAt && (

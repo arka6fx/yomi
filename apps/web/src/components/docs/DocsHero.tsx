@@ -34,9 +34,9 @@ export function DocsHero() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.08 }}
-          className="mt-5 font-serif text-5xl tracking-tight sm:text-6xl"
+          className="mt-5 text-5xl font-semibold tracking-[-0.04em] sm:text-6xl"
         >
-          Everything Yomi does, <span className="font-serif italic text-primary">today</span>.
+          Everything Yomi does, <span className="text-brand">today</span>.
         </motion.h1>
         <motion.p
           initial={{ opacity: 0, y: 10 }}

@@ -1,149 +1,140 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Menu, X } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { BrandMark } from "@/components/BrandMark"
+import { cn } from "@/lib/utils"
 
 const NAV_LINKS = [
-  { label: "Features", href: "/#features" },
-  { label: "Integrations", href: "/#connectors" },
-  { label: "Pricing", href: "/#pricing" },
+  { label: "Skills", href: "/skills" },
+  { label: "Pricing", href: "/pricing" },
   { label: "Docs", href: "/docs" },
+  { label: "FAQ", href: "/faq" },
   { label: "Support", href: "/support" },
-  { label: "Privacy", href: "/privacy" },
-  { label: "Terms", href: "/terms" },
 ]
 
+// Not sticky: the bar scrolls away with the hero, and a lone "start now" button stays
+// pinned to the corner once it has.
 export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const { data: session } = authClient.useSession()
   const router = useRouter()
+  const pathname = usePathname()
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 420)
+    onScroll()
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
+
+  const cta = session
+    ? { label: "Dashboard", href: "/dashboard" }
+    : { label: "Start now", href: "/signup" }
 
   return (
-    <div className="sticky top-3 z-50 px-4">
-      <header className="animate-nav-in relative max-w-5xl mx-auto rounded-2xl border border-border bg-card/80 backdrop-blur-xl shadow-sm">
-        <div className="flex items-center justify-between px-4 md:px-6 py-3">
-          <BrandMark size="md" />
+    <>
+      <header className="animate-nav-in relative z-50 mx-auto flex max-w-6xl items-center justify-between px-4 pt-5 sm:px-6">
+        <BrandMark />
 
-          <nav className="hidden lg:flex items-center gap-7">
+        <nav
+          aria-label="Main"
+          className="hidden items-center gap-0.5 rounded-2xl border border-white/80 bg-card/85 p-1.5 shadow-[0_1px_2px_rgba(16,24,40,0.05),0_8px_24px_-10px_rgba(16,24,40,0.2)] backdrop-blur-xl md:flex"
+        >
+          {NAV_LINKS.map((link) => (
+            <Link
+              key={link.label}
+              href={link.href}
+              aria-current={pathname === link.href ? "page" : undefined}
+              className={cn(
+                "rounded-xl px-3.5 py-2 text-sm font-medium transition-colors",
+                pathname === link.href
+                  ? "text-foreground"
+                  : "text-foreground/65 hover:text-foreground",
+              )}
+            >
+              {link.label}
+            </Link>
+          ))}
+          {!session && (
+            <Link
+              href="/signin"
+              className="rounded-xl px-3.5 py-2 text-sm font-medium text-foreground/65 transition-colors hover:text-foreground"
+            >
+              Log in
+            </Link>
+          )}
+          <Link href={cta.href} className="btn-ink ml-1 px-4 py-2 text-sm">
+            {cta.label}
+          </Link>
+        </nav>
+
+        <div className="flex items-center gap-2 md:hidden">
+          <Link href={cta.href} className="btn-ink px-4 py-2 text-sm">
+            {cta.label}
+          </Link>
+          <button
+            className="grid size-10 place-items-center rounded-xl border border-white/80 bg-card/85 text-foreground shadow-sm backdrop-blur"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label="Toggle menu"
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
+        </div>
+
+        {menuOpen && (
+          <div className="surface animate-menu-in absolute inset-x-4 top-full mt-2 p-2 md:hidden">
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.label}
                 href={link.href}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setMenuOpen(false)}
+                className="block rounded-xl px-3 py-2.5 text-[15px] font-medium text-foreground/80 hover:bg-muted"
               >
                 {link.label}
               </Link>
             ))}
-          </nav>
-
-          <div className="flex items-center gap-1">
-            {session ? (
-              <>
-                <Link
-                  href="/dashboard"
-                  className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl hover:bg-muted/50"
-                >
-                  Dashboard
-                </Link>
+            <div className="mt-1 border-t border-border pt-1">
+              {session ? (
                 <button
-                  onClick={async () => {
-                    await authClient.revokeSessions().catch(() => {})
-                    await authClient.signOut()
-                    router.push("/")
+                  onClick={() => {
+                    setMenuOpen(false)
+                    authClient.signOut().then(() => router.push("/"))
                   }}
-                  className="bg-primary text-primary-foreground text-sm font-medium px-4 py-1.5 rounded-xl hover:bg-primary/90 transition-colors"
+                  className="block w-full rounded-xl px-3 py-2.5 text-left text-[15px] font-medium text-foreground/80 hover:bg-muted"
                 >
                   Sign out
                 </button>
-              </>
-            ) : (
-              <>
+              ) : (
                 <Link
                   href="/signin"
-                  className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl hover:bg-muted/50"
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/signup"
-                  className="bg-primary text-primary-foreground text-sm font-medium px-4 py-1.5 rounded-xl hover:bg-primary/90 transition-colors"
-                >
-                  Get started
-                </Link>
-              </>
-            )}
-            <button
-              className="lg:hidden ml-1 text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/50 transition-colors"
-              onClick={() => setMenuOpen((v) => !v)}
-              aria-label="Toggle menu"
-            >
-              {menuOpen ? <X size={18} /> : <Menu size={18} />}
-            </button>
-          </div>
-        </div>
-
-        {/* no exit animation — that was the only thing AnimatePresence was here for, and it
-            is not worth shipping an animation runtime on every route to fade a menu out */}
-        {menuOpen && (
-          <div className="animate-menu-in absolute left-0 right-0 top-full mt-2 overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
-            <div className="px-4 py-3 flex flex-col gap-0.5">
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.label}
-                  href={link.href}
                   onClick={() => setMenuOpen(false)}
-                  className="py-2.5 px-3 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  className="block rounded-xl px-3 py-2.5 text-[15px] font-medium text-foreground/80 hover:bg-muted"
                 >
-                  {link.label}
+                  Log in
                 </Link>
-              ))}
-              <div className="flex gap-2 mt-2 pt-2 border-t border-border">
-                {session ? (
-                  <>
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setMenuOpen(false)}
-                      className="flex-1 text-center py-2 rounded-xl text-sm text-muted-foreground border border-border hover:bg-muted/50 transition-colors"
-                    >
-                      Dashboard
-                    </Link>
-                    <button
-                      onClick={() => {
-                        setMenuOpen(false)
-                        authClient.signOut().then(() => router.push("/"))
-                      }}
-                      className="flex-1 text-center py-2 rounded-xl text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                    >
-                      Sign out
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      href="/signin"
-                      onClick={() => setMenuOpen(false)}
-                      className="flex-1 text-center py-2 rounded-xl text-sm text-muted-foreground border border-border hover:bg-muted/50 transition-colors"
-                    >
-                      Sign in
-                    </Link>
-                    <Link
-                      href="/signup"
-                      onClick={() => setMenuOpen(false)}
-                      className="flex-1 text-center py-2 rounded-xl text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                    >
-                      Sign up
-                    </Link>
-                  </>
-                )}
-              </div>
+              )}
             </div>
           </div>
         )}
       </header>
-    </div>
+
+      <Link
+        href={cta.href}
+        aria-hidden={!scrolled}
+        tabIndex={scrolled ? 0 : -1}
+        className={cn(
+          "btn-ink fixed right-4 top-4 z-50 hidden px-5 py-2.5 text-sm transition-all duration-300 md:inline-flex",
+          scrolled ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-3 opacity-0",
+        )}
+      >
+        {cta.label}
+      </Link>
+    </>
   )
 }

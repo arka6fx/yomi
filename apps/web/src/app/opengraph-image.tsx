@@ -20,7 +20,7 @@ export default function Image() {
         position: "relative",
       }}
     >
-      {/* Subtle blue wash, echoes the site-texture-bg-light glow */}
+      {/* Subtle blue wash, echoes the site's sky-blue glow */}
       <div
         style={{
           position: "absolute",

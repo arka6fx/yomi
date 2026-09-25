@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Loader2, RefreshCw } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
+import { BrandMark } from "@/components/BrandMark"
 import { TelegramIcon } from "@/components/TelegramIcon"
 
 type Login = { token: string; code: string; url: string; expiresAt: string }
@@ -105,133 +106,144 @@ export function TelegramSignIn({ mode }: { mode: "signin" | "signup" }) {
             : "welcome back 👋"
 
   return (
-    <main className="relative flex min-h-dvh flex-col items-center overflow-hidden bg-[#eef1f5] px-4 text-[#16181d]">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[55vh]"
-        style={{
-          background: "linear-gradient(180deg, #8cc8ff 0%, #cfe7ff 45%, rgba(238,241,245,0) 100%)",
-        }}
-      />
-
-      <header className="relative flex w-full max-w-5xl items-center justify-between py-5">
-        <Link
-          href="/"
-          className="flex items-center gap-2 rounded-full bg-white/80 py-1.5 pl-1.5 pr-4 shadow-[0_1px_2px_rgba(0,0,0,0.06),0_4px_16px_rgba(20,60,120,0.08)] backdrop-blur"
-        >
-          <img
-            src="/brand-mark-128.png"
-            alt=""
-            width={32}
-            height={32}
-            className="size-8 rounded-full"
-          />
-          <span className="text-lg font-semibold tracking-tight">Yomi</span>
-        </Link>
-        <Link
-          href={mode === "signin" ? "/signup" : "/signin"}
-          className="rounded-full bg-white/80 px-4 py-2 text-sm font-medium shadow-[0_1px_2px_rgba(0,0,0,0.06)] backdrop-blur hover:bg-white"
-        >
-          {mode === "signin" ? "new here? sign up" : "have an account? sign in"}
-        </Link>
+    <main className="relative flex min-h-dvh flex-col items-center overflow-hidden bg-[radial-gradient(70%_45%_at_50%_0%,#d7e9f8_0%,transparent_70%)] px-4 text-foreground">
+      <header className="flex w-full justify-center pt-6">
+        <BrandMark />
       </header>
 
-      <section className="relative flex w-full max-w-md flex-1 flex-col items-center justify-center pb-16 text-center">
-        <img
-          src="/android-chrome-192x192.png"
-          alt=""
-          width={112}
-          height={112}
-          className="size-28 rounded-[30%] shadow-[0_12px_40px_rgba(20,80,160,0.25)]"
-        />
-        <p
-          aria-live="polite"
-          className="mt-6 rounded-full bg-[#16181d] px-5 py-2.5 text-lg font-semibold text-white shadow-lg"
-        >
-          {greeting}
-        </p>
-
+      <section className="flex w-full max-w-xl flex-1 flex-col pb-8">
         {phase === "waiting" && login ? (
-          <div className="mt-8 w-full">
-            <p className="text-sm text-[#5b6270]">your code</p>
-            <p className="mt-1 font-mono text-5xl font-bold tracking-[0.3em] text-[#16181d]">
-              {login.code}
-            </p>
-            <p className="mx-auto mt-3 max-w-xs text-sm text-[#5b6270]">
+          <div className="flex flex-1 flex-col items-center justify-center text-center">
+            <p className="text-sm text-muted-foreground">your code</p>
+            <p className="mt-1 font-mono text-5xl font-bold tracking-[0.3em]">{login.code}</p>
+            <p className="mx-auto mt-3 max-w-xs text-sm text-muted-foreground">
               Yomi sent you a message on Telegram. Approve it only if it shows this same code.
             </p>
-            <div className="mt-6 flex items-center justify-center gap-2 text-sm text-[#5b6270]">
+            <div className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <Loader2 size={15} className="animate-spin" /> waiting for approval…
             </div>
+          </div>
+        ) : (
+          // decorative preview of a chat with yomi
+          <div aria-hidden className="mt-10 flex flex-1 flex-col items-center">
+            <img
+              src="/brand-mark-128.png"
+              alt=""
+              width={60}
+              height={60}
+              className="size-[60px] rounded-full shadow-[0_8px_20px_-8px_rgba(16,24,40,0.5)]"
+            />
+            <p className="mt-1.5 text-xs font-semibold text-muted-foreground">yomi</p>
+            <div className="mt-6 w-full max-w-sm space-y-2.5">
+              <p className="bubble-in w-fit max-w-[80%] px-4 py-2.5 text-[15px] font-medium">
+                {mode === "signup"
+                  ? "it’s 9pm. you said you’d finish the deck today 👀"
+                  : "morning! 3 meetings today and sarah replied 📬"}
+              </p>
+              <p className="bubble-out ml-auto w-fit max-w-[80%] px-4 py-2.5 text-[15px] font-medium">
+                {mode === "signup"
+                  ? "i know 😭 block 2 hours tomorrow?"
+                  : "draft a reply for me pls"}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-10 text-center">
+          <h1
+            aria-live="polite"
+            className="text-3xl font-semibold leading-tight tracking-[-0.03em]"
+          >
+            {phase === "idle" && mode === "signup" ? (
+              <>
+                the assistant in your telegram
+                <br />
+                that gets stuff done
+              </>
+            ) : (
+              greeting
+            )}
+          </h1>
+
+          {phase === "waiting" && login ? (
             <div className="mt-6 flex flex-col gap-2">
               <a
                 href={login.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-full bg-white px-6 py-3.5 text-sm font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.06),0_4px_16px_rgba(20,60,120,0.08)] hover:bg-white/80"
+                className="btn-key py-3.5 text-sm"
               >
                 Telegram didn’t open? Open it again
               </a>
               <button
                 onClick={() => void start()}
-                className="text-xs text-[#5b6270] underline-offset-2 hover:underline"
+                className="text-xs text-muted-foreground underline-offset-2 hover:underline"
               >
                 get a new code
               </button>
             </div>
-          </div>
-        ) : (
-          <div className="mt-10 w-full">
-            <button
-              onClick={() => void start()}
-              disabled={phase === "starting" || phase === "done"}
-              className="flex w-full items-center justify-center gap-2.5 rounded-full px-6 py-4 text-base font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_8px_24px_rgba(34,158,217,0.35)] transition hover:brightness-105 disabled:opacity-70"
-              style={{ background: "linear-gradient(180deg, #37aee2 0%, #1e96c8 100%)" }}
+          ) : (
+            <>
+              <button
+                onClick={() => void start()}
+                disabled={phase === "starting" || phase === "done"}
+                className="btn-telegram mt-6 w-full py-4 text-base disabled:opacity-70"
+              >
+                {phase === "starting" ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : phase === "expired" || phase === "cancelled" ? (
+                  <RefreshCw size={18} />
+                ) : (
+                  <span className="grid size-7 place-items-center rounded-full bg-white">
+                    <TelegramIcon size={22} />
+                  </span>
+                )}
+                Continue with Telegram
+              </button>
+              <p className="mx-auto mt-3 max-w-xs text-xs text-muted-foreground">
+                Yomi lives in your Telegram. No password, no email needed.
+              </p>
+
+              <div className="mt-6 flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="h-px flex-1 bg-border" /> or{" "}
+                <span className="h-px flex-1 bg-border" />
+              </div>
+              <div className="mt-4 flex justify-center gap-2">
+                {(["google", "github"] as const).map((provider) => (
+                  <button
+                    key={provider}
+                    onClick={() => void social(provider)}
+                    disabled={oauth !== null}
+                    className="btn-key px-5 py-2.5 text-sm disabled:opacity-60"
+                  >
+                    {oauth === provider ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : provider === "google" ? (
+                      "Sign in with Google"
+                    ) : (
+                      "Sign in with GitHub"
+                    )}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
+
+          <p className="mt-6 text-sm text-muted-foreground">
+            {mode === "signin" ? "new here? " : "already have an account? "}
+            <Link
+              href={mode === "signin" ? "/signup" : "/signin"}
+              className="font-semibold text-foreground underline underline-offset-2"
             >
-              {phase === "starting" ? (
-                <Loader2 size={18} className="animate-spin" />
-              ) : phase === "expired" || phase === "cancelled" ? (
-                <RefreshCw size={18} />
-              ) : (
-                <span className="grid size-7 place-items-center rounded-full bg-white">
-                  <TelegramIcon size={22} />
-                </span>
-              )}
-              Continue with Telegram
-            </button>
-            <p className="mx-auto mt-3 max-w-xs text-xs text-[#5b6270]">
-              Yomi lives in your Telegram. No password, no email needed.
-            </p>
-
-            <div className="mt-8 flex items-center gap-3 text-xs text-[#8a909c]">
-              <span className="h-px flex-1 bg-[#d9dde4]" /> or{" "}
-              <span className="h-px flex-1 bg-[#d9dde4]" />
-            </div>
-            <div className="mt-4 flex justify-center gap-2">
-              {(["google", "github"] as const).map((provider) => (
-                <button
-                  key={provider}
-                  onClick={() => void social(provider)}
-                  disabled={oauth !== null}
-                  className="rounded-full bg-white px-5 py-2.5 text-sm font-medium shadow-[0_1px_2px_rgba(0,0,0,0.06)] hover:bg-white/80 disabled:opacity-60"
-                >
-                  {oauth === provider ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : provider === "google" ? (
-                    "Sign in with Google"
-                  ) : (
-                    "Sign in with GitHub"
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {error && <p className="mt-4 text-sm text-[#d6452b]">{error}</p>}
+              {mode === "signin" ? "sign up" : "log in"}
+            </Link>
+          </p>
+        </div>
       </section>
 
-      <footer className="relative pb-6 text-xs text-[#8a909c]">
+      <footer className="pb-6 text-xs text-muted-foreground">
         by continuing you agree to our{" "}
         <Link href="/terms" className="underline underline-offset-2">
           terms

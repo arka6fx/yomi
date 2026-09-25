@@ -1,22 +1,14 @@
 import type { Metadata } from "next"
-import { Inter, Instrument_Serif, JetBrains_Mono } from "next/font/google"
+import { Inter, JetBrains_Mono } from "next/font/google"
 import { Providers } from "@/components/providers"
 import { SITE_DESC, SITE_NAME, SITE_TITLE, TITLE_TEMPLATE } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import "./globals.css"
 
-// Body / UI typeface — Inter (optical 14..32, full weight range).
+// Fallback for the rounded system face (SF Pro Rounded) on platforms that lack it.
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
-})
-
-// Display / heading typeface — Instrument Serif (roman + italic accent).
-const instrumentSerif = Instrument_Serif({
-  subsets: ["latin"],
-  variable: "--font-heading",
-  weight: ["400"],
-  style: ["normal", "italic"],
 })
 
 const mono = JetBrains_Mono({
@@ -83,10 +75,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={cn("dark antialiased", inter.variable, instrumentSerif.variable, mono.variable)}
-    >
+    <html lang="en" className={cn("antialiased", inter.variable, mono.variable)}>
       {/* warms the DNS/TLS handshake to the API host before the first fetch — react 19
           hoists link/meta tags rendered anywhere in the tree up into <head>.
           use-credentials matches how auth-client actually calls the API (cross-subdomain

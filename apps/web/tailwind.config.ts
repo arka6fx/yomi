@@ -39,13 +39,18 @@ const config: Config = {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
+        brand: {
+          DEFAULT: "hsl(var(--brand))",
+          foreground: "hsl(var(--brand-foreground))",
+        },
       },
       fontFamily: {
-        // Body / UI = Inter; headings/display/accent = Instrument Serif.
-        sans: ["var(--font-sans)", "Inter", "sans-serif"],
-        accent: ["var(--font-heading)", "Instrument Serif", "serif"],
-        serif: ["var(--font-heading)", "Instrument Serif", "Georgia", "serif"],
-        display: ["var(--font-heading)", "Instrument Serif", "serif"],
+        // One rounded sans everywhere: SF Pro Rounded where the OS has it, Inter otherwise.
+        // accent/serif/display are kept as aliases so older markup still resolves.
+        sans: ["ui-rounded", '"SF Pro Rounded"', "var(--font-sans)", "Inter", "sans-serif"],
+        accent: ["ui-rounded", '"SF Pro Rounded"', "var(--font-sans)", "Inter", "sans-serif"],
+        serif: ["ui-rounded", '"SF Pro Rounded"', "var(--font-sans)", "Inter", "sans-serif"],
+        display: ["ui-rounded", '"SF Pro Rounded"', "var(--font-sans)", "Inter", "sans-serif"],
         mono: [
           "var(--font-mono)",
           "ui-monospace",

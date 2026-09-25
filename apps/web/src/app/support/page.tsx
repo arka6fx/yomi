@@ -1,9 +1,8 @@
 import type { Metadata } from "next"
 import { pageMetadata } from "@/lib/site"
 import Link from "next/link"
-import { Bug, Mail, MessageSquareText } from "lucide-react"
-import Nav from "@/components/Nav"
-import LandingFooter from "@/components/landing/LandingFooter"
+import { ArrowRight, Bug, Check, Mail, MessageSquareText } from "lucide-react"
+import { PageIntro, SitePage } from "@/components/SitePage"
 
 export const metadata: Metadata = pageMetadata({
   title: "Support",
@@ -38,56 +37,75 @@ const channels = [
 
 export default function SupportPage() {
   return (
-    <div className="landing-light site-texture-bg-light min-h-screen text-foreground">
-      <Nav />
-      <main className="pt-16">
-        <section className="mx-auto max-w-5xl px-6 py-24">
-          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Contact
+    <SitePage>
+      <section className="mx-auto max-w-5xl px-4 pb-24 pt-16 sm:px-6 sm:pt-24">
+        <PageIntro eyebrow="contact" title="how can we help?">
+          <p className="max-w-2xl">
+            Send a note with the email on your account, what you expected to happen, what happened
+            instead, and any screenshots or logs that do not contain secrets.
           </p>
-          <div className="max-w-3xl">
-            <h1 className="font-accent text-5xl text-foreground sm:text-6xl">Support for Yomi.</h1>
-            <p className="mt-5 max-w-2xl text-base leading-8 text-muted-foreground">
-              Send a note with the email on your account, what you expected to happen, what happened
-              instead, and any screenshots or logs that do not contain secrets.
-            </p>
-          </div>
+        </PageIntro>
 
-          <div className="mt-14 grid gap-4 md:grid-cols-3">
-            {channels.map((channel) => {
-              const Icon = channel.icon
-              return (
-                <Link
-                  key={channel.title}
-                  href={channel.href}
-                  className="group rounded-2xl glass-card p-6 transition-colors hover:border-primary/30"
-                  target={channel.href.startsWith("http") ? "_blank" : undefined}
-                  rel={channel.href.startsWith("http") ? "noopener noreferrer" : undefined}
-                >
-                  <Icon className="mb-8 h-5 w-5 text-primary" aria-hidden="true" />
-                  <h2 className="font-accent text-2xl text-foreground">{channel.title}</h2>
-                  <p className="mt-3 min-h-24 text-sm leading-7 text-muted-foreground">
-                    {channel.description}
-                  </p>
-                  <span className="mt-5 inline-flex text-sm font-medium text-primary transition-colors group-hover:text-foreground">
-                    {channel.label}
-                  </span>
-                </Link>
-              )
-            })}
-          </div>
+        <div className="mt-14 grid gap-5 md:grid-cols-3">
+          {channels.map((channel) => {
+            const Icon = channel.icon
+            return (
+              <Link
+                key={channel.title}
+                href={channel.href}
+                className="surface group flex flex-col p-7 transition-transform hover:-translate-y-0.5"
+                target={channel.href.startsWith("http") ? "_blank" : undefined}
+                rel={channel.href.startsWith("http") ? "noopener noreferrer" : undefined}
+              >
+                <span className="orb size-12">
+                  <Icon className="size-5 text-foreground" aria-hidden="true" />
+                </span>
+                <h2 className="mt-6 text-xl font-semibold">{channel.title}</h2>
+                <p className="mt-2 flex-1 text-[15px] leading-relaxed text-muted-foreground">
+                  {channel.description}
+                </p>
+                <span className="mt-6 inline-flex items-center gap-1 text-sm font-semibold">
+                  {channel.label}
+                  <ArrowRight
+                    size={14}
+                    className="transition-transform group-hover:translate-x-0.5"
+                  />
+                </span>
+              </Link>
+            )
+          })}
+        </div>
 
-          <div className="mt-14 rounded-2xl glass-card p-6 text-sm leading-7 text-muted-foreground">
-            <h2 className="font-accent text-2xl text-foreground">Before you write</h2>
-            <ul className="mt-4 list-none space-y-2 [&_li]:relative [&_li]:pl-4 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-primary [&_li]:before:content-['›']">
-              <li>For login issues, include whether you used Google or GitHub.</li>
-              <li>Include browser version and steps to reproduce.</li>
-              <li>For billing issues, do not send full payment card details.</li>
-            </ul>
-          </div>
-        </section>
-      </main>
-      <LandingFooter />
-    </div>
+        <div className="surface mt-5 p-7">
+          <h2 className="text-xl font-semibold">before you write</h2>
+          <ul className="mt-4 space-y-2.5 text-[15px] text-muted-foreground">
+            {[
+              "For login issues, include whether you used Telegram, Google or GitHub.",
+              "Include browser version and steps to reproduce.",
+              "For billing issues, do not send full payment card details.",
+            ].map((tip) => (
+              <li key={tip} className="flex items-start gap-2.5">
+                <span className="mt-0.5 grid size-[18px] shrink-0 place-items-center rounded-full bg-foreground text-white">
+                  <Check size={11} strokeWidth={3} />
+                </span>
+                {tip}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="mt-10 text-center text-[15px] text-muted-foreground">
+          looking for a quick answer? try the{" "}
+          <Link href="/faq" className="font-semibold text-foreground underline">
+            faq
+          </Link>{" "}
+          or the{" "}
+          <Link href="/docs" className="font-semibold text-foreground underline">
+            docs
+          </Link>
+          .
+        </p>
+      </section>
+    </SitePage>
   )
 }
