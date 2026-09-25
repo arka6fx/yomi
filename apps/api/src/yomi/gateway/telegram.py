@@ -323,6 +323,21 @@ def _metering_user(row: User) -> MeteringUser:
     }
 
 
+async def _greet_as_active_character(d1: D1Backend, tg_user_id: str, chat_id: str) -> None:
+    """A character switched on before Telegram was linked couldn't text first; do it now."""
+    from yomi.app.routes.characters import say_first_line
+    from yomi.services import characters_d1
+    from yomi.services import connectors_d1 as _connectors_d1
+
+    try:
+        owner = await _connectors_d1.resolve_platform_user(d1, "telegram", tg_user_id, chat_id)
+        character = await characters_d1.active(d1, owner) if owner else None
+        if character is not None:
+            await say_first_line(d1, owner, character)
+    except Exception:  # a greeting must never break linking
+        logger.warning("could not greet as the active character", exc_info=True)
+
+
 async def _link_with_code(
     db_session: AsyncSession, tg_user_id: str, chat_id: str, code: str,
     d1: D1Backend | None = None,
@@ -418,6 +433,8 @@ async def _handle_update(
         try:
             await _link_with_code(db_session, tg_user_id, chat_id, code, d1)
             await send_message(chat_id, "Account linked. Send me a message or voice note to get started.")
+            if d1 is not None:
+                await _greet_as_active_character(d1, tg_user_id, chat_id)
         except ValueError as exc:
             await send_message(chat_id, str(exc))
         return {"status": "ok"}

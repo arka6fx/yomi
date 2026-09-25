@@ -112,3 +112,17 @@ def test_activate_route_texts_first(backend, monkeypatch):
         assert "back to plain yomi" in sent[-1][1]
     finally:
         app.dependency_overrides.clear()
+
+
+async def test_linking_telegram_later_gets_the_first_text(backend, monkeypatch):
+    from yomi.gateway import telegram
+
+    sent: list[tuple[str, str]] = []
+
+    async def fake_send(chat_id, text):
+        sent.append((chat_id, text))
+
+    monkeypatch.setattr(telegram, "send_message", fake_send)
+    await characters_d1.activate(backend, USER, GOJO)
+    await telegram._greet_as_active_character(backend, "tg", "chat-1")
+    assert sent and sent[-1][0] == "chat-1" and "Satoru Gojo" in sent[-1][1]
