@@ -867,6 +867,109 @@ async def telegram_webapp_auth(
     return response
 
 
+TELEGRAM_EMAIL_DOMAIN = "users.getyomi.in"
+
+
+async def telegram_account_for(backend: D1Backend, tg_user: dict[str, Any]) -> str:
+    """Yomi user id for a Telegram account, creating and linking one on first use.
+
+    Telegram exposes no email, so new accounts get a non-deliverable placeholder
+    (``telegram-<id>@users.getyomi.in``) until the user adds a real one.
+    """
+    from yomi.services import connectors_d1
+
+    telegram_id = str(tg_user["id"])
+    existing = await connectors_d1.resolve_platform_user(
+        backend, "telegram", telegram_id, telegram_id
+    )
+    if existing is not None:
+        return existing
+    now = _now_naive()
+    user_id = _base_user_id()
+    name = " ".join(
+        part for part in (tg_user.get("first_name"), tg_user.get("last_name")) if part
+    ) or str(tg_user.get("username") or "Yomi user")
+    await auth_d1.create_user(backend, {
+        "id": user_id,
+        "name": name,
+        "email": f"telegram-{telegram_id}@{TELEGRAM_EMAIL_DOMAIN}",
+        "email_verified": False,
+        "image": None,
+        "created_at": now,
+        "updated_at": now,
+        "plan": "explore",
+        "role": "user",
+        "subscription_status": "inactive",
+        "trial_interaction_limit": REGULAR_INTERACTION_LIMIT,
+        "trial_start_date": now,
+        "trial_end_date": now + TRIAL_LIFETIME,
+    })
+    await backend.store.atomic([
+        backend.store.insert_or_ignore("platform_connections", {
+            "id": _gen_id(),
+            "user_id": user_id,
+            "platform": "telegram",
+            "platform_user_id": telegram_id,
+            "platform_chat_id": telegram_id,
+            "connected_at": now,
+            "updated_at": now,
+        })
+    ])
+    await _apply_signup_side_effects_d1(backend, user_id, now)
+    return user_id
+
+
+@router.post("/telegram-login/start")
+async def telegram_login_start(
+    request: Request, d1: D1Backend | None = Depends(get_d1_backend)
+) -> JSONResponse:
+    from yomi.services import telegram_login_d1
+
+    if d1 is None or not settings.telegram_bot_username:
+        return JSONResponse({"error": "Telegram sign-in is not available"}, 503)
+    started = await telegram_login_d1.start(
+        d1, request.headers.get("user-agent") or "", _client_ip(request)
+    )
+    bot = settings.telegram_bot_username.lstrip("@")
+    return JSONResponse({
+        **started,
+        "url": f"https://t.me/{bot}?start=login_{started['token']}",
+        "bot": bot,
+    })
+
+
+@router.post("/telegram-login/poll")
+async def telegram_login_poll(
+    request: Request, d1: D1Backend | None = Depends(get_d1_backend)
+) -> JSONResponse:
+    from yomi.services import telegram_login_d1
+
+    try:
+        body = await request.json()
+    except (json.JSONDecodeError, ValueError):
+        body = {}
+    token = body.get("token") if isinstance(body, dict) else None
+    if d1 is None or not isinstance(token, str) or not token:
+        return JSONResponse({"status": "unknown"}, 400)
+    status, user_id = await telegram_login_d1.consume(d1, token)
+    if status != "approved" or user_id is None:
+        return JSONResponse({"status": status})
+    user = await auth_d1.find_user_by_id(d1, user_id)
+    if user is None or user.deleted_at is not None:
+        return JSONResponse({"status": "unknown"})
+    session_row = await auth_d1.create_session(
+        d1,
+        user_id=user_id,
+        token=_gen_id(32),
+        expires_at=(datetime.now(UTC) + SESSION_LIFETIME).isoformat(),
+        ip_address=_client_ip(request),
+        user_agent=request.headers.get("user-agent") or "",
+    )
+    response = JSONResponse({"status": "approved"})
+    set_session_cookie(response, session_row.token)
+    return response
+
+
 def _client_ip(request: Request) -> str:
     forwarded = request.headers.get("cf-connecting-ip")
     if forwarded:

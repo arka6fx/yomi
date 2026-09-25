@@ -1,15 +1,9 @@
-import AuthCard from "@/components/AuthCard"
-import AuthLayout from "@/components/AuthLayout"
+import { TelegramSignIn } from "@/components/auth/TelegramSignIn"
 
 export const metadata = { title: "Sign up", robots: { index: false, follow: false } }
 
-// static prerender — AuthCard reads ?error= client-side
 export const dynamic = "force-static"
 
-export default function SignUpPage() {
-  return (
-    <AuthLayout mode="signup">
-      <AuthCard defaultMode="signup" callbackURL="/link" />
-    </AuthLayout>
-  )
+export default function Page() {
+  return <TelegramSignIn mode="signup" />
 }

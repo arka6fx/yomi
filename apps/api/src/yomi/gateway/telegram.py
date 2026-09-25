@@ -85,6 +85,59 @@ async def send_approval_prompt(chat_id: str | int, action_id: str, meta: dict) -
         )
 
 
+async def _start_web_login(chat_id: str, token: str, d1: D1Backend | None) -> None:
+    """Ask the user to confirm a web sign-in, showing the browser's code and device."""
+    from yomi.services import telegram_login_d1
+
+    request = await telegram_login_d1.pending(d1, token) if d1 is not None and token else None
+    if request is None:
+        await send_message(chat_id, "That sign-in link has expired. Start again on the website.")
+        return
+    device = telegram_login_d1.describe_device(str(request.get("user_agent") or ""))
+    text = (
+        "<b>Sign in to Yomi on the web?</b>\n"
+        f"Requested from {html.escape(device)}.\n\n"
+        f"Only approve if your screen shows the code <b>{request['code']}</b>. "
+        "If you didn't start this, tap Cancel."
+    )
+    keyboard = {"inline_keyboard": [[
+        {"text": f"✅ Approve ({request['code']})", "callback_data": f"login:a:{token}"},
+        {"text": "✖️ Cancel", "callback_data": f"login:r:{token}"},
+    ]]}
+    await _telegram_call(
+        "sendMessage",
+        {"chat_id": chat_id, "text": text, "parse_mode": "HTML", "reply_markup": keyboard},
+    )
+
+
+async def _finish_web_login(callback: dict, approve: bool, token: str, d1: D1Backend) -> dict:
+    from yomi.app.routes.auth import telegram_account_for
+    from yomi.services import telegram_login_d1
+
+    message = callback.get("message") or {}
+    chat_id = str((message.get("chat") or {}).get("id") or "")
+    tg_user = callback.get("from") or {}
+    user_id = None
+    if approve and tg_user.get("id") and await telegram_login_d1.pending(d1, token):
+        user_id = await telegram_account_for(d1, tg_user)
+    done = await telegram_login_d1.decide(d1, token, user_id, approve)
+    await _telegram_call("answerCallbackQuery", {"callback_query_id": callback.get("id")})
+    if message.get("message_id") is not None:
+        await _telegram_call(
+            "editMessageReplyMarkup",
+            {"chat_id": chat_id, "message_id": message["message_id"],
+             "reply_markup": {"inline_keyboard": []}},
+        )
+    if not done:
+        reply = "That sign-in request has expired. Start again on the website."
+    elif approve:
+        reply = "✅ You're signed in. Go back to your browser."
+    else:
+        reply = "Sign-in cancelled."
+    await send_message(chat_id, reply)
+    return {"status": "ok"}
+
+
 async def _telegram_call(method: str, payload: dict) -> None:
     url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/{method}"
     async with httpx.AsyncClient() as client:
@@ -98,6 +151,8 @@ async def _handle_callback(callback: dict, d1: D1Backend | None) -> dict:
     chat_id = str((message.get("chat") or {}).get("id") or "")
     tg_user_id = str((callback.get("from") or {}).get("id") or "")
     parts = data.split(":", 2)
+    if len(parts) == 3 and parts[0] == "login" and d1 is not None:
+        return await _finish_web_login(callback, parts[1] == "a", parts[2], d1)
     if len(parts) != 3 or parts[0] != "act" or parts[1] not in ("a", "r") or d1 is None:
         await _telegram_call("answerCallbackQuery", {"callback_query_id": callback.get("id")})
         return {"status": "ignored"}
@@ -314,6 +369,9 @@ async def _handle_update(
 
     if text == "/start":
         await send_message(chat_id, "Welcome! Send /start <code> with the code from the dashboard to link your account.")
+        return {"status": "ok"}
+    elif text.startswith("/start login_"):
+        await _start_web_login(chat_id, text.split("login_", 1)[1].strip(), d1)
         return {"status": "ok"}
     elif text.startswith("/start "):
         code = text.split(" ")[1]
