@@ -1,6 +1,7 @@
 // Every dashboard view; the shell switches between them in place.
 export type DashboardTab =
   | "home"
+  | "skills"
   | "command-center"
   | "activity"
   | "approvals"

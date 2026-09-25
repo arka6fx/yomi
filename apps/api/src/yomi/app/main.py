@@ -99,6 +99,8 @@ def create_app() -> FastAPI:
     app.include_router(memory_router)
     app.include_router(vault_router)
     app.include_router(trust_router)
+    from yomi.app.routes.skills import skills_router
+    app.include_router(skills_router)
     from yomi.app.routes.email import email_router
     app.include_router(email_router)
 

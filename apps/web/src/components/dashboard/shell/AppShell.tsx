@@ -20,6 +20,7 @@ import {
   MessageCircle,
   PenLine,
   Plug,
+  Puzzle,
   Shield,
   Sparkles,
   User,
@@ -33,7 +34,7 @@ import { cn } from "@/lib/utils"
 
 const PILLS: { tab: DashboardTab; label: string; icon: typeof Home }[] = [
   { tab: "home", label: "home", icon: Home },
-  { tab: "integrations", label: "apps", icon: Plug },
+  { tab: "skills", label: "skills", icon: Puzzle },
   { tab: "schedules", label: "routines", icon: Zap },
   { tab: "vault", label: "vault", icon: Lock },
 ]
@@ -43,11 +44,12 @@ const TILES: { tab: DashboardTab; label: string; icon: typeof Home }[] = [
   { tab: "trusted", label: "trusted people", icon: Users },
   { tab: "email", label: "email", icon: Mail },
   { tab: "memory", label: "memory", icon: Brain },
+  { tab: "integrations", label: "apps", icon: Plug },
   { tab: "activity", label: "activity", icon: Activity },
-  { tab: "approvals", label: "approvals", icon: BadgeCheck },
 ]
 
 const SETTINGS: { tab: DashboardTab; label: string; hint: string; icon: typeof Home }[] = [
+  { tab: "approvals", label: "approvals", hint: "actions waiting for your ok", icon: BadgeCheck },
   {
     tab: "writing-style",
     label: "personality",

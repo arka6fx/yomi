@@ -367,6 +367,17 @@ async def _handle_update(
     if not text:
         return {"status": "ignored"}
 
+    if text.startswith("/start skill_"):
+        # "Try it in Telegram" from the skills gallery: run the skill's prompt as if
+        # the user had typed it, through the normal linked-user, billing and run path.
+        from yomi.services.skills import get_skill
+
+        skill = get_skill(text.split("skill_", 1)[1].strip())
+        if skill is None:
+            await send_message(chat_id, "That skill isn't available any more.")
+            return {"status": "ok"}
+        text = skill["prompt"]
+
     if text == "/start":
         await send_message(chat_id, "Welcome! Send /start <code> with the code from the dashboard to link your account.")
         return {"status": "ok"}

@@ -36,6 +36,7 @@ import { TelegramCard } from "@/components/dashboard/TelegramCard"
 import { CommandCenter } from "@/components/dashboard/CommandCenter"
 import { AppShell } from "@/components/dashboard/shell/AppShell"
 import { HomeView } from "@/components/dashboard/shell/HomeView"
+import { SkillsView } from "@/components/dashboard/shell/SkillsView"
 import { AgentActivityManager } from "@/components/dashboard/AgentActivityManager"
 import { ApprovalManager } from "@/components/dashboard/ApprovalManager"
 import { VaultManager } from "@/components/dashboard/VaultManager"
@@ -866,6 +867,20 @@ function DashboardContent() {
             transition={{ duration: 0.3 }}
           >
             <VaultManager token={session.session.token} />
+          </motion.div>
+        )}
+
+        {activeTab === "skills" && session && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <SkillsView
+              token={session.session.token}
+              connectedProviders={connectedProviders}
+              onNavigate={setActiveTab}
+            />
           </motion.div>
         )}
 
