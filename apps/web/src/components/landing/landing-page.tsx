@@ -1,14 +1,14 @@
 // Deliberately NOT "use client". This page is almost entirely static marketing copy, but it
 // used to be one big client component, so all of it hydrated and it pulled framer-motion in
 // with it — measured at ~2.5s of LCP and every bit of the page's TBT. The three things that
-// genuinely need the browser are client islands (HeroActions, PlanButton,
+// genuinely need the browser are client islands (ChatDemo, PlanButton,
 // OauthErrorRedirect) and the entrance animations are now CSS.
 import Link from "next/link"
-import { Check, ChevronRight, Layers, MessageSquare, Shield, Zap } from "lucide-react"
+import { Check, ChevronRight, Layers, MessageSquare, Shield } from "lucide-react"
 import { formatUsd } from "@/lib/local-price"
 
 import LandingFooter from "@/components/landing/LandingFooter"
-import { HeroActions } from "@/components/landing/HeroActions"
+import { ChatDemo } from "@/components/landing/ChatDemo"
 import { OauthErrorRedirect } from "@/components/landing/OauthErrorRedirect"
 import { PlanButton } from "@/components/landing/PlanButton"
 import Nav from "@/components/Nav"
@@ -16,49 +16,6 @@ import Nav from "@/components/Nav"
 // three "use client" components, so importing anything from it makes those client entry
 // points and ships all ~50 connector SVGs (116 KiB) to the browser for a server-only page.
 import { ConnectorIcon } from "@yomi/ui/icons"
-
-// Plays out once on load: user's message lands, Yomi "types," then replies
-// with the approve chip — a small proof of the approval-before-action promise
-// instead of a static screenshot.
-function TelegramHeroCard() {
-  return (
-    <div className="glass-card mb-6 max-w-md rounded-2xl p-4">
-      <div className="mb-3 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-        <ConnectorIcon id="telegram" size={13} />
-        Yomi on Telegram
-      </div>
-
-      <div className="animate-msg-in flex justify-end">
-        <p className="max-w-[80%] rounded-2xl rounded-tr-sm bg-foreground/[0.06] px-3.5 py-2 text-sm text-foreground">
-          Move my 3pm to Thursday and tell Sarah
-        </p>
-      </div>
-
-      {/* grid stacking (not absolute) so the card grows to fit whichever
-          overlapping child — indicator or reply — is tallest right now */}
-      <div className="relative mt-2 grid">
-        <div className="hero-typing col-start-1 row-start-1 flex h-fit items-center gap-1 rounded-2xl rounded-tl-sm bg-primary/10 px-4 py-3">
-          {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              // staggered to match the indicator's own 1.5s start
-              style={{ animationDelay: `${1.5 + i * 0.15}s` }}
-              className="hero-typing-dot h-1.5 w-1.5 rounded-full bg-primary/50"
-            />
-          ))}
-        </div>
-
-        <div className="animate-reply-in col-start-1 row-start-1 h-fit max-w-[85%] rounded-2xl rounded-tl-sm bg-primary/10 px-3.5 py-2.5 text-sm text-foreground">
-          <p>Done — moved to Thursday 3pm. Drafted a note to Sarah.</p>
-          <p className="animate-chip-in mt-2 inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground">
-            <Check size={12} />
-            Approve to send
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 const FEATURES = [
   {
@@ -188,89 +145,50 @@ export function LandingPage() {
         <section
           id="hero"
           style={{ marginTop: "-74px" }}
-          className="relative flex min-h-screen flex-col overflow-hidden"
+          className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-4 pb-8 pt-32"
         >
-          <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col justify-between px-5 pb-8 pt-28 sm:px-8 sm:pb-10 lg:px-10">
-            <div className="animate-rise-in mb-6 flex flex-wrap items-center gap-3 text-xs font-medium text-muted-foreground">
-              <span className="rounded-full border border-border bg-card/70 px-3 py-1.5 backdrop-blur-md">
-                Early access
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Zap size={14} className="fill-primary/30 text-primary" />
-                &lt; 2s fast path
-              </span>
-              <span className="hidden h-1 w-1 rounded-full bg-border sm:block" />
-              <span>On Telegram · text, voice, or photo</span>
-            </div>
+          {/* Dusk sky and layered ridgelines, drawn in CSS/SVG so it costs no image bytes. */}
+          <div
+            aria-hidden
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(90% 60% at 50% 100%, rgba(255,190,150,0.55), transparent 70%)," +
+                "linear-gradient(180deg, #5b7fc7 0%, #9aa7e0 30%, #f0b7a4 62%, #f7cfae 78%, #3a3f5c 100%)",
+            }}
+          />
+          <svg
+            aria-hidden
+            className="absolute inset-x-0 bottom-0 h-[55%] w-full"
+            viewBox="0 0 1440 500"
+            preserveAspectRatio="none"
+          >
+            <path
+              d="M0 260 L180 150 L330 240 L520 90 L700 230 L880 120 L1060 250 L1250 140 L1440 220 V500 H0Z"
+              fill="#6d6f93"
+              opacity="0.55"
+            />
+            <path
+              d="M0 330 L150 250 L300 320 L470 210 L640 330 L820 230 L1000 340 L1180 250 L1440 320 V500 H0Z"
+              fill="#474a6e"
+              opacity="0.8"
+            />
+            <path
+              d="M0 410 L200 340 L380 400 L560 330 L760 420 L960 350 L1160 420 L1440 360 V500 H0Z"
+              fill="#2a2c45"
+            />
+          </svg>
 
-            {/* big centered tagline — the heart of the hero */}
-            <div className="animate-hero-rise-delayed mx-auto flex max-w-5xl flex-col items-center px-2 text-center">
-              <p className="font-serif text-5xl leading-[1.04] tracking-tight text-foreground sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
-                Your <span className="text-primary">AI companion</span> for work{" "}
-                <em className="italic">and life</em>.
-              </p>
-            </div>
-
-            <div>
-              <div className="grid items-end gap-8 lg:grid-cols-[1fr_360px]">
-                {/* the giant display size is a two-column composition paired
-                  against the CTA panel — that pairing only exists at lg+
-                  (grid-cols-[1fr_360px]), so below that it stays a normal
-                  heading instead of an orphaned oversized word */}
-                <h1 className="animate-hero-rise-delayed font-accent text-4xl leading-tight tracking-normal text-foreground lg:text-[11.2rem] lg:leading-[0.82]">
-                  Yomi
-                  {/* the visible wordmark alone is a poor heading for search and screen readers */}
-                  <span className="sr-only"> — AI productivity assistant on Telegram</span>
-                </h1>
-
-                <div className="animate-card-rise pb-1 lg:pb-6">
-                  {/* the hero's one visual: a real exchange, not a stock photo —
-                    plays out as Yomi actually replies, doubling as proof of
-                    the approval-before-action promise */}
-                  <TelegramHeroCard />
-
-                  <div className="mb-7 max-w-md">
-                    <div className="flex flex-wrap gap-2">
-                      {["Telegram", "Web dashboard", "No copy-paste"].map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded-full border border-border bg-card/50 px-3 py-1 text-xs font-medium tracking-wide text-muted-foreground backdrop-blur-sm"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-
-                    <p className="mt-4 font-serif text-sm italic text-muted-foreground/90">
-                      Your data is never stored.{" "}
-                      <a
-                        href="#google-data"
-                        className="font-sans text-xs not-italic underline underline-offset-2 transition-colors hover:text-foreground"
-                      >
-                        Learn more
-                      </a>
-                    </p>
-                  </div>
-                  <HeroActions telegramIcon={<ConnectorIcon id="telegram" size={17} />} />
-                </div>
-              </div>
-
-              <div className="animate-fade-in mt-6 grid gap-3 border-t border-border pt-4 text-sm text-muted-foreground sm:grid-cols-3">
-                <span className="flex items-center gap-2">
-                  <MessageSquare size={15} className="text-primary" />
-                  Text, voice, or photo
-                </span>
-                <span className="flex items-center gap-2">
-                  <Layers size={15} className="text-primary" />
-                  Works across your apps
-                </span>
-                <span className="flex items-center gap-2">
-                  <Shield size={15} className="text-primary" />
-                  Never stored
-                </span>
-              </div>
-            </div>
+          <h1 className="sr-only">Yomi — AI productivity assistant on Telegram</h1>
+          <div className="relative z-10">
+            <ChatDemo />
           </div>
+          <a
+            href="#about"
+            className="relative z-10 mt-6 rounded-full bg-white/15 px-4 py-2 text-xs font-medium text-white backdrop-blur-md hover:bg-white/25"
+          >
+            what can yomi do? ↓
+          </a>
         </section>
 
         {/* ── What is Yomi?────────────────────────────────────────────────── */}
