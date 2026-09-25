@@ -57,8 +57,12 @@ def _parse_json_value(value: Any) -> Any:
     return None
 
 
+_USER_COLUMNS = frozenset(AuthUser.__table__.columns.keys())
+
+
 def _user_from_row(row: dict[str, Any]) -> AuthUser:
-    data = dict(row)
+    # D1-only columns (e.g. bio) aren't on the shared model; read them from the row.
+    data = {key: value for key, value in row.items() if key in _USER_COLUMNS}
     for key in _USER_BOOLS:
         if key in data:
             data[key] = bool(data[key])

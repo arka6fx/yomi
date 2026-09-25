@@ -19,4 +19,9 @@ index_name = "yomi-vectors-staging-768"
 binding = "R2_INGEST"
 bucket_name = "yomi-ingest"
 
+# User uploads such as profile pictures, served via /api/media on the API.
+[[r2_buckets]]
+binding = "R2_MEDIA"
+bucket_name = "yomi-media"
+
 # Configure with wrangler secret put STORAGE_GATEWAY_SECRET --config ../wrangler.storage.toml

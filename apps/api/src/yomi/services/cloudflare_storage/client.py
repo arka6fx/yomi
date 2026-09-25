@@ -157,3 +157,41 @@ class StorageClient:
 
     async def ingest_delete(self, key: str) -> None:
         await self.post("/ingest/delete", {"key": key})
+
+    async def media_put(self, key: str, data: bytes, content_type: str) -> None:
+        try:
+            response = await self.http.post(
+                f"{self.url}/media/put",
+                headers={
+                    "Authorization": f"Bearer {self.secret}",
+                    "Content-Type": content_type,
+                    "x-media-key": key,
+                },
+                content=data,
+                timeout=35.0,
+                follow_redirects=False,
+            )
+        except httpx.HTTPError:
+            raise StorageError("Storage transport failed; media upload aborted") from None
+        if response.status_code != 200:
+            raise StorageError(f"Storage media upload failed (HTTP {response.status_code})")
+
+    async def media_read(self, key: str) -> tuple[bytes, str] | None:
+        try:
+            response = await self.http.post(
+                f"{self.url}/media/read",
+                headers={"Authorization": f"Bearer {self.secret}"},
+                json={"key": key},
+                timeout=35.0,
+                follow_redirects=False,
+            )
+        except httpx.HTTPError:
+            raise StorageError("Storage transport failed; media read aborted") from None
+        if response.status_code == 404:
+            return None
+        if response.status_code != 200:
+            raise StorageError(f"Storage media read failed (HTTP {response.status_code})")
+        return response.content, response.headers.get("content-type", "application/octet-stream")
+
+    async def media_delete(self, key: str) -> None:
+        await self.post("/media/delete", {"key": key})

@@ -134,7 +134,12 @@ function creditsCaption(included: number, resetAt?: string | null, resetKind?: R
 type PlatformLink = { platform: string; connectedAt: string }
 
 function DashboardContent() {
-  const { data: session, isPending, isError: sessionError } = authClient.useSession()
+  const {
+    data: session,
+    isPending,
+    isError: sessionError,
+    refetch: refetchSession,
+  } = authClient.useSession()
   const router = useRouter()
 
   const [sub, setSub] = useState<Sub | null>(null)
@@ -1076,7 +1081,7 @@ function DashboardContent() {
                 subtitle="your name, photo and the details yomi uses for you."
               />
             </div>
-            <ProfileManager token={session.session.token} />
+            <ProfileManager token={session.session.token} onChanged={refetchSession} />
 
             {/* Welcome banner — shown once after signup */}
             {showWelcome && (

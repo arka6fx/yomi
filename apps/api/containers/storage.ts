@@ -3,6 +3,7 @@ export interface StorageEnv {
   DB: D1Database;
   VECTORS: VectorizeIndex;
   R2_INGEST: R2Bucket;
+  R2_MEDIA: R2Bucket;
   STORAGE_GATEWAY_SECRET: string;
 }
 
@@ -15,6 +16,10 @@ const MAX_BODY_BYTES = 1_000_000;
 const MAX_INGEST_BYTES = 8 * 1024 * 1024;
 const INGEST_TTL_MS = 24 * 60 * 60 * 1000;
 const INGEST_KEY_RE = /^ingest\/[a-zA-Z0-9._/-]+$/;
+// User uploads (profile pictures). Bytes are validated by the Python container.
+const MAX_MEDIA_BYTES = 2 * 1024 * 1024;
+const MEDIA_KEY_RE = /^(avatars)\/[A-Za-z0-9_-]{1,64}\/[a-f0-9-]{36}\.(png|jpg|webp|gif)$/;
+const MEDIA_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 type RecordType = "memory" | "rag";
 type JsonObject = Record<string, unknown>;
 
@@ -138,7 +143,10 @@ export async function storageFetch(request: Request, env: StorageEnv): Promise<R
 
   try {
     const path = new URL(request.url).pathname;
+    if (path === "/media/put") return await mediaPut(env, request);
     const input = await body(request);
+    if (path === "/media/read") return await mediaRead(env, input);
+    if (path === "/media/delete") return await mediaDelete(env, input);
     if (path === "/ingest/put") return await ingestPut(env, input);
     if (path === "/ingest/read") return await ingestRead(env, input);
     if (path === "/ingest/delete") return await ingestDelete(env, input);
@@ -278,5 +286,40 @@ async function ingestRead(env: StorageEnv, input: JsonObject): Promise<Response>
 async function ingestDelete(env: StorageEnv, input: JsonObject): Promise<Response> {
   const key = await ingestKey(input);
   await env.R2_INGEST.delete(key);
+  return json({ ok: true });
+}
+
+function mediaKey(value: unknown): string {
+  const key = string(value, 200);
+  if (!MEDIA_KEY_RE.test(key)) throw new InvalidRequest("Invalid media key");
+  return key;
+}
+
+async function mediaPut(env: StorageEnv, request: Request): Promise<Response> {
+  // Raw bytes in the body; the key and type ride in headers so no base64 bloat.
+  const key = mediaKey(request.headers.get("x-media-key"));
+  const contentType = request.headers.get("content-type") ?? "";
+  if (!MEDIA_TYPES.has(contentType)) throw new InvalidRequest("Unsupported media type");
+  const bytes = new Uint8Array(await request.arrayBuffer());
+  if (!bytes.byteLength || bytes.byteLength > MAX_MEDIA_BYTES) {
+    throw new InvalidRequest("Media too large");
+  }
+  await env.R2_MEDIA.put(key, bytes, { httpMetadata: { contentType } });
+  return json({ key, size: bytes.byteLength, contentType });
+}
+
+async function mediaRead(env: StorageEnv, input: JsonObject): Promise<Response> {
+  const stored = await env.R2_MEDIA.get(mediaKey(input.key));
+  if (!stored) return json({ error: "Not found" }, 404);
+  return new Response(stored.body, {
+    headers: {
+      "content-type": stored.httpMetadata?.contentType ?? "application/octet-stream",
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
+async function mediaDelete(env: StorageEnv, input: JsonObject): Promise<Response> {
+  await env.R2_MEDIA.delete(mediaKey(input.key));
   return json({ ok: true });
 }

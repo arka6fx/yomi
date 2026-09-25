@@ -1,13 +1,47 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
-import { Check, Loader2, User } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { Camera, Check, Loader2, Trash2, User } from "lucide-react"
 import { PLANS } from "@/lib/plans"
 
 type ProfileData = {
   name: string
   email: string
   plan: string
+  image?: string | null
+  bio?: string
+}
+
+const BIO_MAX = 280
+
+// Square-crop and shrink to 512px before upload: small files, and re-encoding
+// through a canvas drops EXIF data such as GPS location.
+async function prepareAvatar(file: File): Promise<Blob> {
+  const bitmap = await createImageBitmap(file)
+  const side = Math.min(bitmap.width, bitmap.height)
+  const size = Math.min(512, side)
+  const canvas = document.createElement("canvas")
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext("2d")
+  if (!ctx) throw new Error("Couldn’t read that image")
+  ctx.drawImage(
+    bitmap,
+    (bitmap.width - side) / 2,
+    (bitmap.height - side) / 2,
+    side,
+    side,
+    0,
+    0,
+    size,
+    size,
+  )
+  bitmap.close()
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/webp", 0.9),
+  )
+  if (!blob) throw new Error("Couldn’t read that image")
+  return blob
 }
 
 type StreakProfileFields = {
@@ -40,7 +74,7 @@ function Avatar({ url, size = 64 }: { url: string | null; size?: number }) {
   )
 }
 
-export function ProfileManager({ token }: { token: string }) {
+export function ProfileManager({ token, onChanged }: { token: string; onChanged?: () => void }) {
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [streakFields, setStreakFields] = useState<StreakProfileFields | null>(null)
   const [loading, setLoading] = useState(true)
@@ -57,6 +91,15 @@ export function ProfileManager({ token }: { token: string }) {
   const [handleError, setHandleError] = useState("")
 
   const [savingPhoto, setSavingPhoto] = useState(false)
+
+  const fileInput = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [photoError, setPhotoError] = useState("")
+
+  const [bioInput, setBioInput] = useState("")
+  const [savingBio, setSavingBio] = useState(false)
+  const [bioSaved, setBioSaved] = useState(false)
+  const [bioError, setBioError] = useState("")
 
   const auth = { Authorization: `Bearer ${token}` }
 
@@ -75,6 +118,7 @@ export function ProfileManager({ token }: { token: string }) {
       setProfile(profileData)
       setStreakFields(streaksData)
       setNameInput(profileData.name)
+      setBioInput(profileData.bio ?? "")
       setHandleInput(streaksData.leaderboardHandle ?? "")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't load profile")
@@ -107,6 +151,67 @@ export function ProfileManager({ token }: { token: string }) {
       setNameError(err instanceof Error ? err.message : "Couldn't save that name")
     } finally {
       setSavingName(false)
+    }
+  }
+
+  async function uploadPhoto(file: File) {
+    setUploading(true)
+    setPhotoError("")
+    try {
+      const blob = await prepareAvatar(file)
+      const res = await fetch("/api/user/avatar", {
+        method: "POST",
+        headers: { ...auth, "Content-Type": blob.type || "application/octet-stream" },
+        body: blob,
+      })
+      const data = (await res.json().catch(() => ({}))) as { error?: string; image?: string }
+      if (!res.ok) throw new Error(data.error ?? "Couldn’t upload that picture")
+      setProfile((prev) => (prev ? { ...prev, image: data.image ?? null } : prev))
+      onChanged?.()
+    } catch (err) {
+      setPhotoError(err instanceof Error ? err.message : "Couldn’t upload that picture")
+    } finally {
+      setUploading(false)
+      if (fileInput.current) fileInput.current.value = ""
+    }
+  }
+
+  async function removePhoto() {
+    setUploading(true)
+    setPhotoError("")
+    try {
+      const res = await fetch("/api/user/avatar", { method: "DELETE", headers: auth })
+      if (!res.ok) throw new Error("Couldn’t remove your picture")
+      setProfile((prev) => (prev ? { ...prev, image: null } : prev))
+      onChanged?.()
+    } catch (err) {
+      setPhotoError(err instanceof Error ? err.message : "Couldn’t remove your picture")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function saveBio() {
+    if (savingBio) return
+    setSavingBio(true)
+    setBioError("")
+    setBioSaved(false)
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { ...auth, "Content-Type": "application/json" },
+        body: JSON.stringify({ bio: bioInput }),
+      })
+      const data = (await res.json().catch(() => ({}))) as { error?: string; bio?: string }
+      if (!res.ok) throw new Error(data.error ?? "Couldn’t save your bio")
+      setBioInput(data.bio ?? bioInput)
+      setProfile((prev) => (prev ? { ...prev, bio: data.bio ?? bioInput } : prev))
+      setBioSaved(true)
+      setTimeout(() => setBioSaved(false), 2000)
+    } catch (err) {
+      setBioError(err instanceof Error ? err.message : "Couldn’t save your bio")
+    } finally {
+      setSavingBio(false)
     }
   }
 
@@ -184,7 +289,32 @@ export function ProfileManager({ token }: { token: string }) {
     <div className="space-y-4">
       <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-5 sm:p-6">
         <div className="flex items-center gap-4">
-          <Avatar url={streakFields.avatarUrl} size={64} />
+          <button
+            type="button"
+            onClick={() => fileInput.current?.click()}
+            disabled={uploading}
+            aria-label="Change profile picture"
+            className="group relative shrink-0 rounded-full disabled:opacity-60"
+          >
+            <Avatar
+              key={profile.image ?? "none"}
+              url={profile.image ?? streakFields.avatarUrl}
+              size={64}
+            />
+            <span className="absolute inset-0 grid place-items-center rounded-full bg-black/45 text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+              {uploading ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
+            </span>
+          </button>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) void uploadPhoto(file)
+            }}
+          />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-foreground">{profile.name}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -192,6 +322,27 @@ export function ProfileManager({ token }: { token: string }) {
                 ? "signed in with telegram"
                 : profile.email}
             </p>
+            <div className="mt-1.5 flex items-center gap-3 text-xs">
+              <button
+                type="button"
+                onClick={() => fileInput.current?.click()}
+                disabled={uploading}
+                className="font-medium text-primary hover:underline disabled:opacity-50"
+              >
+                {profile.image ? "Change photo" : "Upload photo"}
+              </button>
+              {profile.image && (
+                <button
+                  type="button"
+                  onClick={() => void removePhoto()}
+                  disabled={uploading}
+                  className="inline-flex items-center gap-1 text-muted-foreground hover:text-destructive disabled:opacity-50"
+                >
+                  <Trash2 size={11} /> Remove
+                </button>
+              )}
+            </div>
+            {photoError && <p className="mt-1 text-xs text-destructive">{photoError}</p>}
           </div>
         </div>
 
@@ -220,6 +371,38 @@ export function ProfileManager({ token }: { token: string }) {
               </button>
             </div>
             {nameError && <p className="mt-1.5 text-xs text-destructive">{nameError}</p>}
+          </div>
+
+          <div>
+            <label className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground">
+              <span>Bio</span>
+              <span>
+                {bioInput.length}/{BIO_MAX}
+              </span>
+            </label>
+            <textarea
+              value={bioInput}
+              onChange={(e) => setBioInput(e.target.value)}
+              placeholder="A line or two about you. Yomi reads this for context."
+              rows={3}
+              maxLength={BIO_MAX}
+              className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary/60"
+            />
+            <div className="mt-1.5 flex items-center justify-between gap-2">
+              {bioError ? <p className="text-xs text-destructive">{bioError}</p> : <span />}
+              <button
+                onClick={saveBio}
+                disabled={savingBio || bioInput === (profile.bio ?? "")}
+                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40 disabled:opacity-50"
+              >
+                {savingBio ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : bioSaved ? (
+                  <Check size={13} />
+                ) : null}
+                {bioSaved ? "Saved" : "Save"}
+              </button>
+            </div>
           </div>
 
           <div>

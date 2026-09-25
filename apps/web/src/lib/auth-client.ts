@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 // Wire-compatible replacement for the retired @better-auth/react client.
 // The auth server is the Python port in apps/api (yomi.app.routes.auth):
@@ -95,10 +95,11 @@ export function useSession() {
   const [data, setData] = useState<SessionResult | undefined>(undefined)
   const [isPending, setIsPending] = useState(true)
   const [isError, setIsError] = useState(false)
+  const [version, setVersion] = useState(0)
 
   useEffect(() => {
     let alive = true
-    setIsPending(true)
+    if (version === 0) setIsPending(true)
     getSession().then(({ data: value, transientError }) => {
       if (!alive) return
       setData(value)
@@ -108,9 +109,16 @@ export function useSession() {
     return () => {
       alive = false
     }
+  }, [version])
+
+  // Re-read the session after a profile change (e.g. a new picture). Keeps the
+  // current data on screen until the fresh copy arrives.
+  const refetch = useCallback(() => {
+    invalidateSession()
+    setVersion((v) => v + 1)
   }, [])
 
-  return { data, isPending, isError }
+  return { data, isPending, isError, refetch }
 }
 
 export async function signInSocial(opts: {
