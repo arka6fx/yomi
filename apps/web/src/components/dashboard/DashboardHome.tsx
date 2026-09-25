@@ -1,28 +1,11 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import type { ReactNode } from "react"
-import {
-  Activity,
-  AlertTriangle,
-  Brain,
-  Clock,
-  Crown,
-  ExternalLink,
-  Flame,
-  HeartPulse,
-  Loader2,
-  MessageSquare,
-  Plug,
-  Plus,
-  Share2,
-  Sunrise,
-} from "lucide-react"
+import { AlertTriangle, Crown, ExternalLink, Loader2, Plug, Plus, Share2 } from "lucide-react"
 import { buildCatalog, ConnectorIcon } from "@yomi/ui"
 import { cn } from "@/lib/utils"
-import { relativePast, truncate } from "@/lib/format"
 import { PLANS } from "@/lib/plans"
-import type { DashboardTab } from "./SettingsMenu"
+import type { DashboardTab } from "./tabs"
 import { TelegramCard, type PlatformLink } from "./TelegramCard"
 
 export type CreditPack = {
@@ -32,48 +15,11 @@ export type CreditPack = {
   priceDisplay: string
 }
 
-type HistorySessionCard = {
-  id: string
-  title: string | null
-  lastMessageAt: string | null
-  lastMessage: { role: string; content: string } | null
-}
-
-type ScheduleRow = {
-  id: string
-  schedule: string
-  prompt: string
-  enabled: boolean
-  oneShot?: boolean
-  nextRunAt?: string | null
-  lastRunAt?: string | null
-  lastRunStatus?: string | null
-  lastRunError?: string | null
-  runCount?: number
-}
-
-type MemoryRow = {
-  id: string
-  topic?: string | null
-  kind?: string | null
-  scope?: string | null
-  content: string
-  summary?: string | null
-  isStatic?: boolean
-  updatedAt?: string | null
-}
-
 type ReferralStats = {
   code: string
   count: number
   cap: number
   creditsEarned: number
-}
-
-type StreakStats = {
-  currentStreak: number
-  longestStreak: number
-  totalMessagesSent: number
 }
 
 export type ActivityItem = {
@@ -101,15 +47,6 @@ const PLAN_TONE_CLASSES: Record<PlanSummary["statusTone"], string> = {
   active: "bg-emerald-500/10 text-emerald-400",
   past_due: "bg-red-500/10 text-red-400",
   trial: "bg-sky-500/10 text-sky-300",
-}
-
-function relativeFuture(value: string) {
-  const minutes = Math.round((new Date(value).getTime() - Date.now()) / 60_000)
-  if (minutes <= 0) return "any moment"
-  if (minutes < 60) return `in ${minutes}m`
-  const hours = Math.round(minutes / 60)
-  if (hours < 24) return `in ${hours}h`
-  return `in ${Math.round(hours / 24)}d`
 }
 
 function PlanBanner({ plan, onClick }: { plan: PlanSummary; onClick: () => void }) {
@@ -175,48 +112,10 @@ function PlanBanner({ plan, onClick }: { plan: PlanSummary; onClick: () => void 
   )
 }
 
-function StatCard({
-  icon: Icon,
-  title,
-  loading,
-  empty,
-  emptyText,
-  onClick,
-  children,
-}: {
-  icon: typeof Clock
-  title: string
-  loading: boolean
-  empty: boolean
-  emptyText: string
-  onClick: () => void
-  children: ReactNode
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex flex-col items-start gap-2 rounded-2xl border border-border bg-card p-4 sm:p-5 text-left transition-colors hover:border-primary/40"
-    >
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Icon size={14} />
-        <span className="text-xs font-medium uppercase tracking-widest">{title}</span>
-      </div>
-      {loading ? (
-        <Loader2 size={14} className="animate-spin text-muted-foreground" />
-      ) : empty ? (
-        <p className="text-sm text-muted-foreground">{emptyText}</p>
-      ) : (
-        <div className="text-sm text-foreground">{children}</div>
-      )}
-    </button>
-  )
-}
-
-// Dashboard landing view: at-a-glance summary cards over data other tabs already
-// fetch in full, plus a memory preview. Reuses existing endpoints only — no new backend.
+// Account section under the Home view: Telegram link, referrals, plan and credits,
+// and connected apps. The at-a-glance tiles live in shell/HomeView.
 export function DashboardHome({
   token,
-  recentActivity,
   plan,
   connectedProviders,
   unhealthyCount,
@@ -236,7 +135,6 @@ export function DashboardHome({
   onUnlinkPlatform,
 }: {
   token: string
-  recentActivity: ActivityItem[]
   plan: PlanSummary
   connectedProviders: string[]
   unhealthyCount: number
@@ -255,62 +153,12 @@ export function DashboardHome({
   unlinkingPlatform: string | null
   onUnlinkPlatform: (platform: string) => void
 }) {
-  const [history, setHistory] = useState<HistorySessionCard[]>([])
-  const [historyLoading, setHistoryLoading] = useState(true)
-  const [schedules, setSchedules] = useState<ScheduleRow[]>([])
-  const [schedulesLoading, setSchedulesLoading] = useState(true)
-  const [memory, setMemory] = useState<MemoryRow[]>([])
-  const [memoryLoading, setMemoryLoading] = useState(true)
   const [referral, setReferral] = useState<ReferralStats | null>(null)
   const [referralLoading, setReferralLoading] = useState(true)
   const [referralCopied, setReferralCopied] = useState(false)
   const [referralError, setReferralError] = useState("")
-  const [streak, setStreak] = useState<StreakStats | null>(null)
-  const [streakLoading, setStreakLoading] = useState(true)
 
   const auth = { Authorization: `Bearer ${token}` }
-
-  const loadHistory = useCallback(async () => {
-    setHistoryLoading(true)
-    try {
-      const res = await fetch("/api/history/sessions?limit=1", { headers: auth })
-      if (!res.ok) throw new Error("failed")
-      const data = (await res.json()) as { sessions?: HistorySessionCard[] }
-      setHistory(data.sessions ?? [])
-    } catch {
-      setHistory([])
-    } finally {
-      setHistoryLoading(false)
-    }
-  }, [token])
-
-  const loadSchedules = useCallback(async () => {
-    setSchedulesLoading(true)
-    try {
-      const res = await fetch("/api/schedules", { headers: auth })
-      if (!res.ok) throw new Error("failed")
-      const data = (await res.json()) as { schedules?: ScheduleRow[] }
-      setSchedules(data.schedules ?? [])
-    } catch {
-      setSchedules([])
-    } finally {
-      setSchedulesLoading(false)
-    }
-  }, [token])
-
-  const loadMemory = useCallback(async () => {
-    setMemoryLoading(true)
-    try {
-      const res = await fetch("/api/memory/entries?limit=5", { headers: auth })
-      if (!res.ok) throw new Error("failed")
-      const data = (await res.json()) as { memories?: MemoryRow[] }
-      setMemory(data.memories ?? [])
-    } catch {
-      setMemory([])
-    } finally {
-      setMemoryLoading(false)
-    }
-  }, [token])
 
   const loadReferral = useCallback(async () => {
     setReferralLoading(true)
@@ -325,26 +173,9 @@ export function DashboardHome({
     }
   }, [token])
 
-  const loadStreak = useCallback(async () => {
-    setStreakLoading(true)
-    try {
-      const res = await fetch("/api/streaks/me", { headers: auth })
-      if (!res.ok) throw new Error("failed")
-      setStreak((await res.json()) as StreakStats)
-    } catch {
-      setStreak(null)
-    } finally {
-      setStreakLoading(false)
-    }
-  }, [token])
-
   useEffect(() => {
-    void loadHistory()
-    void loadSchedules()
-    void loadMemory()
     void loadReferral()
-    void loadStreak()
-  }, [loadHistory, loadSchedules, loadMemory, loadReferral, loadStreak])
+  }, [loadReferral])
 
   async function copyReferralLink() {
     if (!referral) return
@@ -373,42 +204,16 @@ export function DashboardHome({
   }
 
   const connectedCatalog = buildCatalog(connectedProviders).filter((c) => c.connected)
-  const latestSession = history[0] ?? null
-  const enabledSchedules = schedules.filter((s) => s.enabled)
-  const soonestNextRunAt = enabledSchedules
-    .map((s) => s.nextRunAt)
-    .filter((v): v is string => !!v)
-    .sort()[0]
-  const latestActivity = recentActivity[0]
 
   const referralLink = referral ? `${window.location.origin}/r/${referral.code}` : ""
 
   return (
     <div className="space-y-6">
-      {!streakLoading && streak && (
-        <div className="flex justify-end">
-          <button
-            onClick={() => onNavigate("streaks")}
-            className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-primary/40"
-          >
-            <Flame size={13} className="text-primary" />
-            {streak.currentStreak > 0 ? `${streak.currentStreak} day streak` : "Start a streak"}
-          </button>
-        </div>
-      )}
-
       <TelegramCard
         platformLinks={platformLinks}
         platformsLoading={platformsLoading}
         unlinking={unlinkingPlatform}
         onUnlink={onUnlinkPlatform}
-      />
-
-      <MorningBriefCard
-        enabled={enabledSchedules.some((schedule) =>
-          /morning|weather|brief/i.test(schedule.prompt),
-        )}
-        onOpenSchedules={() => onNavigate("schedules")}
       />
 
       {!referralLoading && referral && (
@@ -461,100 +266,6 @@ export function DashboardHome({
           </div>
         </div>
       )}
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <StatCard
-          icon={MessageSquare}
-          title="History"
-          loading={historyLoading}
-          empty={!latestSession}
-          emptyText="No conversations yet"
-          onClick={() => onNavigate("history")}
-        >
-          {latestSession?.lastMessage && <p>{truncate(latestSession.lastMessage.content, 80)}</p>}
-          {latestSession?.lastMessageAt && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              {relativePast(latestSession.lastMessageAt)}
-            </p>
-          )}
-        </StatCard>
-
-        <StatCard
-          icon={Clock}
-          title="Schedules"
-          loading={schedulesLoading}
-          empty={schedules.length === 0}
-          emptyText="No automations yet"
-          onClick={() => onNavigate("schedules")}
-        >
-          <p>
-            {enabledSchedules.length} of {schedules.length} active
-          </p>
-          {soonestNextRunAt && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Next run {relativeFuture(soonestNextRunAt)}
-            </p>
-          )}
-        </StatCard>
-
-        <StatCard
-          icon={Brain}
-          title="Memory"
-          loading={memoryLoading}
-          empty={memory.length === 0}
-          emptyText="Nothing remembered yet"
-          onClick={() => onNavigate("memory")}
-        >
-          <p>
-            {memory.length} memor{memory.length === 1 ? "y" : "ies"}
-          </p>
-        </StatCard>
-
-        <StatCard
-          icon={HeartPulse}
-          title="Status"
-          loading={false}
-          empty={false}
-          emptyText=""
-          onClick={() => onNavigate("status")}
-        >
-          <p>Agent &amp; connector health</p>
-        </StatCard>
-
-        <StatCard
-          icon={Flame}
-          title="Streak"
-          loading={streakLoading}
-          empty={!streak || (streak.currentStreak === 0 && streak.totalMessagesSent === 0)}
-          emptyText="Message Yomi to start one"
-          onClick={() => onNavigate("streaks")}
-        >
-          {streak && (
-            <>
-              <p>{streak.currentStreak} day streak</p>
-              <p className="mt-1 text-xs text-muted-foreground">Longest: {streak.longestStreak}</p>
-            </>
-          )}
-        </StatCard>
-
-        <StatCard
-          icon={Activity}
-          title="Activity"
-          loading={false}
-          empty={!latestActivity}
-          emptyText="No activity yet"
-          onClick={() => onNavigate("billing")}
-        >
-          {latestActivity && (
-            <>
-              <p>{latestActivity.label}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {relativePast(latestActivity.createdAt)}
-              </p>
-            </>
-          )}
-        </StatCard>
-      </div>
 
       <PlanBanner plan={plan} onClick={() => onNavigate("billing")} />
 
@@ -695,43 +406,6 @@ export function DashboardHome({
         )}
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10">
-              <Brain size={16} className="text-primary" />
-            </div>
-            <h2 className="text-sm font-medium text-foreground">Memory</h2>
-          </div>
-          <button
-            onClick={() => onNavigate("memory")}
-            className="text-xs font-medium text-primary hover:underline"
-          >
-            View all
-          </button>
-        </div>
-
-        {memoryLoading ? (
-          <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
-            <Loader2 size={14} className="animate-spin" />
-            Loading…
-          </div>
-        ) : memory.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nothing remembered yet.</p>
-        ) : (
-          <ul className="space-y-2.5">
-            {memory.map((row) => (
-              <li key={row.id} className="text-sm">
-                {row.topic && <span className="font-medium text-foreground">{row.topic}: </span>}
-                <span className="text-muted-foreground">
-                  {truncate(row.summary || row.content, 100)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
       <div className="flex justify-center">
         <a
           href="https://github.com/arka6fx/yomi-feedback/issues/new"
@@ -744,64 +418,5 @@ export function DashboardHome({
         </a>
       </div>
     </div>
-  )
-}
-
-function MorningBriefCard({
-  enabled,
-  onOpenSchedules,
-}: {
-  enabled: boolean
-  onOpenSchedules: () => void
-}) {
-  return (
-    <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
-            <Sunrise size={18} />
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-sm font-semibold text-foreground">Your morning brief</h2>
-              <span
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase",
-                  enabled ? "bg-emerald-500/10 text-emerald-400" : "bg-muted text-muted-foreground",
-                )}
-              >
-                {enabled ? "Active" : "Ready to set up"}
-              </span>
-            </div>
-            <p className="mt-1.5 max-w-xl text-sm leading-5 text-muted-foreground">
-              Say “Good morning, darling” in Telegram and Yomi can bring weather, today&apos;s
-              calendar, priorities, and a gentle first step together.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-              {["Weather", "Calendar", "Tasks", "Inbox signals"].map((item) => (
-                <span
-                  key={item}
-                  className="rounded-full border border-border bg-background/50 px-2.5 py-1"
-                >
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-        <button
-          onClick={onOpenSchedules}
-          className="shrink-0 rounded-xl border border-primary/30 px-3 py-2 text-xs font-medium text-primary transition hover:bg-primary/10"
-        >
-          {enabled ? "Tune the brief" : "Set up the brief"}
-        </button>
-      </div>
-      {!enabled && (
-        <p className="mt-4 border-t border-border/70 pt-3 text-xs text-muted-foreground">
-          Yomi will ask for the missing details, like your weather location, preferred time, and
-          what should never be disturbed.
-        </p>
-      )}
-    </section>
   )
 }

@@ -61,3 +61,52 @@ describe("referral redirects", () => {
     expect(response.headers.get("x-robots-tag")).toBe("noindex")
   })
 })
+
+describe("/api/geo", () => {
+  const withCf = (cf: Record<string, string>) => {
+    const request = new Request("https://getyomi.in/api/geo")
+    Object.defineProperty(request, "cf", { value: cf })
+    return request
+  }
+
+  test("adds weather using coordinates rounded to one decimal", async () => {
+    const calls: string[] = []
+    const realFetch = globalThis.fetch
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      calls.push(String(input))
+      return Response.json({ current: { temperature_2m: 26.6, weather_code: 2 } })
+    }) as typeof fetch
+    try {
+      const response = await worker.fetch(
+        withCf({ country: "IN", city: "Kolkata", latitude: "22.5726", longitude: "88.3639" }),
+        { ASSETS: unusedAssets },
+      )
+      expect(await response.json()).toEqual({
+        country: "IN",
+        city: "Kolkata",
+        weather: { tempC: 27, code: 2 },
+      })
+      expect(calls[0]).toContain("latitude=22.6&longitude=88.4")
+    } finally {
+      globalThis.fetch = realFetch
+    }
+  })
+
+  test("still answers when there is no location or the weather call fails", async () => {
+    const realFetch = globalThis.fetch
+    globalThis.fetch = (async () => {
+      throw new Error("offline")
+    }) as typeof fetch
+    try {
+      const response = await worker.fetch(
+        withCf({ country: "IN", latitude: "1", longitude: "2" }),
+        {
+          ASSETS: unusedAssets,
+        },
+      )
+      expect(await response.json()).toEqual({ country: "IN", city: null, weather: null })
+    } finally {
+      globalThis.fetch = realFetch
+    }
+  })
+})

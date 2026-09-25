@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { Crown, Cuboid, Flame, Loader2, Trophy, User } from "lucide-react"
-import type { DashboardTab } from "./SettingsMenu"
+import type { DashboardTab } from "./tabs"
 
 type StreakStats = {
   currentStreak: number

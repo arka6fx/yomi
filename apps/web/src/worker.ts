@@ -33,6 +33,47 @@ const CSP = [
   "object-src 'none'",
 ].join("; ")
 
+type RequestGeo = {
+  country?: string
+  city?: string
+  latitude?: string
+  longitude?: string
+}
+
+// Country and city come from Cloudflare's IP lookup. Weather is fetched here, not in
+// the browser: the CSP stays closed and Open-Meteo only ever sees coordinates rounded
+// to ~10 km, never the visitor's IP.
+async function geoResponse(request: Request): Promise<Response> {
+  const cf = (request as { cf?: RequestGeo }).cf ?? {}
+  let weather: { tempC: number; code: number } | null = null
+  const lat = Number(cf.latitude)
+  const lon = Number(cf.longitude)
+  if (Number.isFinite(lat) && Number.isFinite(lon)) {
+    try {
+      const res = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(1)}&longitude=${lon.toFixed(1)}&current=temperature_2m,weather_code`,
+        {
+          cf: { cacheTtl: 900, cacheEverything: true },
+          signal: AbortSignal.timeout(2500),
+        } as RequestInit & { cf: { cacheTtl: number; cacheEverything: boolean } },
+      )
+      const data = (await res.json()) as {
+        current?: { temperature_2m?: number; weather_code?: number }
+      }
+      const current = data.current
+      if (typeof current?.temperature_2m === "number" && typeof current.weather_code === "number") {
+        weather = { tempC: Math.round(current.temperature_2m), code: current.weather_code }
+      }
+    } catch {
+      // weather is decoration; the greeting still renders without it
+    }
+  }
+  return Response.json(
+    { country: cf.country ?? null, city: cf.city ?? null, weather },
+    { headers: { "cache-control": "no-store" } },
+  )
+}
+
 function withSecurityHeaders(response: Response): Response {
   const headers = new Headers(response.headers)
   headers.set("content-security-policy", CSP)
@@ -115,10 +156,7 @@ export default {
     // Cloudflare stamps request.cf.country from the visitor's IP, which is far
     // more reliable than browser language.
     if (url.pathname === "/api/geo") {
-      const country = (request as { cf?: { country?: string } }).cf?.country ?? null
-      return withSecurityHeaders(
-        Response.json({ country }, { headers: { "cache-control": "no-store" } }),
-      )
+      return withSecurityHeaders(await geoResponse(request))
     }
 
     if (url.pathname.startsWith("/api/")) {

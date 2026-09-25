@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import {
-  LogOut,
   Check,
   Crown,
   Loader2,
@@ -16,8 +15,6 @@ import {
   Plug,
   ExternalLink,
   Zap,
-  Home,
-  Command,
 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { openExternal } from "@/lib/telegram-webapp"
@@ -33,10 +30,12 @@ import { ProfileManager } from "@/components/dashboard/ProfileManager"
 import { ConversationManager } from "@/components/dashboard/ConversationManager"
 import { HistoryManager } from "@/components/dashboard/HistoryManager"
 import { StatusManager } from "@/components/dashboard/StatusManager"
-import { SettingsMenu, type DashboardTab } from "@/components/dashboard/SettingsMenu"
+import type { DashboardTab } from "@/components/dashboard/tabs"
 import { DashboardHome, type PlanSummary } from "@/components/dashboard/DashboardHome"
 import { TelegramCard } from "@/components/dashboard/TelegramCard"
 import { CommandCenter } from "@/components/dashboard/CommandCenter"
+import { AppShell } from "@/components/dashboard/shell/AppShell"
+import { HomeView } from "@/components/dashboard/shell/HomeView"
 import { AgentActivityManager } from "@/components/dashboard/AgentActivityManager"
 import { ApprovalManager } from "@/components/dashboard/ApprovalManager"
 import { VaultManager } from "@/components/dashboard/VaultManager"
@@ -687,83 +686,29 @@ function DashboardContent() {
   }
 
   return (
-    <div className="site-texture-bg min-h-dvh text-foreground">
-      {/* Nav */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
-          <Link
-            href="/"
-            className="font-display text-xl font-bold text-foreground select-none shrink-0"
-          >
-            Yomi
-          </Link>
-          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <span className="text-sm text-muted-foreground hidden sm:block truncate max-w-[200px]">
-              {session.user.email}
-            </span>
-            <SettingsMenu onNavigate={setActiveTab} />
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <LogOut size={14} />
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8 sm:space-y-10 relative z-10">
-        {/* Welcome */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h1 className="text-3xl font-light text-foreground" style={{ letterSpacing: "-0.03em" }}>
-            Hey, {session.user.name?.split(" ")[0] ?? "there"}.
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">Your Yomi account overview.</p>
-        </motion.div>
-
-        {/* Tab switcher — horizontally scrollable on small screens */}
-        <div className="-mx-4 sm:mx-0 overflow-x-auto no-scrollbar border-b border-border">
-          <div className="flex gap-1 px-4 sm:px-0 min-w-max">
-            {(["home", "command-center", "integrations"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap",
-                  activeTab === tab
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {tab === "home" && <Home size={13} />}
-                {tab === "command-center" && <Command size={13} />}
-                {tab === "integrations" && <Plug size={13} />}
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                {tab === "integrations" && connectedProviders.length > 0 && (
-                  <span className="ml-1 bg-primary/20 text-primary text-xs px-1.5 py-0.5 rounded-full leading-none">
-                    {connectedProviders.length}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Integrations tab */}
+    <AppShell
+      activeTab={activeTab}
+      onNavigate={setActiveTab}
+      user={session.user}
+      onSignOut={handleSignOut}
+    >
+      <div className="space-y-8 sm:space-y-10">
         {activeTab === "home" && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
+            className="space-y-10"
           >
+            <HomeView
+              token={session.session.token}
+              userName={session.user.name}
+              connectedCount={connectedProviders.length}
+              telegramLinked={platformLinks.some((link) => link.platform === "telegram")}
+              onNavigate={setActiveTab}
+            />
             <DashboardHome
               token={session.session.token}
-              recentActivity={recentActivity}
               plan={planSummary}
               connectedProviders={connectedProviders}
               unhealthyCount={integrationHealth.filter((item) => !item.healthy).length}
@@ -1596,7 +1541,7 @@ function DashboardContent() {
             </>
           ) /* end billing tab */
         }
-      </main>
+      </div>
 
       {/* API Key modal */}
       {apiKeyModal && (
@@ -1700,7 +1645,7 @@ function DashboardContent() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   )
 }
 

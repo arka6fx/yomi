@@ -59,3 +59,6 @@ export function pageMetadata({
     },
   }
 }
+
+// The Yomi Telegram bot; the whole product lives in this chat.
+export const TELEGRAM_BOT_URL = "https://t.me/yomi_assistant_bot"
