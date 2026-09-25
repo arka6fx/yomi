@@ -70,7 +70,7 @@ async def test_linking_moves_data_and_removes_the_placeholder(backend):
 
 
 async def test_target_keeps_its_own_row_on_conflict(backend):
-    await characters_d1.activate(backend, TG, "gallery:zen")
+    await characters_d1.activate(backend, TG, "gallery:hello-kitty")
     await characters_d1.activate(backend, GOOGLE, "gallery:satoru-gojo")
     assert await account_merge_d1.merge_placeholder(backend, TG, GOOGLE)
     assert (await characters_d1.active(backend, GOOGLE))["name"] == "Satoru Gojo"

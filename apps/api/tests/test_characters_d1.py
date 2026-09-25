@@ -126,3 +126,9 @@ async def test_linking_telegram_later_gets_the_first_text(backend, monkeypatch):
     await characters_d1.activate(backend, USER, GOJO)
     await telegram._greet_as_active_character(backend, "tg", "chat-1")
     assert sent and sent[-1][0] == "chat-1" and "Satoru Gojo" in sent[-1][1]
+
+
+def test_gallery_is_gojo_and_hello_kitty():
+    assert [c["name"] for c in characters_d1.gallery()] == ["Satoru Gojo", "Hello Kitty"]
+    kitty = characters_d1.gallery_character("gallery:hello-kitty")
+    assert kitty["basedOn"] == "Hello Kitty (Sanrio)" and kitty["imageCredit"] == "AniList"

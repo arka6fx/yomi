@@ -392,7 +392,7 @@ export function CharactersView({ token }: { token: string }) {
 
         {opened.starters.length > 0 && (
           <div>
-            <p className="mb-2 text-sm font-semibold">things to text {opened.name.split(" ")[0]}</p>
+            <p className="mb-2 text-sm font-semibold">things to text {opened.name}</p>
             <div className="flex flex-wrap gap-2">
               {opened.starters.map((s) => (
                 <span key={s} className="rounded-full bg-card px-3.5 py-1.5 text-sm shadow-sm">
