@@ -14,6 +14,9 @@ WEB_ORIGIN = "https://getyomi.in"
 CORS_ORIGIN = "https://getyomi.in"
 CLOUDFLARE_ACCOUNT_ID = "fd75a1445f24dfdad463df40c093f667"
 
+[observability]
+enabled = true
+
 [[containers]]
 max_instances = 2
 class_name = "YomiContainer"

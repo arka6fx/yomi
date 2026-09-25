@@ -295,6 +295,8 @@ async function handleEmail(message: ForwardableEmailMessage, env: Env): Promise<
   if (response.status === 404) {
     message.setReject("No such mailbox");
   } else if (!response.ok) {
+    const detail = (await response.text().catch(() => "")).slice(0, 500);
+    console.error("inbound email failed", response.status, detail);
     // Fail the delivery rather than silently accepting mail we could not store.
     throw new Error(`inbound email failed: ${response.status}`);
   }
