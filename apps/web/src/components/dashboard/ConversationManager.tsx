@@ -1,7 +1,9 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Loader2, MessageSquare, RotateCcw } from "lucide-react"
+import { Loader2, RotateCcw } from "lucide-react"
+import { PageHeader, SURFACE } from "@/components/dashboard/shell/ui"
+import { cn } from "@/lib/utils"
 
 type Turn = { role: "user" | "assistant" | "system"; content: string }
 
@@ -55,67 +57,65 @@ export function ConversationManager({ token }: { token: string }) {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3.5">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10">
-            <MessageSquare size={20} className="text-primary" />
+    <section className="space-y-6 pt-6">
+      <PageHeader
+        title="conversation"
+        subtitle="the thread yomi shares across the web and telegram. recent turns are shown below."
+        actions={
+          <>
+            {history.length > 0 && (
+              <button
+                onClick={handleReset}
+                disabled={resetting}
+                className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive disabled:opacity-50"
+              >
+                {resetting ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <RotateCcw size={12} />
+                )}
+                {confirmReset ? "Confirm reset?" : "Reset"}
+              </button>
+            )}
+          </>
+        }
+      />
+      <div className={cn(SURFACE, "p-5 sm:p-6")}>
+        {error && <p className="mb-3 text-xs text-destructive">{error}</p>}
+
+        {loading ? (
+          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 size={14} className="animate-spin" />
+            Loading your conversation…
           </div>
-          <div>
-            <h2 className="font-serif text-2xl leading-tight text-foreground">
-              Your <span className="italic">conversation</span>
-            </h2>
-            <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              The thread Yomi shares across your web app and Telegram. Recent turns are shown below.
+        ) : history.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border/70 bg-background/40 px-5 py-10 text-center">
+            <p className="text-sm font-medium text-foreground">No conversation yet</p>
+            <p className="mx-auto mt-1 max-w-xs text-xs text-muted-foreground">
+              Talk to Yomi from the web app or Telegram and the thread shows up here.
             </p>
           </div>
-        </div>
-        {history.length > 0 && (
-          <button
-            onClick={handleReset}
-            disabled={resetting}
-            className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive disabled:opacity-50"
-          >
-            {resetting ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
-            {confirmReset ? "Confirm reset?" : "Reset"}
-          </button>
+        ) : (
+          <ul className="space-y-3">
+            {history.map((turn, i) => (
+              <li
+                key={i}
+                className={turn.role === "user" ? "flex justify-end" : "flex justify-start"}
+              >
+                <div
+                  className={
+                    turn.role === "user"
+                      ? "max-w-[80%] rounded-2xl rounded-br-sm bg-primary px-3.5 py-2 text-sm text-primary-foreground"
+                      : "max-w-[80%] rounded-2xl rounded-bl-sm border border-border bg-background/40 px-3.5 py-2 text-sm text-foreground"
+                  }
+                >
+                  <p className="whitespace-pre-wrap break-words leading-relaxed">{turn.content}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
-
-      {error && <p className="mb-3 text-xs text-destructive">{error}</p>}
-
-      {loading ? (
-        <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-          <Loader2 size={14} className="animate-spin" />
-          Loading your conversation…
-        </div>
-      ) : history.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border/70 bg-background/40 px-5 py-10 text-center">
-          <p className="text-sm font-medium text-foreground">No conversation yet</p>
-          <p className="mx-auto mt-1 max-w-xs text-xs text-muted-foreground">
-            Talk to Yomi from the web app or Telegram and the thread shows up here.
-          </p>
-        </div>
-      ) : (
-        <ul className="space-y-3">
-          {history.map((turn, i) => (
-            <li
-              key={i}
-              className={turn.role === "user" ? "flex justify-end" : "flex justify-start"}
-            >
-              <div
-                className={
-                  turn.role === "user"
-                    ? "max-w-[80%] rounded-2xl rounded-br-sm bg-primary px-3.5 py-2 text-sm text-primary-foreground"
-                    : "max-w-[80%] rounded-2xl rounded-bl-sm border border-border bg-background/40 px-3.5 py-2 text-sm text-foreground"
-                }
-              >
-                <p className="whitespace-pre-wrap break-words leading-relaxed">{turn.content}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    </section>
   )
 }

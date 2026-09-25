@@ -50,7 +50,7 @@ export function CommandCenter({ connections, onOpenConnections }: CommandCenterP
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 sm:p-8">
+      <section className="relative overflow-hidden rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-6 sm:p-8">
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
@@ -93,7 +93,7 @@ export function CommandCenter({ connections, onOpenConnections }: CommandCenterP
       </div>
 
       <section className="grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
-        <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold text-foreground">Your tool shelf</h3>
@@ -137,7 +137,7 @@ export function CommandCenter({ connections, onOpenConnections }: CommandCenterP
           )}
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-5">
           <div className="mb-4 flex items-center gap-2">
             <Terminal size={17} className="text-primary" />
             <div>
@@ -165,7 +165,7 @@ export function CommandCenter({ connections, onOpenConnections }: CommandCenterP
             <button
               key={recipe.title}
               onClick={() => void copyPrompt(recipe.prompt)}
-              className="group rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_14px_36px_-24px_hsl(var(--primary)/.7)]"
+              className="group rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-4 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_14px_36px_-24px_hsl(var(--primary)/.7)]"
             >
               <div className="flex items-start justify-between gap-3">
                 <span className="text-sm font-medium text-foreground">{recipe.title}</span>
@@ -189,7 +189,7 @@ export function CommandCenter({ connections, onOpenConnections }: CommandCenterP
 
 function Capability({ icon, title, copy }: { icon: ReactNode; title: string; copy: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-4">
       <div className="mb-3 grid h-10 w-10 place-items-center rounded-xl border border-primary/20 bg-gradient-to-br from-primary/20 to-primary/5 text-primary shadow-inner">
         {icon}
       </div>

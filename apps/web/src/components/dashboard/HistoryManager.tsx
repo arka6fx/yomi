@@ -1,7 +1,9 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { ArrowLeft, History, Loader2, Search } from "lucide-react"
+import { ArrowLeft, Loader2, Search } from "lucide-react"
+import { PageHeader, SURFACE } from "@/components/dashboard/shell/ui"
+import { cn } from "@/lib/utils"
 import { relativePast, truncate } from "@/lib/format"
 
 type SessionCard = {
@@ -115,7 +117,7 @@ export function HistoryManager({ token }: { token: string }) {
 
   if (selectedId) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <div className={cn(SURFACE, "p-5 sm:p-6")}>
         <button
           onClick={() => setSelectedId(null)}
           className="mb-4 flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
@@ -166,107 +168,98 @@ export function HistoryManager({ token }: { token: string }) {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-      <div className="mb-5 flex items-start gap-3.5">
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10">
-          <History size={20} className="text-primary" />
+    <section className="space-y-6 pt-6">
+      <PageHeader
+        title="history"
+        subtitle="your past conversations with yomi, across telegram and the web. open one to read it in full."
+      />
+      <div className={cn(SURFACE, "p-5 sm:p-6")}>
+        <div className="relative mb-5">
+          <Search
+            size={14}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search conversations…"
+            className="w-full rounded-xl border border-border bg-background/60 py-2.5 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/40 focus:outline-none"
+          />
         </div>
-        <div>
-          <h2 className="font-serif text-2xl leading-tight text-foreground">
-            Your <span className="italic">history</span>
-          </h2>
-          <p className="mt-1 max-w-md text-sm text-muted-foreground">
-            Your past conversations with Yomi, across Telegram and web. Open one to see the full
-            transcript.
-          </p>
-        </div>
-      </div>
 
-      <div className="relative mb-5">
-        <Search
-          size={14}
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-        />
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search conversations…"
-          className="w-full rounded-xl border border-border bg-background/60 py-2.5 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/40 focus:outline-none"
-        />
-      </div>
+        {error && <p className="mb-3 text-xs text-destructive">{error}</p>}
 
-      {error && <p className="mb-3 text-xs text-destructive">{error}</p>}
-
-      {loading ? (
-        <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-          <Loader2 size={14} className="animate-spin" />
-          Loading your history…
-        </div>
-      ) : sessions.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border/70 bg-background/40 px-5 py-10 text-center">
-          <p className="text-sm font-medium text-foreground">
-            {query ? "No matching conversations" : "No conversations yet"}
-          </p>
-          <p className="mx-auto mt-1 max-w-xs text-xs text-muted-foreground">
-            {query
-              ? "Try a different search term."
-              : "Talk to Yomi on Telegram and past conversations show up here once they wrap up."}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {groupByRecency(sessions).map((group) => (
-            <div key={group.label}>
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-                {group.label}
-                <span className="text-muted-foreground/60">{group.sessions.length}</span>
-              </p>
-              <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
-                {group.sessions.map((session) => (
-                  <button
-                    key={session.id}
-                    onClick={() => openSession(session.id)}
-                    className="flex w-full items-start justify-between gap-3 bg-background/40 px-4 py-3.5 text-left transition-colors hover:bg-background/70"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">
-                        {session.title ?? "Untitled conversation"}
-                      </p>
-                      {session.lastMessage && (
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          <span className="text-muted-foreground/70">
-                            {session.lastMessage.role === "user" ? "you" : "yomi"}
-                          </span>{" "}
-                          {truncate(session.lastMessage.content, 90)}
+        {loading ? (
+          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 size={14} className="animate-spin" />
+            Loading your history…
+          </div>
+        ) : sessions.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border/70 bg-background/40 px-5 py-10 text-center">
+            <p className="text-sm font-medium text-foreground">
+              {query ? "No matching conversations" : "No conversations yet"}
+            </p>
+            <p className="mx-auto mt-1 max-w-xs text-xs text-muted-foreground">
+              {query
+                ? "Try a different search term."
+                : "Talk to Yomi on Telegram and past conversations show up here once they wrap up."}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {groupByRecency(sessions).map((group) => (
+              <div key={group.label}>
+                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                  {group.label}
+                  <span className="text-muted-foreground/60">{group.sessions.length}</span>
+                </p>
+                <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+                  {group.sessions.map((session) => (
+                    <button
+                      key={session.id}
+                      onClick={() => openSession(session.id)}
+                      className="flex w-full items-start justify-between gap-3 bg-background/40 px-4 py-3.5 text-left transition-colors hover:bg-background/70"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {session.title ?? "Untitled conversation"}
                         </p>
-                      )}
-                      {session.lastMessageAt && (
-                        <p className="mt-1 text-[11px] text-muted-foreground/70">
-                          {relativePast(session.lastMessageAt)}
-                        </p>
-                      )}
-                    </div>
-                  </button>
-                ))}
+                        {session.lastMessage && (
+                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                            <span className="text-muted-foreground/70">
+                              {session.lastMessage.role === "user" ? "you" : "yomi"}
+                            </span>{" "}
+                            {truncate(session.lastMessage.content, 90)}
+                          </p>
+                        )}
+                        {session.lastMessageAt && (
+                          <p className="mt-1 text-[11px] text-muted-foreground/70">
+                            {relativePast(session.lastMessageAt)}
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
 
-          {hasMore && (
-            <button
-              onClick={() => {
-                const last = sessions[sessions.length - 1]
-                if (last?.lastMessageAt) void load({ cursor: last.lastMessageAt })
-              }}
-              disabled={loadingMore}
-              className="w-full rounded-xl border border-border py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:opacity-50"
-            >
-              {loadingMore ? "Loading…" : "Load more"}
-            </button>
-          )}
-        </div>
-      )}
-    </div>
+            {hasMore && (
+              <button
+                onClick={() => {
+                  const last = sessions[sessions.length - 1]
+                  if (last?.lastMessageAt) void load({ cursor: last.lastMessageAt })
+                }}
+                disabled={loadingMore}
+                className="w-full rounded-xl border border-border py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:opacity-50"
+              >
+                {loadingMore ? "Loading…" : "Load more"}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
   )
 }

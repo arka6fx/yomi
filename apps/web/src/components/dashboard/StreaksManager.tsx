@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Crown, Cuboid, Flame, Loader2, Trophy, User } from "lucide-react"
+import { Crown, Cuboid, Loader2, Trophy, User } from "lucide-react"
 import type { DashboardTab } from "./tabs"
 
 type StreakStats = {
@@ -182,7 +182,7 @@ export function StreaksManager({
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 flex justify-center">
+      <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-5 sm:p-6 flex justify-center">
         <Loader2 size={20} className="animate-spin text-muted-foreground" />
       </div>
     )
@@ -190,7 +190,7 @@ export function StreaksManager({
 
   if (error || !stats || !leaderboard) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-5 sm:p-6">
         <p className="text-sm text-destructive">{error || "Couldn't load streaks"}</p>
       </div>
     )
@@ -205,19 +205,7 @@ export function StreaksManager({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-        <div className="mb-5 flex items-start gap-3.5">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10">
-            <Flame size={20} className="text-primary" />
-          </div>
-          <div>
-            <h2 className="text-base font-medium text-foreground">Streaks</h2>
-            <p className="text-sm text-muted-foreground">
-              Message Yomi every day to keep your streak alive.
-            </p>
-          </div>
-        </div>
-
+      <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-5 sm:p-6">
         <div className="grid grid-cols-3 gap-3">
           <div className="rounded-xl border border-border p-3">
             <p className="text-xs text-muted-foreground">Current streak</p>
@@ -274,7 +262,7 @@ export function StreaksManager({
         </button>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-5 sm:p-6">
         <div className="mb-4 flex items-center gap-2.5">
           <Trophy size={16} className="text-muted-foreground" />
           <h3 className="text-sm font-medium text-foreground">Leaderboard</h3>

@@ -1,7 +1,9 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Check, Copy, Gift, Loader2 } from "lucide-react"
+import { Check, Copy, Loader2 } from "lucide-react"
+import { PageHeader, SURFACE } from "@/components/dashboard/shell/ui"
+import { cn } from "@/lib/utils"
 
 type ReferralEvent = {
   id: string
@@ -70,7 +72,7 @@ export function ReferralsManager({ token }: { token: string }) {
 
   if (error || !stats) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <div className={cn(SURFACE, "p-5 sm:p-6")}>
         <p className="text-sm text-destructive">{error || "Couldn't load referrals"}</p>
       </div>
     )
@@ -79,58 +81,52 @@ export function ReferralsManager({ token }: { token: string }) {
   const link = `${window.location.origin}/r/${stats.code}`
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-      <div className="mb-5 flex items-start gap-3.5">
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10">
-          <Gift size={20} className="text-primary" />
+    <section className="space-y-6 pt-6">
+      <PageHeader
+        title="invite a friend"
+        subtitle="get 100 credits for every friend who joins yomi through your link."
+      />
+      <div className={cn(SURFACE, "p-5 sm:p-6")}>
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 p-3">
+          <code className="flex-1 truncate text-sm text-foreground">{link}</code>
+          <button
+            onClick={copyLink}
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            {copied ? <Check size={14} /> : <Copy size={14} />}
+            {copied ? "Copied" : "Copy"}
+          </button>
         </div>
-        <div>
-          <h2 className="text-base font-medium text-foreground">Referrals</h2>
-          <p className="text-sm text-muted-foreground">
-            Get 100 credits for every friend who joins Yomi through your link.
-          </p>
-        </div>
-      </div>
 
-      <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 p-3">
-        <code className="flex-1 truncate text-sm text-foreground">{link}</code>
-        <button
-          onClick={copyLink}
-          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          {copied ? <Check size={14} /> : <Copy size={14} />}
-          {copied ? "Copied" : "Copy"}
-        </button>
-      </div>
-
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-border p-3">
-          <p className="text-xs text-muted-foreground">Referrals used</p>
-          <p className="text-lg font-medium text-foreground">
-            {stats.count} <span className="text-sm text-muted-foreground">/ {stats.cap}</span>
-          </p>
-        </div>
-        <div className="rounded-xl border border-border p-3">
-          <p className="text-xs text-muted-foreground">Credits earned</p>
-          <p className="text-lg font-medium text-foreground">{stats.creditsEarned}</p>
-        </div>
-      </div>
-
-      {stats.events.length > 0 && (
-        <div className="mt-5">
-          <p className="mb-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            History
-          </p>
-          <div className="space-y-1.5">
-            {stats.events.map((e) => (
-              <div key={e.id} className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">{when(e.createdAt)}</span>
-                <span className="text-foreground">+{e.creditsGranted} credits</span>
-              </div>
-            ))}
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-border p-3">
+            <p className="text-xs text-muted-foreground">Referrals used</p>
+            <p className="text-lg font-medium text-foreground">
+              {stats.count} <span className="text-sm text-muted-foreground">/ {stats.cap}</span>
+            </p>
+          </div>
+          <div className="rounded-xl border border-border p-3">
+            <p className="text-xs text-muted-foreground">Credits earned</p>
+            <p className="text-lg font-medium text-foreground">{stats.creditsEarned}</p>
           </div>
         </div>
-      )}
-    </div>
+
+        {stats.events.length > 0 && (
+          <div className="mt-5">
+            <p className="mb-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+              History
+            </p>
+            <div className="space-y-1.5">
+              {stats.events.map((e) => (
+                <div key={e.id} className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">{when(e.createdAt)}</span>
+                  <span className="text-foreground">+{e.creditsGranted} credits</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
   )
 }

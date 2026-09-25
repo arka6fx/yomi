@@ -738,6 +738,12 @@ function DashboardContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
+            <div className="pt-6 pb-6">
+              <PageHeader
+                title="apps"
+                subtitle="connect the apps yomi works across. yomi only reads what it needs for the task you ask."
+              />
+            </div>
             {integrationBanner?.kind === "success" && (
               <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-400">
                 Integration connected successfully.
@@ -830,6 +836,12 @@ function DashboardContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
+            <div className="pt-6 pb-6">
+              <PageHeader
+                title="command center"
+                subtitle="hand yomi a whole mission and see what it can reach."
+              />
+            </div>
             <CommandCenter
               connections={integrationHealth.map((item) => ({
                 id: item.provider,
@@ -967,6 +979,12 @@ function DashboardContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
+            <div className="pt-6 pb-6">
+              <PageHeader
+                title="privacy"
+                subtitle="your consents, data exports and deletion, all in one place."
+              />
+            </div>
             <PrivacyManager token={session.session.token} />
           </motion.div>
         )}
@@ -989,6 +1007,12 @@ function DashboardContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
+            <div className="pt-6 pb-6">
+              <PageHeader
+                title="streaks"
+                subtitle="message yomi every day to keep your streak alive."
+              />
+            </div>
             <StreaksManager token={session.session.token} onNavigate={setActiveTab} />
           </motion.div>
         )}
@@ -1000,7 +1024,13 @@ function DashboardContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <div className="pt-6 pb-6">
+              <PageHeader
+                title="personality"
+                subtitle="teach yomi how to talk to you, e.g. “always be short, no emoji”."
+              />
+            </div>
+            <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-5 sm:p-6">
               <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
                 Writing style
               </p>
@@ -1029,6 +1059,12 @@ function DashboardContent() {
         {/* Profile tab content */}
         {activeTab === "profile" && (
           <>
+            <div className="pt-6 pb-6">
+              <PageHeader
+                title="profile"
+                subtitle="your name, photo and the details yomi uses for you."
+              />
+            </div>
             <ProfileManager token={session.session.token} />
 
             {/* Welcome banner — shown once after signup */}

@@ -1,17 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import {
-  Shield,
-  Check,
-  X,
-  Loader2,
-  Download,
-  Package,
-  Trash2,
-  Sparkles,
-  ChevronDown,
-} from "lucide-react"
+import { Check, X, Loader2, Download, Package, Trash2, Sparkles, ChevronDown } from "lucide-react"
 import {
   PRIVACY_CONSENT_PURPOSES,
   PRIVACY_CONSENT_PURPOSE_LABELS,
@@ -205,11 +195,6 @@ export function PrivacyManager({ token }: TokenProp) {
 
   return (
     <div>
-      <div className="mb-5 flex items-center gap-2">
-        <Shield size={18} className="text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">Privacy & Consent</h2>
-      </div>
-
       {pendingOptIns.length > 0 && (
         <div className="mb-4 flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-2.5">

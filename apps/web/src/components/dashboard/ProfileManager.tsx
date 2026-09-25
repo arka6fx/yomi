@@ -163,7 +163,7 @@ export function ProfileManager({ token }: { token: string }) {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 flex justify-center">
+      <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-5 sm:p-6 flex justify-center">
         <Loader2 size={20} className="animate-spin text-muted-foreground" />
       </div>
     )
@@ -171,7 +171,7 @@ export function ProfileManager({ token }: { token: string }) {
 
   if (error || !profile || !streakFields) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-5 sm:p-6">
         <p className="text-sm text-destructive">{error || "Couldn't load profile"}</p>
       </div>
     )
@@ -182,12 +182,16 @@ export function ProfileManager({ token }: { token: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-5 sm:p-6">
         <div className="flex items-center gap-4">
           <Avatar url={streakFields.avatarUrl} size={64} />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-foreground">{profile.name}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{profile.email}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {profile.email?.endsWith("@users.getyomi.in")
+                ? "signed in with telegram"
+                : profile.email}
+            </p>
           </div>
         </div>
 
@@ -270,7 +274,7 @@ export function ProfileManager({ token }: { token: string }) {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-5 sm:p-6">
         <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
           Your plan
         </p>

@@ -12,6 +12,7 @@ import {
   WalletCards,
   XCircle,
 } from "lucide-react"
+import { PageHeader, SURFACE } from "@/components/dashboard/shell/ui"
 import { cn } from "@/lib/utils"
 
 type CheckLevel = "ok" | "warn" | "down"
@@ -90,101 +91,99 @@ export function StatusManager({ token }: { token: string }) {
   const overall = data ? LEVEL_META[data.overall] : LEVEL_META.ok
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-start gap-3.5">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10">
-            <Activity size={20} className="text-primary" />
+    <section className="space-y-6 pt-6">
+      <PageHeader
+        title="system status"
+        subtitle={
+          <span className="inline-flex items-center gap-2">
+            {!loading && data && <span className={cn("h-1.5 w-1.5 rounded-full", overall.dot)} />}
+            <span className={data ? overall.text : undefined}>
+              {loading ? "checking…" : data ? overall.label : "status unavailable"}
+            </span>
+          </span>
+        }
+        actions={
+          <>
+            <button
+              onClick={load}
+              disabled={loading}
+              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
+            >
+              {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+              Refresh
+            </button>
+          </>
+        }
+      />
+      <div className={cn(SURFACE, "p-5 sm:p-6")}>
+        {error && <p className="mb-4 text-xs text-destructive">{error}</p>}
+
+        {loading && !data ? (
+          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 size={14} className="animate-spin" />
+            Loading status…
           </div>
-          <div className="min-w-0">
-            <h2 className="font-serif text-2xl leading-tight text-foreground">
-              System <span className="italic">status</span>
-            </h2>
-            <div className="mt-1 flex items-center gap-2">
-              {!loading && data && <span className={cn("h-1.5 w-1.5 rounded-full", overall.dot)} />}
-              <p className={cn("text-sm", data ? overall.text : "text-muted-foreground")}>
-                {loading ? "Checking…" : data ? overall.label : "Status unavailable"}
-              </p>
+        ) : data ? (
+          <div className="space-y-5">
+            {/* Quick stat tiles */}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <StatTile Icon={WalletCards} label="Credits" value={String(data.credits.balance)} />
+              <StatTile Icon={Plug} label="Connectors" value={String(data.connectors.total)} />
+              <StatTile
+                Icon={Clock}
+                label="Schedules"
+                value={`${data.schedules.enabled}/${data.schedules.total}`}
+              />
+              <StatTile Icon={Activity} label="Plan" value={data.plan.name} />
             </div>
-          </div>
-        </div>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
-        >
-          {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-          Refresh
-        </button>
-      </div>
 
-      {error && <p className="mb-4 text-xs text-destructive">{error}</p>}
+            {/* Detailed checks */}
+            <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+              {data.checks.map((ch) => {
+                const meta = LEVEL_META[ch.level]
+                const Icon = meta.Icon
+                return (
+                  <li
+                    key={ch.id}
+                    className="flex items-center justify-between gap-3 bg-background/40 px-4 py-3"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Icon size={16} className={cn("shrink-0", meta.text)} />
+                      <span className="truncate text-sm text-foreground">{ch.label}</span>
+                    </div>
+                    <span className="shrink-0 text-right text-xs text-muted-foreground">
+                      {ch.detail}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
 
-      {loading && !data ? (
-        <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-          <Loader2 size={14} className="animate-spin" />
-          Loading status…
-        </div>
-      ) : data ? (
-        <div className="space-y-5">
-          {/* Quick stat tiles */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <StatTile Icon={WalletCards} label="Credits" value={String(data.credits.balance)} />
-            <StatTile Icon={Plug} label="Connectors" value={String(data.connectors.total)} />
-            <StatTile
-              Icon={Clock}
-              label="Schedules"
-              value={`${data.schedules.enabled}/${data.schedules.total}`}
-            />
-            <StatTile Icon={Activity} label="Plan" value={data.plan.name} />
-          </div>
+            {data.connectors.needsReconnect.length > 0 && (
+              <div className="rounded-xl border border-yellow-500/25 bg-yellow-500/10 p-4">
+                <p className="text-sm font-medium text-yellow-300">
+                  Some connectors need reconnecting
+                </p>
+                <p className="mt-1 text-xs text-yellow-200/75">
+                  {data.connectors.needsReconnect.map((c) => c.displayName).join(", ")} — reconnect
+                  on the Integrations tab.
+                </p>
+              </div>
+            )}
 
-          {/* Detailed checks */}
-          <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
-            {data.checks.map((ch) => {
-              const meta = LEVEL_META[ch.level]
-              const Icon = meta.Icon
-              return (
-                <li
-                  key={ch.id}
-                  className="flex items-center justify-between gap-3 bg-background/40 px-4 py-3"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <Icon size={16} className={cn("shrink-0", meta.text)} />
-                    <span className="truncate text-sm text-foreground">{ch.label}</span>
-                  </div>
-                  <span className="shrink-0 text-right text-xs text-muted-foreground">
-                    {ch.detail}
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
-
-          {data.connectors.needsReconnect.length > 0 && (
-            <div className="rounded-xl border border-yellow-500/25 bg-yellow-500/10 p-4">
-              <p className="text-sm font-medium text-yellow-300">
-                Some connectors need reconnecting
+            {data.schedules.nextRunAt && (
+              <p className="text-xs text-muted-foreground">
+                Next scheduled task runs {when(data.schedules.nextRunAt)}.
               </p>
-              <p className="mt-1 text-xs text-yellow-200/75">
-                {data.connectors.needsReconnect.map((c) => c.displayName).join(", ")} — reconnect on
-                the Integrations tab.
-              </p>
-            </div>
-          )}
+            )}
 
-          {data.schedules.nextRunAt && (
-            <p className="text-xs text-muted-foreground">
-              Next scheduled task runs {when(data.schedules.nextRunAt)}.
+            <p className="text-[11px] text-muted-foreground/60">
+              Last checked {when(data.generatedAt)}.
             </p>
-          )}
-
-          <p className="text-[11px] text-muted-foreground/60">
-            Last checked {when(data.generatedAt)}.
-          </p>
-        </div>
-      ) : null}
-    </div>
+          </div>
+        ) : null}
+      </div>
+    </section>
   )
 }
 
