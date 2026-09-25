@@ -13,6 +13,8 @@ import {
   Trash2,
   X,
 } from "lucide-react"
+import { PageHeader, SURFACE } from "@/components/dashboard/shell/ui"
+import { cn } from "@/lib/utils"
 
 type Kind = "login" | "card" | "address" | "phone" | "agent_item"
 
@@ -278,176 +280,181 @@ export function VaultManager({ token }: { token: string }) {
   const agentItems = items.filter((item) => item.kind === "agent_item")
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-      <div className="mb-2">
-        <h2 className="text-lg font-medium text-foreground">Vault</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Encrypted details Yomi can use for you. Passwords and card numbers are typed straight into
-          your private computer and never shown to the AI. Every card payment needs your approval.
-        </p>
-      </div>
-      {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
+    <section className="space-y-6 pt-6">
+      <PageHeader
+        title="vault"
+        subtitle="encrypted logins, cards and personal info yomi can use for you. passwords and card numbers are typed straight into your private computer and never shown to the AI, and every card payment needs your ok."
+      />
+      <div className={cn(SURFACE, "p-5 sm:p-6")}>
+        {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
 
-      {loading ? (
-        <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-          <Loader2 size={15} className="animate-spin" /> Loading vault…
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {section("Logins", ["login"], "No logins saved", addButton("login", "Add login"))}
-          {section("Cards", ["card"], "No cards saved", addButton("card", "Add card"))}
-          {section(
-            "Personal info",
-            ["address", "phone"],
-            "No personal info saved",
-            <div className="flex gap-1">
-              <button
-                onClick={() => open("address")}
-                className="rounded-lg border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
-              >
-                Add address
-              </button>
-              <button
-                onClick={() => open("phone")}
-                className="rounded-lg border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
-              >
-                Add phone
-              </button>
-            </div>,
-          )}
+        {loading ? (
+          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 size={15} className="animate-spin" /> Loading vault…
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {section("Logins", ["login"], "No logins saved", addButton("login", "Add login"))}
+            {section("Cards", ["card"], "No cards saved", addButton("card", "Add card"))}
+            {section(
+              "Personal info",
+              ["address", "phone"],
+              "No personal info saved",
+              <div className="flex gap-1">
+                <button
+                  onClick={() => open("address")}
+                  className="rounded-lg border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Add address
+                </button>
+                <button
+                  onClick={() => open("phone")}
+                  className="rounded-lg border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Add phone
+                </button>
+              </div>,
+            )}
 
-          <div className="border-b border-border pb-5">
-            <button
-              onClick={() => setShowAgentItems((v) => !v)}
-              className="flex w-full items-center justify-between py-3 text-left"
-            >
-              <div>
-                <h3 className="text-base font-medium text-foreground">
-                  Agent items ({agentItems.length})
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Accounts Yomi created for you. They stay in your vault and under your control.
-                </p>
+            <div className="border-b border-border pb-5">
+              <button
+                onClick={() => setShowAgentItems((v) => !v)}
+                className="flex w-full items-center justify-between py-3 text-left"
+              >
+                <div>
+                  <h3 className="text-base font-medium text-foreground">
+                    Agent items ({agentItems.length})
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Accounts Yomi created for you. They stay in your vault and under your control.
+                  </p>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {showAgentItems ? "Hide" : "Show"}
+                </span>
+              </button>
+              {showAgentItems && section("", ["agent_item"], "No agent items yet", null)}
+            </div>
+
+            <div className="pt-2">
+              <h3 className="py-3 text-base font-medium text-foreground">Agent spending</h3>
+              <p className="text-sm text-muted-foreground">
+                This month:{" "}
+                {Object.keys(monthTotals).length === 0
+                  ? "nothing spent"
+                  : Object.entries(monthTotals)
+                      .map(([currency, amount]) => money(amount, currency))
+                      .join(" · ")}
+              </p>
+              {payments.length > 0 && (
+                <ul className="mt-3 divide-y divide-border">
+                  {payments.slice(0, 20).map((p) => (
+                    <li
+                      key={p.id}
+                      className="flex items-center justify-between gap-3 py-2.5 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-foreground">{p.merchant}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {[p.card, p.purpose, new Date(p.createdAt).toLocaleDateString()]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-foreground">{money(p.amount, p.currency)}</p>
+                        <p className="text-[11px] capitalize text-muted-foreground">{p.status}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <h3 className="pb-1 pt-6 text-base font-medium text-foreground">Receipts</h3>
+              <p className="text-xs text-muted-foreground">
+                Found in emails sent to your Yomi address (see Email).
+              </p>
+              {receipts.length === 0 ? (
+                <p className="pt-2 text-sm text-muted-foreground">No receipts yet</p>
+              ) : (
+                <ul className="mt-2 divide-y divide-border">
+                  {receipts.slice(0, 20).map((r) => (
+                    <li
+                      key={r.id}
+                      className="flex items-center justify-between gap-3 py-2.5 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-foreground">{r.merchant}</p>
+                        <p className="text-xs text-muted-foreground">{r.date}</p>
+                      </div>
+                      <p className="text-foreground">{money(r.amount, r.currency)}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+
+        {form && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label={form.title}
+          >
+            <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-medium text-foreground">{form.title}</h3>
+                <button
+                  onClick={() => setAdding(null)}
+                  aria-label="Close"
+                  className="text-muted-foreground"
+                >
+                  <X size={16} />
+                </button>
               </div>
-              <span className="text-xs text-muted-foreground">
-                {showAgentItems ? "Hide" : "Show"}
-              </span>
-            </button>
-            {showAgentItems && section("", ["agent_item"], "No agent items yet", null)}
-          </div>
-
-          <div className="pt-2">
-            <h3 className="py-3 text-base font-medium text-foreground">Agent spending</h3>
-            <p className="text-sm text-muted-foreground">
-              This month:{" "}
-              {Object.keys(monthTotals).length === 0
-                ? "nothing spent"
-                : Object.entries(monthTotals)
-                    .map(([currency, amount]) => money(amount, currency))
-                    .join(" · ")}
-            </p>
-            {payments.length > 0 && (
-              <ul className="mt-3 divide-y divide-border">
-                {payments.slice(0, 20).map((p) => (
-                  <li key={p.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                    <div className="min-w-0">
-                      <p className="truncate text-foreground">{p.merchant}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {[p.card, p.purpose, new Date(p.createdAt).toLocaleDateString()]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-foreground">{money(p.amount, p.currency)}</p>
-                      <p className="text-[11px] capitalize text-muted-foreground">{p.status}</p>
-                    </div>
-                  </li>
+              <div className="space-y-3">
+                {[
+                  { key: "label", label: "Name", placeholder: form.namePlaceholder } as Field,
+                  ...form.fields,
+                ].map((field) => (
+                  <label key={field.key} className="block">
+                    <span className="mb-1 flex items-center gap-1 text-xs text-muted-foreground">
+                      {field.secret && <Lock size={11} />}
+                      {field.label}
+                      {field.optional && " (optional)"}
+                    </span>
+                    <input
+                      type={field.secret ? "password" : "text"}
+                      autoComplete="off"
+                      value={draft[field.key] ?? ""}
+                      placeholder={field.placeholder}
+                      onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+                    />
+                  </label>
                 ))}
-              </ul>
-            )}
-
-            <h3 className="pb-1 pt-6 text-base font-medium text-foreground">Receipts</h3>
-            <p className="text-xs text-muted-foreground">
-              Found in emails sent to your Yomi address (see Email).
-            </p>
-            {receipts.length === 0 ? (
-              <p className="pt-2 text-sm text-muted-foreground">No receipts yet</p>
-            ) : (
-              <ul className="mt-2 divide-y divide-border">
-                {receipts.slice(0, 20).map((r) => (
-                  <li key={r.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                    <div className="min-w-0">
-                      <p className="truncate text-foreground">{r.merchant}</p>
-                      <p className="text-xs text-muted-foreground">{r.date}</p>
-                    </div>
-                    <p className="text-foreground">{money(r.amount, r.currency)}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      )}
-
-      {form && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={form.title}
-        >
-          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-foreground">{form.title}</h3>
-              <button
-                onClick={() => setAdding(null)}
-                aria-label="Close"
-                className="text-muted-foreground"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="space-y-3">
-              {[
-                { key: "label", label: "Name", placeholder: form.namePlaceholder } as Field,
-                ...form.fields,
-              ].map((field) => (
-                <label key={field.key} className="block">
-                  <span className="mb-1 flex items-center gap-1 text-xs text-muted-foreground">
-                    {field.secret && <Lock size={11} />}
-                    {field.label}
-                    {field.optional && " (optional)"}
-                  </span>
-                  <input
-                    type={field.secret ? "password" : "text"}
-                    autoComplete="off"
-                    value={draft[field.key] ?? ""}
-                    placeholder={field.placeholder}
-                    onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-                  />
-                </label>
-              ))}
-            </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                onClick={() => setAdding(null)}
-                className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => void save()}
-                disabled={!canSave || saving}
-                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
-              >
-                {saving ? "Saving…" : "Save"}
-              </button>
+              </div>
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  onClick={() => setAdding(null)}
+                  className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => void save()}
+                  disabled={!canSave || saving}
+                  className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                >
+                  {saving ? "Saving…" : "Save"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </section>
   )
 }

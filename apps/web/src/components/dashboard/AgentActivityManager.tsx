@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { CheckCircle2, ChevronDown, Clock3, Loader2, RefreshCw, XCircle } from "lucide-react"
+import { PageHeader, SURFACE } from "@/components/dashboard/shell/ui"
+import { cn } from "@/lib/utils"
 
 type Run = {
   id: string
@@ -63,49 +65,51 @@ export function AgentActivityManager({ token }: { token: string }) {
   }
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-      <div className="mb-5 flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-medium text-foreground">Agent activity</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            A redacted record of what Yomi ran, what it is waiting for, and what needs attention.
-          </p>
-        </div>
-        <button
-          onClick={() => void load()}
-          disabled={loading}
-          className="rounded-lg border border-border p-2 text-muted-foreground hover:text-foreground disabled:opacity-50"
-          aria-label="Refresh activity"
-        >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-        </button>
+    <section className="space-y-6 pt-6">
+      <PageHeader
+        title="activity"
+        subtitle="a redacted record of what yomi ran, what it’s waiting for, and what needs your attention."
+        actions={
+          <>
+            <button
+              onClick={() => void load()}
+              disabled={loading}
+              aria-label="Refresh"
+              className="grid size-10 place-items-center rounded-full bg-card shadow-sm hover:bg-muted disabled:opacity-50"
+            >
+              <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+            </button>
+          </>
+        }
+      />
+      <div className={cn(SURFACE, "p-5 sm:p-6")}>
+        {loading ? (
+          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 size={15} className="animate-spin" /> Loading activity…
+          </div>
+        ) : runs.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+            No agent runs yet. Your first Telegram task will appear here.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {runs.map((run) => (
+              <RunRow
+                key={run.id}
+                run={run}
+                open={openId === run.id}
+                steps={steps[run.id] ?? []}
+                loading={stepLoading === run.id}
+                onToggle={() => void toggleRun(run.id)}
+              />
+            ))}
+          </div>
+        )}
+        <p className="mt-5 border-t border-border pt-4 text-xs text-muted-foreground">
+          Secrets, credentials, raw prompts, and tool payloads are intentionally excluded from this
+          view.
+        </p>
       </div>
-      {loading ? (
-        <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-          <Loader2 size={15} className="animate-spin" /> Loading activity…
-        </div>
-      ) : runs.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-          No agent runs yet. Your first Telegram task will appear here.
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {runs.map((run) => (
-            <RunRow
-              key={run.id}
-              run={run}
-              open={openId === run.id}
-              steps={steps[run.id] ?? []}
-              loading={stepLoading === run.id}
-              onToggle={() => void toggleRun(run.id)}
-            />
-          ))}
-        </div>
-      )}
-      <p className="mt-5 border-t border-border pt-4 text-xs text-muted-foreground">
-        Secrets, credentials, raw prompts, and tool payloads are intentionally excluded from this
-        view.
-      </p>
     </section>
   )
 }

@@ -37,6 +37,7 @@ import { HomeView } from "@/components/dashboard/shell/HomeView"
 import { SkillsView } from "@/components/dashboard/shell/SkillsView"
 import { RoutinesView } from "@/components/dashboard/shell/RoutinesView"
 import { MemoryView } from "@/components/dashboard/shell/MemoryView"
+import { PageHeader } from "@/components/dashboard/shell/ui"
 import { AgentActivityManager } from "@/components/dashboard/AgentActivityManager"
 import { ApprovalManager } from "@/components/dashboard/ApprovalManager"
 import { VaultManager } from "@/components/dashboard/VaultManager"
@@ -1080,6 +1081,12 @@ function DashboardContent() {
         {
           activeTab === "billing" && (
             <>
+              <div className="pt-6">
+                <PageHeader
+                  title="plan & billing"
+                  subtitle="your plan, credits and payments. prices are in US dollars and checkout is handled by Dodo Payments."
+                />
+              </div>
               {/* Billing warnings */}
               {sub?.billingWarning && (
                 <motion.div
@@ -1115,7 +1122,7 @@ function DashboardContent() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.08 }}
               >
-                <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 flex flex-wrap items-start justify-between gap-6">
+                <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-5 sm:p-6 flex flex-wrap items-start justify-between gap-6">
                   <div>
                     <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
                       Current plan
@@ -1190,7 +1197,7 @@ function DashboardContent() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.12 }}
               >
-                <div className="overflow-hidden rounded-2xl border border-border bg-card">
+                <div className="overflow-hidden rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)]">
                   <div className="p-5 sm:p-6">
                     <div className="flex flex-wrap items-start justify-between gap-6 mb-6">
                       <div>
@@ -1356,7 +1363,7 @@ function DashboardContent() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.14 }}
               >
-                <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+                <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-5 sm:p-6">
                   <div className="flex flex-wrap items-start justify-between gap-6 mb-6">
                     <div>
                       <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">

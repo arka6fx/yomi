@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { Loader2, UserPlus } from "lucide-react"
+import { PageHeader, SURFACE } from "@/components/dashboard/shell/ui"
+import { cn } from "@/lib/utils"
 
 type Person = {
   id: string
@@ -130,111 +132,112 @@ export function TrustedPeopleManager({ token }: { token: string }) {
   )
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-      <h2 className="text-lg font-medium text-foreground">Trusted people</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        People whose Yomi can message yours, for example to find a time that works. You approve
-        every message your Yomi sends.
-      </p>
-      {error && <p className="mt-3 text-xs text-destructive">{error}</p>}
-      {notice && <p className="mt-3 text-xs text-emerald-400">{notice}</p>}
+    <section className="space-y-6 pt-6">
+      <PageHeader
+        title="trusted people"
+        subtitle="people whose yomi can message yours, for example to find a time that works. you approve every message your yomi sends."
+      />
+      <div className={cn(SURFACE, "p-5 sm:p-6")}>
+        {error && <p className="mt-3 text-xs text-destructive">{error}</p>}
+        {notice && <p className="mt-3 text-xs text-emerald-400">{notice}</p>}
 
-      {loading ? (
-        <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-          <Loader2 size={15} className="animate-spin" /> Loading…
-        </div>
-      ) : data.paused ? (
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4">
-          <div>
-            <p className="text-sm font-medium text-foreground">Connections paused</p>
-            <p className="text-xs text-muted-foreground">
-              Your Yomi isn’t exchanging messages with other people’s. Resume to see your trusted
-              people and pending requests.
-            </p>
+        {loading ? (
+          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 size={15} className="animate-spin" /> Loading…
           </div>
-          <button
-            onClick={() =>
-              void run("pause", () =>
-                call("/pause", { method: "POST", body: JSON.stringify({ paused: false }) }),
-              )
-            }
-            disabled={busy !== null}
-            className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
-          >
-            Resume
-          </button>
-        </div>
-      ) : (
-        <>
-          <div className="mt-5 flex gap-2">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && void invite()}
-              placeholder="Their Yomi account email"
-              className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-            />
-            <button
-              onClick={() => void invite()}
-              disabled={busy !== null || !email.trim()}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-            >
-              <UserPlus size={14} /> Connect
-            </button>
-          </div>
-
-          {heading("Requests", "People asking to connect their Yomi to yours")}
-          {list(data.requests, "No pending requests", (p) => (
-            <>
-              {button(p.id, "block", "Block")}
-              {button(p.id, "decline", "Decline")}
-              {button(p.id, "accept", "Accept", true)}
-            </>
-          ))}
-
-          {data.sent.length > 0 && (
-            <>
-              {heading("Sent", "Waiting for them to accept")}
-              {list(data.sent, "", (p) => button(p.id, "remove", "Cancel"))}
-            </>
-          )}
-
-          {heading("Trusted people", "Their Yomi can reach yours")}
-          {list(data.trusted, "No trusted people yet", (p) => (
-            <>
-              {button(p.id, "block", "Block")}
-              {button(p.id, "remove", "Remove")}
-            </>
-          ))}
-
-          <button onClick={() => setShowBlocked((v) => !v)} className="w-full text-left">
-            {heading(`Blocked (${data.blocked.length})`, "Their Yomi can’t reach yours")}
-          </button>
-          {showBlocked &&
-            list(data.blocked, "Nobody blocked", (p) => button(p.id, "unblock", "Unblock"))}
-
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
+        ) : data.paused ? (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4">
             <div>
-              <p className="text-sm font-medium text-foreground">Connections active</p>
+              <p className="text-sm font-medium text-foreground">Connections paused</p>
               <p className="text-xs text-muted-foreground">
-                Your Yomi can exchange messages with the Yomi of people you trust.
+                Your Yomi isn’t exchanging messages with other people’s. Resume to see your trusted
+                people and pending requests.
               </p>
             </div>
             <button
               onClick={() =>
                 void run("pause", () =>
-                  call("/pause", { method: "POST", body: JSON.stringify({ paused: true }) }),
+                  call("/pause", { method: "POST", body: JSON.stringify({ paused: false }) }),
                 )
               }
               disabled={busy !== null}
-              className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
+              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-              Pause connections
+              Resume
             </button>
           </div>
-        </>
-      )}
+        ) : (
+          <>
+            <div className="mt-5 flex gap-2">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && void invite()}
+                placeholder="Their Yomi account email"
+                className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+              />
+              <button
+                onClick={() => void invite()}
+                disabled={busy !== null || !email.trim()}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+              >
+                <UserPlus size={14} /> Connect
+              </button>
+            </div>
+
+            {heading("Requests", "People asking to connect their Yomi to yours")}
+            {list(data.requests, "No pending requests", (p) => (
+              <>
+                {button(p.id, "block", "Block")}
+                {button(p.id, "decline", "Decline")}
+                {button(p.id, "accept", "Accept", true)}
+              </>
+            ))}
+
+            {data.sent.length > 0 && (
+              <>
+                {heading("Sent", "Waiting for them to accept")}
+                {list(data.sent, "", (p) => button(p.id, "remove", "Cancel"))}
+              </>
+            )}
+
+            {heading("Trusted people", "Their Yomi can reach yours")}
+            {list(data.trusted, "No trusted people yet", (p) => (
+              <>
+                {button(p.id, "block", "Block")}
+                {button(p.id, "remove", "Remove")}
+              </>
+            ))}
+
+            <button onClick={() => setShowBlocked((v) => !v)} className="w-full text-left">
+              {heading(`Blocked (${data.blocked.length})`, "Their Yomi can’t reach yours")}
+            </button>
+            {showBlocked &&
+              list(data.blocked, "Nobody blocked", (p) => button(p.id, "unblock", "Unblock"))}
+
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
+              <div>
+                <p className="text-sm font-medium text-foreground">Connections active</p>
+                <p className="text-xs text-muted-foreground">
+                  Your Yomi can exchange messages with the Yomi of people you trust.
+                </p>
+              </div>
+              <button
+                onClick={() =>
+                  void run("pause", () =>
+                    call("/pause", { method: "POST", body: JSON.stringify({ paused: true }) }),
+                  )
+                }
+                disabled={busy !== null}
+                className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
+              >
+                Pause connections
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </section>
   )
 }
