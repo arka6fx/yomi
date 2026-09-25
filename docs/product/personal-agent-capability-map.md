@@ -29,6 +29,7 @@ after browser work. [OpenInstinct repository](https://github.com/Merit-Systems/O
 | Area | Current state | Gap / next move |
 | --- | --- | --- |
 | Identity and Telegram | Implemented; Telegram maps to the linked user and durable D1 history exists | Add unified web/Telegram run timeline |
+| Email address | Implemented: `<alias>@mail.getyomi.in` via Cloudflare Email Routing to the Worker `email()` handler; Telegram alerts, agent inbox tools, receipts logged to spending | Let the agent reply from the address (Email Service send) |
 | Agent loop | Implemented; tool loop, compaction, saved soul, Composio metering | Add structured plans, step events, cancellation and resumable runs |
 | Memory | Implemented; memory CRUD, search, embeddings and privacy export/delete | Add provenance, confidence, correction and relationship/project entities |
 | Connectors | Implemented; native Google/GitHub/Slack/etc. plus Composio and custom MCP | Add capability/risk display and per-tool permission settings |

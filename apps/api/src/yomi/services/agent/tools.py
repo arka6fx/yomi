@@ -304,4 +304,7 @@ async def build_user_registry(
         from yomi.services.agent.trust_tools import register_trust_tools
 
         register_trust_tools(tool_registry, d1, user_id, create_pending_action)
+        from yomi.services.agent.email_tools import register_email_tools
+
+        register_email_tools(tool_registry, d1, user_id)
     return tool_registry

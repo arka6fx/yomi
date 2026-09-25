@@ -68,4 +68,8 @@ async def list_vault_payments(
     user: User = Depends(get_current_user),
     d1: D1Backend | None = Depends(get_d1_backend),
 ):
-    return await vault_d1.list_payments(_require(d1), user.id)
+    from yomi.services import email_d1
+
+    backend = _require(d1)
+    ledger = await vault_d1.list_payments(backend, user.id)
+    return {**ledger, "receipts": await email_d1.expenses(backend, user.id)}

@@ -15,14 +15,12 @@ email belongs to a Yomi user.
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from yomi.services.cloudflare_storage.client import Statement
 from yomi.services.cloudflare_storage.deps import D1Backend
 from yomi.services.cloudflare_storage.store import new_id, utcnow_iso
-
-logger = logging.getLogger(__name__)
+from yomi.services.notify_d1 import notify_user
 
 MAX_MESSAGE_CHARS = 2000
 REQUEST_SENT = "If they use Yomi, they'll get your request on Telegram."
@@ -30,22 +28,6 @@ REQUEST_SENT = "If they use Yomi, they'll get your request on Telegram."
 
 class TrustError(ValueError):
     """A refused trusted-people operation, safe to show the user."""
-
-
-async def _notify(backend: D1Backend, user_id: str, text: str) -> None:
-    row = await backend.store.fetch_one(
-        "SELECT platform_chat_id FROM platform_connections WHERE user_id = ? "
-        "AND platform = 'telegram' AND platform_chat_id IS NOT NULL LIMIT 1",
-        [user_id],
-    )
-    if not row:
-        return
-    from yomi.gateway.telegram import send_message
-
-    try:
-        await send_message(str(row["platform_chat_id"]), text)
-    except Exception as exc:  # noqa: BLE001 — delivery is best-effort; row is stored
-        logger.warning("[trust] telegram notify failed: %s", exc)
 
 
 async def _name(backend: D1Backend, user_id: str) -> str:
@@ -109,7 +91,7 @@ async def request(backend: D1Backend, user_id: str, email: str, note: str | None
                 [now, link["id"]],
             )
         ])
-        await _notify(
+        await notify_user(
             backend, target_id,
             f"🤝 {await _name(backend, user_id)} accepted your trusted-person request.",
         )
@@ -127,7 +109,7 @@ async def request(backend: D1Backend, user_id: str, email: str, note: str | None
         })
     ])
     if not await is_paused(backend, target_id):
-        await _notify(
+        await notify_user(
             backend, target_id,
             f"🤝 {await _name(backend, user_id)} wants to connect their Yomi to yours. "
             "Accept or decline in the dashboard under Trusted people.",
@@ -189,7 +171,7 @@ async def decide(backend: D1Backend, user_id: str, link_id: str, action: str) ->
                 [now, link_id],
             )
         ])
-        await _notify(
+        await notify_user(
             backend, str(other),
             f"🤝 {await _name(backend, user_id)} accepted your trusted-person request.",
         )
@@ -254,7 +236,7 @@ async def send_message(
             "created_at": utcnow_iso(),
         })
     ])
-    await _notify(
+    await notify_user(
         backend, recipient_id,
         f"💬 From {await _name(backend, sender_id)}'s Yomi:\n\n{body[:MAX_MESSAGE_CHARS]}\n\n"
         "Reply here and I'll pass it back.",

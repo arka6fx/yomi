@@ -19,7 +19,7 @@ MIGRATIONS = Path(__file__).resolve().parents[1] / "migrations-d1"
 
 class SqliteStore(D1Store):
     def __init__(self, users: tuple[str, ...] = ()) -> None:
-        self.db = sqlite3.connect(":memory:")
+        self.db = sqlite3.connect(":memory:", check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         for path in sorted(MIGRATIONS.glob("*.sql")):
             self.db.executescript(path.read_text(encoding="utf-8"))

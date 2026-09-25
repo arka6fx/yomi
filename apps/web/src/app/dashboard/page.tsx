@@ -41,6 +41,7 @@ import { AgentActivityManager } from "@/components/dashboard/AgentActivityManage
 import { ApprovalManager } from "@/components/dashboard/ApprovalManager"
 import { VaultManager } from "@/components/dashboard/VaultManager"
 import { TrustedPeopleManager } from "@/components/dashboard/TrustedPeopleManager"
+import { EmailManager } from "@/components/dashboard/EmailManager"
 import {
   ConnectorMarketplace,
   CustomMcpServers,
@@ -930,6 +931,16 @@ function DashboardContent() {
             transition={{ duration: 0.3 }}
           >
             <TrustedPeopleManager token={session.session.token} />
+          </motion.div>
+        )}
+
+        {activeTab === "email" && session && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <EmailManager token={session.session.token} />
           </motion.div>
         )}
 

@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Lock,
   Users,
+  Mail,
 } from "lucide-react"
 
 export type DashboardTab =
@@ -27,6 +28,7 @@ export type DashboardTab =
   | "approvals"
   | "vault"
   | "trusted"
+  | "email"
   | "integrations"
   | "memory"
   | "schedules"
@@ -77,6 +79,7 @@ export function SettingsMenu({ onNavigate }: { onNavigate: (tab: DashboardTab) =
     { label: "Approvals", icon: ShieldCheck, onClick: () => navigate("approvals") },
     { label: "Vault", icon: Lock, onClick: () => navigate("vault") },
     { label: "Trusted people", icon: Users, onClick: () => navigate("trusted") },
+    { label: "Email", icon: Mail, onClick: () => navigate("email") },
     { label: "Connections", icon: Plug, onClick: () => navigate("integrations") },
     { label: "Memory", icon: Brain, onClick: () => navigate("memory") },
     { label: "Profile", icon: User, onClick: () => navigate("profile") },

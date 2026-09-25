@@ -105,6 +105,9 @@ class Settings(BaseSettings):
     r2_endpoint: str = ""  # https://<account>.r2.cloudflarestorage.com
     r2_bucket: str = "yomi-assets"
 
+    # inbound email: Cloudflare Email Routing subdomain for <alias>@<domain>
+    inbound_email_domain: str = "mail.getyomi.in"
+
     # telegram webhook secret (optional; set to verify Telegram requests)
     telegram_webhook_secret: str = ""
 

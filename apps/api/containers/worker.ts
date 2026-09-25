@@ -255,23 +255,59 @@ async function containerIsNotServed(response: Response): Promise<boolean> {
   return /not listening|tcp address|warming up|starting/i.test(text);
 }
 
+async function fetchContainer(request: Request, env: Env): Promise<Response> {
+  const container = getContainer(env.YOMI_CONTAINER);
+  let lastResponse: Response | undefined;
+  for (const delay of WAKE_RETRY_DELAYS_MS) {
+    const response = await container.fetch(request.clone()).catch(() => undefined);
+    if (response && !(await containerIsNotServed(response))) {
+      return response;
+    }
+    lastResponse = response ?? lastResponse;
+    await sleep(delay);
+  }
+  return lastResponse ?? new Response("Container unavailable", { status: 502 });
+}
+
+// Cloudflare Email Routing (mail.getyomi.in catch-all) delivers here. The raw
+// MIME goes to the container; unknown aliases are rejected at SMTP time.
+const MAX_EMAIL_BYTES = 5 * 1024 * 1024;
+
+async function handleEmail(message: ForwardableEmailMessage, env: Env): Promise<void> {
+  if (message.rawSize > MAX_EMAIL_BYTES) {
+    message.setReject("Message too large");
+    return;
+  }
+  const key = (env as unknown as Record<string, string | undefined>).INTERNAL_API_KEY ?? "";
+  if (!key) {
+    message.setReject("Mailbox unavailable");
+    return;
+  }
+  const raw = await new Response(message.raw).arrayBuffer();
+  const response = await fetchContainer(
+    new Request("http://localhost/internal/inbound-email", {
+      method: "POST",
+      headers: { "x-yomi-internal": key, "x-yomi-to": message.to, "content-type": "message/rfc822" },
+      body: raw,
+    }),
+    env,
+  );
+  if (response.status === 404) {
+    message.setReject("No such mailbox");
+  } else if (!response.ok) {
+    // Fail the delivery rather than silently accepting mail we could not store.
+    throw new Error(`inbound email failed: ${response.status}`);
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const container = getContainer(env.YOMI_CONTAINER);
-    let lastResponse: Response | undefined;
-    for (const delay of WAKE_RETRY_DELAYS_MS) {
-      const response = await container
-        .fetch(request.clone())
-        .catch(() => undefined);
-      if (response && !(await containerIsNotServed(response))) {
-        return response;
-      }
-      lastResponse = response ?? lastResponse;
-      await sleep(delay);
-    }
-    return lastResponse ?? new Response("Container unavailable", { status: 502 });
+    return fetchContainer(request, env);
   },
   async scheduled(_event: ScheduledEvent, env: Env): Promise<void> {
     await runDispatch(env);
+  },
+  async email(message: ForwardableEmailMessage, env: Env): Promise<void> {
+    await handleEmail(message, env);
   },
 };

@@ -37,6 +37,14 @@ type Payment = {
   createdAt: string
 }
 
+type ReceiptRow = {
+  id: string
+  merchant: string
+  amount: number
+  currency: string
+  date: string
+}
+
 type Field = {
   key: string
   label: string
@@ -127,6 +135,7 @@ export function VaultManager({ token }: { token: string }) {
   const [items, setItems] = useState<VaultItem[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
   const [monthTotals, setMonthTotals] = useState<Record<string, number>>({})
+  const [receipts, setReceipts] = useState<ReceiptRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [adding, setAdding] = useState<Exclude<Kind, "agent_item"> | null>(null)
@@ -148,10 +157,12 @@ export function VaultManager({ token }: { token: string }) {
       const paymentsData = (await paymentsRes.json()) as {
         payments: Payment[]
         monthTotals: Record<string, number>
+        receipts?: ReceiptRow[]
       }
       setItems(itemsData.items)
       setPayments(paymentsData.payments)
       setMonthTotals(paymentsData.monthTotals)
+      setReceipts(paymentsData.receipts ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn’t load your vault")
     } finally {
@@ -351,6 +362,26 @@ export function VaultManager({ token }: { token: string }) {
                       <p className="text-foreground">{money(p.amount, p.currency)}</p>
                       <p className="text-[11px] capitalize text-muted-foreground">{p.status}</p>
                     </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <h3 className="pb-1 pt-6 text-base font-medium text-foreground">Receipts</h3>
+            <p className="text-xs text-muted-foreground">
+              Found in emails sent to your Yomi address (see Email).
+            </p>
+            {receipts.length === 0 ? (
+              <p className="pt-2 text-sm text-muted-foreground">No receipts yet</p>
+            ) : (
+              <ul className="mt-2 divide-y divide-border">
+                {receipts.slice(0, 20).map((r) => (
+                  <li key={r.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate text-foreground">{r.merchant}</p>
+                      <p className="text-xs text-muted-foreground">{r.date}</p>
+                    </div>
+                    <p className="text-foreground">{money(r.amount, r.currency)}</p>
                   </li>
                 ))}
               </ul>
