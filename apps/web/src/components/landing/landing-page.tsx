@@ -76,8 +76,13 @@ const STICKERS: { emoji: string; className: string; tilt: string; delay: string 
 
 // Real characters floating beside the phone, like friends you could text next.
 const HERO_CHARACTERS = [
-  { slug: "katsuki-bakugo", label: "text Bakugo", className: "left-[13%] top-0", delay: "0s" },
-  { slug: "satoru-gojo", label: "text Gojo", className: "right-[12%] top-[340px]", delay: "1.8s" },
+  { slug: "shouyou-hinata", label: "text Hinata", className: "left-[13%] top-0", delay: "0s" },
+  {
+    slug: "hello-kitty",
+    label: "text Hello Kitty",
+    className: "right-[12%] top-[340px]",
+    delay: "1.8s",
+  },
 ].flatMap((spot) => {
   const character = getCharacter(spot.slug)
   return character ? [{ ...spot, character }] : []
