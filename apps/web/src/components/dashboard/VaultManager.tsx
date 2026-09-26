@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react"
 import {
   CreditCard,
   KeyRound,
-  Loader2,
   Lock,
   MapPin,
   Phone,
@@ -218,10 +217,12 @@ export function VaultManager({ token }: { token: string }) {
     else setError("Couldn’t delete that item")
   }
 
+  let sectionIndex = 0
   const section = (title: string, kinds: Kind[], empty: string, add: React.ReactNode) => {
     const rows = items.filter((item) => kinds.includes(item.kind))
+    const i = sectionIndex++
     return (
-      <div className="border-b border-border pb-5">
+      <div className="rise border-b border-border pb-5" style={{ "--i": i } as React.CSSProperties}>
         <div className="flex items-center justify-between py-3">
           <h3 className="text-base font-medium text-foreground">{title}</h3>
           {add}
@@ -230,7 +231,7 @@ export function VaultManager({ token }: { token: string }) {
           <p className="text-sm text-muted-foreground">{empty}</p>
         ) : (
           <ul className="divide-y divide-border">
-            {rows.map((item) => {
+            {rows.map((item, n) => {
               const Icon =
                 item.kind === "card"
                   ? CreditCard
@@ -242,7 +243,11 @@ export function VaultManager({ token }: { token: string }) {
                         ? Bot
                         : KeyRound
               return (
-                <li key={item.id} className="flex items-center gap-3 py-3">
+                <li
+                  key={item.id}
+                  className="rise flex items-center gap-3 py-3"
+                  style={{ "--i": i + Math.min(n, 8) } as React.CSSProperties}
+                >
                   <Icon size={16} className="shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground">{item.label}</p>
@@ -280,7 +285,7 @@ export function VaultManager({ token }: { token: string }) {
   const agentItems = items.filter((item) => item.kind === "agent_item")
 
   return (
-    <section className="space-y-6 pt-6">
+    <section className="page-fade space-y-6 pt-6">
       <PageHeader
         title="vault"
         subtitle="encrypted logins, cards and personal info yomi can use for you. passwords and card numbers are typed straight into your private computer and never shown to the AI, and every card payment needs your ok."
@@ -289,8 +294,21 @@ export function VaultManager({ token }: { token: string }) {
         {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
 
         {loading ? (
-          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-            <Loader2 size={15} className="animate-spin" /> Loading vault…
+          <div className="space-y-6 py-2" aria-busy="true" aria-label="loading vault">
+            {[0, 1, 2].map((n) => (
+              <div key={n} className="space-y-3">
+                <div className="shimmer h-4 w-28 rounded-full" />
+                {[0, 1].map((m) => (
+                  <div key={m} className="flex items-center gap-3">
+                    <div className="shimmer size-8 shrink-0 rounded-xl" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="shimmer h-3.5 w-40 rounded-full" />
+                      <div className="shimmer h-3 w-56 max-w-full rounded-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
         ) : (
           <div className="space-y-2">
