@@ -196,6 +196,15 @@ export function HomeView({
     }
   }
 
+  function unhide() {
+    setHideSetup(false)
+    try {
+      localStorage.removeItem(HIDE_SETUP_KEY)
+    } catch {
+      // storage unavailable: it's shown for this visit anyway
+    }
+  }
+
   async function copyInvite() {
     if (!data.referral) return
     const link = `${window.location.origin}/r/${data.referral.code}`
@@ -289,6 +298,15 @@ export function HomeView({
           <AlertTriangle size={15} className="shrink-0 text-amber-500" />
           {unhealthyCount} connected app{unhealthyCount === 1 ? " needs" : "s need"} reconnecting
           <ArrowRight size={14} className="ml-auto text-muted-foreground" />
+        </button>
+      )}
+
+      {hideSetup && doneCount < steps.length && (
+        <button
+          onClick={unhide}
+          className="-mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground/60 hover:text-foreground"
+        >
+          <Check size={13} /> show setup · {doneCount} of {steps.length}
         </button>
       )}
 
