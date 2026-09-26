@@ -76,7 +76,12 @@ const STICKERS: { emoji: string; className: string; tilt: string; delay: string 
 
 // Real characters floating beside the phone, like friends you could text next.
 const HERO_CHARACTERS = [
-  { slug: "shouyou-hinata", label: "text Hinata", className: "left-[13%] top-0", delay: "0s" },
+  {
+    slug: "shouyou-hinata",
+    label: "text Shoyo Hinata",
+    className: "left-[13%] top-0",
+    delay: "0s",
+  },
   {
     slug: "hello-kitty",
     label: "text Hello Kitty",
