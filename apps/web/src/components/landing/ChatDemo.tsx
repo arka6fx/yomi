@@ -166,8 +166,10 @@ export function ChatDemo() {
   const time = "9:41 AM"
   const pickHint = picked.length ? `${picked.length} picked` : "pick as many as you like"
 
+  // svh, not dvh: dvh follows the mobile address bar as it slides in and out, which made
+  // the phone stretch and shrink while scrolling. Browsers without svh get a fixed height.
   return (
-    <div className="relative mx-auto h-[min(700px,calc(100dvh-10.5rem))] w-[min(360px,calc(100vw-2rem))] rounded-[3rem] bg-[#16181d] p-2.5 shadow-[0_40px_80px_rgba(10,20,40,0.45)]">
+    <div className="relative mx-auto h-[640px] min-h-[520px] w-[min(360px,calc(100vw-2rem))] supports-[height:100svh]:h-[min(700px,calc(100svh-10.5rem))] rounded-[3rem] bg-[#16181d] p-2.5 shadow-[0_40px_80px_rgba(10,20,40,0.45)]">
       <div
         className="relative flex h-full flex-col overflow-hidden rounded-[2.4rem]"
         style={{ backgroundColor: TG.bg, backgroundImage: WALLPAPER, color: TG.text }}
