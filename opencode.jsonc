@@ -5,8 +5,8 @@
   ],
   "references": {
     "specs": {
-      "path": "./specs",
-      "description": "Product specifications and design documents",
+      "path": "./docs",
+      "description": "Architecture, runbook, product specs and ADRs",
     },
   },
   "mcp": {

@@ -187,6 +187,17 @@ enforces the ones below in CI.
 
 ---
 
+## Claude Code
+
+- `CLAUDE.md` imports this file. `apps/api/CLAUDE.md` and `apps/web/CLAUDE.md`
+  add area-specific rules and load when you work in those folders.
+- `/check` runs every CI check and fixes failures. `/new-migration <what>` adds
+  a D1 migration with tests.
+- In Claude Code on the web, `.claude/hooks/session-start.sh` installs npm and
+  uv dependencies before the session starts.
+- `.claude/settings.json` asks before deploys, `wrangler secret`, and remote D1
+  migrations, and blocks reading real `.env` files.
+
 ## Agent skills
 
 - **Issue tracker:** GitHub Issues on `arka6fx/yomi`. See
