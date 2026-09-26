@@ -7,13 +7,15 @@ upsert's supersession writes stay atomic.
 
 from __future__ import annotations
 
+import re
 import uuid
 from contextlib import suppress
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 from sqlalchemy import delete, desc, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -305,6 +307,67 @@ async def _json_body(request: Request) -> dict[str, Any]:
     except Exception:
         return {}
     return data if isinstance(data, dict) else {}
+
+
+MAX_IMPORT_LINES = 200
+_BULLET = re.compile(r"^\s*(?:[-*•·–]|\d+[.)])\s*")
+
+
+class ImportIn(BaseModel):
+    """What another assistant said it remembers, pasted as text (one memory per line)."""
+
+    text: str = Field(max_length=100_000)
+    source: Literal["chatgpt", "claude", "other"] = "other"
+
+
+def parse_import(text: str) -> list[str]:
+    """Split a pasted memory list into clean, distinct lines.
+
+    Drops bullets and numbering, blank lines, headings ("Here's what I know:"),
+    fragments too short to mean anything, and case-insensitive duplicates.
+    """
+    seen: set[str] = set()
+    lines: list[str] = []
+    for raw in text.splitlines():
+        line = _BULLET.sub("", raw).strip().strip('"').strip()
+        if len(line) < 4 or line.endswith(":"):
+            continue
+        key = line.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        lines.append(line[:MAX_MEMORY_CHARS])
+        if len(lines) >= MAX_IMPORT_LINES:
+            break
+    return lines
+
+
+@memory_router.post("/import", dependencies=[Depends(require_consent("memory"))])
+async def memory_import(
+    body: ImportIn,
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    """Bring memories over from ChatGPT or Claude (D1 only).
+
+    Each line becomes its own memory. No topic is set, so every line keeps its own
+    (its first words) and one import can't overwrite another through the topic rule.
+    """
+    if d1 is None:
+        return JSONResponse({"error": "import requires the d1 backend"}, status_code=501)
+    lines = parse_import(body.text)
+    if not lines:
+        return JSONResponse(
+            {"error": "no memories found in that text", "code": "empty_import"}, status_code=400
+        )
+    imported = 0
+    for line in lines:
+        memory = await d1_backend.upsert(d1, user.id, {
+            "content": line, "kind": "fact", "scope": "global",
+            "sourceType": f"import:{body.source}",
+        })
+        imported += memory is not None
+    return {"imported": imported, "skipped": len(lines) - imported}
 
 
 @memory_router.post("/add", dependencies=[Depends(require_consent("memory"))])
