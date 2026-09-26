@@ -1,205 +1,103 @@
 # Yomi - AGENTS.md
 
-AI productivity assistant. Connects to Google Workspace (Gmail, Calendar, Drive,
-Classroom, Tasks, Meet) and GitHub, Slack, Notion, Linear, and more. You talk to
-Yomi on Telegram (text, voice, images); the web app is a management dashboard
-(account linking, schedules, memory, billing), not a chat surface. Backend-first
-for durable memory and connector agents.
+Working instructions for coding agents and contributors. For the project
+overview see [`README.md`](./README.md); for the system design see
+[`docs/architecture.md`](./docs/architecture.md).
+
+Yomi is a personal AI assistant. Users talk to it on **Telegram** (text, voice,
+images). The web app at `getyomi.in` is a **management dashboard** (account
+linking, approvals, routines, memory, billing), not a chat surface.
 
 ---
 
-## Design Principle
+## Design principles
 
-| Request type   | Architecture                        | Budget          |
-| -------------- | ----------------------------------- | --------------- |
-| Connector task | Python agent loop + connector tools | seconds-minutes |
-| Telegram task  | Python gateway + memory/tools       | seconds-minutes |
-| Computer use   | Browser Run REST API (via httpx)    | seconds-minutes |
+| Request type     | Path                                         | Budget          |
+| ---------------- | -------------------------------------------- | --------------- |
+| Telegram message | Python gateway → background agent run        | seconds–minutes |
+| Connector task   | Agent loop + connector tools                 | seconds–minutes |
+| Computer use     | Browser Run REST API, or the sandbox desktop | seconds–minutes |
 
-Never switch models mid-turn; that loses prompt cache and causes tool-vocab mismatch.
+- **Never switch models mid-turn.** It loses the prompt cache and breaks
+  tool-vocabulary consistency.
+- **Ask before irreversible actions.** Sending, booking, paying, and deleting go
+  through a pending action the user approves.
+- **The backend owns all data.** The web app never reads storage directly.
+
+## Footprint ladder
+
+Pick the highest rung (smallest footprint) that solves the problem:
+
+1. **Extend existing code**: the capability is a variation of something that
+   exists.
+2. **CLI command + skill**: config or state expressible as shell commands.
+3. **Service-gated tool**: structured params and returns; only appears once its
+   prerequisite is configured.
+4. **Plugin**: third-party, niche, or user-specific.
+5. **MCP server**: needs structured I/O but is not core.
+6. **New core tool**: only when fundamental, broadly useful, and unreachable
+   otherwise.
 
 ---
 
-## Footprint Ladder
+## Repository map
 
-Choose the highest, least-footprint rung that solves the problem:
-
-1. **Extend existing code** — capability is a variation of something that already exists.
-2. **CLI command + skill** — config/state expressible as shell commands.
-3. **Service-gated tool** — structured params/returns, only appears when prerequisite configured.
-4. **Plugin** — third-party/niche/user-specific capability.
-5. **MCP server** — capability needs structured I/O but is not core-fundamental.
-6. **New core tool** — only when fundamental, broadly useful, and unreachable via other means.
-
----
-
-## Monorepo
-
-```
-         Telegram
-     text / voice / images
-               │
-               ▼
-   ┌──────────────────────────────────────────────┐
-   │   THIN WORKER (apps/api/containers/)     │
-   │   TypeScript, Cloudflare Containers API      │
-   │   Routes all traffic → Python container      │
-   │   Forwards secrets via envVars               │
-   └──────────────────┬───────────────────────────┘
-                      │
-                      ▼
-   ┌──────────────────────────────────────────────┐
-   │       PYTHON CONTAINER (apps/api/)       │
-   │   FastAPI + uvicorn on Cloudflare Containers │
-   │                                              │
-   │   auth, billing, LLM proxy, metering,        │
-   │   agent loop, Telegram gateway,              │
-   │   canonical memory, RAG, connectors          │
-   │                                              │
-   │   Cloudflare services via REST:              │
-   │   • Browser Run → computer use               │
-   │   • R2 → voice/image storage                 │
-   │   • Workers AI → embeddings (optional)       │
-   └──────────┬────────────────────┬──────────────┘
-              │                    │
-              ▼                    ▼
-         Connectors            Postgres
-         first-class           Neon +
-         + Composio            pgvector
-              │
-              └── Dashboard (apps/web, Next.js)
-                  marketing, auth, account linking,
-                  credits, memory view
-                  (all data via Python API)
+```text
+apps/api/          FastAPI backend (canonical), Workers, D1 migrations, tests
+  src/yomi/app/        routes (/api/*), deps, auth
+  src/yomi/gateway/    Telegram webhook
+  src/yomi/services/   agent loop, memory, RAG, metering, *_d1 data access
+  src/yomi/connectors/ Gmail, Calendar, Drive, Composio bridge
+  containers/          backend Worker (worker.ts) + storage gateway (storage.ts)
+  migrations-d1/       D1 schema (numbered SQL)
+apps/web/          Next.js marketing site + dashboard (see apps/web/CLAUDE.md)
+apps/sandbox/      computer-use desktop (Cloudflare Sandbox + Chrome)
+packages/db/       SQLAlchemy models for the legacy Postgres path
+packages/shared/   TypeScript contracts shared across apps
+packages/ui/       connector catalog + dashboard components
+docs/              architecture, runbook, specs, ADRs
+SOUL.md            personality notes (the live prompt is DEFAULT_AGENT_SOUL in shared/text.py)
+CONTEXT.md         domain glossary
 ```
 
 ```bash
-# JS: install + run landing
-npm install && npm run dev
-
-# Python: install + run backend
-cd apps/api && uv sync && uv run uvicorn yomi.run:app --reload --port 8080
-
-# Shortcut from root:
-npm run python:dev
+npm install && npm run python:dev          # backend on :8080
+npm run dev --workspace @yomi/web   # dashboard on :3000
 ```
 
 ---
 
 ## Stack
 
-- **LLM:** Cloudflare Workers AI via OpenAI-compatible endpoint (`@cf/zai-org/glm-5.3-flash` for chat, agent, search and vision; reasoning effort low for chat, high for agent runs) — no OpenAI dependency
-- **STT:** Workers AI `@cf/openai/whisper-large-v3-turbo` — transcribes incoming voice notes; replies are always text
-- **Backend:** Python FastAPI + uvicorn on **Cloudflare Containers** (TCP socket → asyncpg works)
-- **Auth:** Better Auth (Google + GitHub OAuth) — session cookie validated by Python via JWT
-- **Database:** asyncpg → Neon PostgreSQL + pgvector (SQLAlchemy 2 async, Alembic migrations)
-- **Billing:** Dodo Payments
-- **Computer use:** Cloudflare Browser Run REST API (scrape, screenshot, extract, CDP)
-- **File storage:** Cloudflare R2 via S3-compatible API (aiobotocore)
-- **Embeddings:** Workers AI `@cf/baai/bge-base-en-v1.5` (768-dim) → Vectorize
+- **Backend:** Python 3.11 FastAPI + uvicorn in a **Cloudflare Container**,
+  behind the thin Worker `apps/api/containers/worker.ts` (HTTP, cron, inbound
+  email).
+- **Storage:** Cloudflare **D1** (relational), **Vectorize** (768-dim
+  embeddings), **R2** (media), reached through the `yomi-storage` gateway
+  Worker. `STORAGE_BACKEND=d1` is the default; Postgres (`packages/db`, Alembic)
+  is a legacy fallback that production does not use.
+- **LLM:** Workers AI via its OpenAI-compatible endpoint:
+  `@cf/zai-org/glm-5.3-flash` for chat, agent, search, and vision (reasoning low
+  for chat, high for agent runs). No OpenAI dependency.
+- **Speech:** `@cf/openai/whisper-large-v3-turbo`, used to transcribe incoming
+  voice notes. Replies are always text.
+- **Embeddings:** `@cf/baai/bge-base-en-v1.5` (768-dim) → Vectorize.
+- **Computer use:** Cloudflare Browser Run REST API, plus a per-user sandbox
+  desktop (`apps/sandbox`).
+- **Auth:** Telegram sign-in (one-time code approved in the bot), Google, and
+  GitHub. Session cookies are Better Auth–compatible and validated by Python.
+- **Billing:** Dodo Payments.
+- **Web:** Next.js on Cloudflare Workers.
 
-## Retired (do not reference)
+## Retired (do not reference or reintroduce)
 
-- Legacy Hono/TypeScript backend — **deleted**. `apps/api`, once that
-  Worker's home, now hosts the canonical **Python FastAPI** backend.
-- `packages/agent-core` — TypeScript AI SDK agent — **deleted**. Python
-  `apps/api/src/yomi/services/agent/` is canonical.
-- `packages/db` (Drizzle/TS) — **deleted**. `packages/db` now ships the shared
-  Python schema (`yomi-db`, SQLAlchemy 2 async) at `packages/db/src/yomi/db/`.
-
----
-
-## Architecture
-
-```
-         Telegram
-     text / voice / images
-               │
-               ▼
-   ┌──────────────────────────────────────────────┐
-   │   Thin Worker (apps/api/containers/worker.ts) │
-   │   Forwards all traffic + secrets to Python   │
-   └──────────────────┬───────────────────────────┘
-                      │ envVars (secrets)
-                      ▼
-   ┌──────────────────────────────────────────────┐
-   │   Python Container (apps/api/src/yomi/)  │
-   │   FastAPI + uvicorn on :8080                 │
-   │                                              │
-   │ Routes:                                      │
-   │   /api/gateway/telegram  ← Telegram webhook  │
-   │   /api/agent/*           ← agent runs        │
-   │   /api/integrations/*    ← OAuth connectors  │
-   │   /api/memory/*          ← memory CRUD       │
-   │   /api/rag/*             ← RAG indexing      │
-   │   /api/billing/*         ← Dodo payments     │
-   │   /api/schedules/*       ← cron schedules    │
-   │   /api/auth/*            ← Better Auth JWT   │
-   │   /health, /health/db    ← probes            │
-   │                                              │
-   │ Services:                                    │
-   │   agent/loop.py          ← OpenAI-compatible tool loop (Workers AI)  │
-   │   agent/tools.py         ← tool registry    │
-   │   browser.py             ← Browser Run REST  │
-   │   memory/                ← memory engine     │
-   │   rag/                   ← RAG pipeline      │
-   │   metering.py            ← credit charging   │
-   └──────────────────────────────────────────────┘
-```
-
----
-
-## Backend Status
-
-`apps/api/` is **canonical and sole backend**. The legacy TS Hono Worker has been retired and deleted.
-
-### Python Coverage
-
-| Area | Status | File |
-|------|--------|------|
-| Auth (JWT validation) | ✅ | `app/deps.py` |
-| Billing / Dodo | ✅ | `app/routes/billing.py` |
-| Memory | ✅ | `app/routes/memory.py`, `services/memory/` |
-| RAG | ✅ | `app/routes/rag.py`, `services/rag/` |
-| Schedules | ✅ | `app/routes/schedules.py` |
-| Metering / Credits | ✅ | `services/metering.py`, `services/credit_ledger.py` |
-| Privacy | ✅ | `app/routes/privacy.py`, `services/privacy/` |
-| Profile | ✅ | `app/routes/profile.py` |
-| Streaks | ✅ | `app/routes/streaks.py` |
-| Referrals | ✅ | `app/routes/referrals.py` |
-| Status | ✅ | `app/routes/status.py` |
-| **Telegram gateway** | ✅ | `gateway/telegram.py` |
-| **Agent loop** | ✅ | `services/agent/loop.py` |
-| **Browser / computer use** | ✅ | `services/browser.py` |
-| **OAuth integrations** | ✅ | `app/routes/integrations.py` |
-| **R2 file storage** | 🔧 stub | `services/storage.py` (needs R2 secrets) |
-| Connectors (Gmail, etc.) | 🚧 in progress | |
-| MCP / custom-MCP | 🔧 stub | `app/routes/custom_mcp.py` |
-
----
-
-## Database
-
-Schema: `packages/db/src/yomi/db/` (shipped as the `yomi-db` distribution; imports
-as `yomi.db.*` via the PEP 420 namespace). Better Auth owns `user / session / account / verification`
-(session cookies validated by Python via JWT; OAuth handler still hits `api.getyomi.in` until cutover).
-
-Driver: `asyncpg` over TCP to Neon (this is why a Container, not a Worker, is required —
-asyncpg needs a real TCP socket). SQLAlchemy 2 async + Alembic migrations in `apps/api/migrations`.
-The Drizzle schema (`packages/db`) is retired, but the SQLAlchemy models mirror it one-for-one.
-
----
-
-## Plans & Credits
-
-| Plan    | Price  | Monthly credits         | Model              |
-| ------- | ------ | ----------------------- | ------------------ |
-| Explore | $0/mo  | 100 (perpetual, renews) | glm-5.3-flash      |
-| Pro     | $5/mo  | 300                     | glm-5.3-flash      |
-| Max     | $40/mo | 750                     | glm-5.3-flash      |
-
-Credit costs: fast chat 1, image analyze 1, voice 2/min, bot message 3, agent run 3 base
-(+1 per Composio tool call). Single chokepoint: `services/metering.py → charge_usage()`.
+- The TypeScript Hono backend and `packages/agent-core`. Python is the only
+  backend.
+- The Drizzle/TypeScript schema. `packages/db` now holds only the Python models.
+- Neon Postgres in production. Data lives in D1.
+- OpenAI models. Everything runs on Workers AI.
+- The desktop client
+  ([ADR 0002](./docs/adr/0002-retire-desktop-telegram-only.md)).
 
 ---
 
@@ -207,80 +105,95 @@ Credit costs: fast chat 1, image analyze 1, voice 2/min, bot message 3, agent ru
 
 `harness = system prompt + tools + connectors + memory + hooks`
 
-`SOUL.md` (repo root) is always part of the system prompt.
+The personality prompt is `DEFAULT_AGENT_SOUL` in
+`apps/api/src/yomi/shared/text.py`. `SOUL.md` holds longer-form personality
+notes and is not loaded at runtime.
 
-**Agent path:** Python agent loop (`services/agent/loop.py`) with full tool set:
+Agent loop: `apps/api/src/yomi/services/agent/loop.py`, with tools registered in
+`services/agent/tools.py`:
 
-- Core: web search, browser (scrape/screenshot/extract/crawl), memory r/w, cron
-- Connectors: loaded from connector registry
-  - First-class (Python tool sets): Gmail, Google Calendar, Google Drive, GitHub, Slack, Notion, Linear
-  - Composio-backed: Google Docs, Sheets, Slides, Maps, Photos, HubSpot, Salesforce, Discord,
-    LinkedIn, Outlook, Teams, OneDrive, Dropbox, Figma, YouTube, Zoom, Stripe, etc.
+- **Core:** web search, browser (scrape, screenshot, extract, crawl), computer,
+  memory read/write, routines, vault, trusted people, email.
+- **Connectors:**
+  - First-class Python tool sets: Gmail, Google Calendar, Google Drive.
+  - Composio-backed: GitHub, Slack, Notion, Linear, Google Docs, Sheets, Slides,
+    Maps, Photos, HubSpot, Salesforce, Discord, LinkedIn, Outlook, Teams,
+    OneDrive, Dropbox, Figma, YouTube, Zoom, Stripe, and more.
 
----
+## Plans and credits
+
+| Plan    | Price | Monthly credits |
+| ------- | ----- | --------------- |
+| Explore | $0    | 100 (renews)    |
+| Pro     | $5    | 300             |
+| Max     | $40   | 750             |
+
+Credit costs: fast chat 1, image analysis 1, voice 2/min, bot message 3, agent
+run 3 base (+1 per Composio tool call). Every charge goes through one
+chokepoint: `services/billing_d1.py → charge_usage()` (`services/metering.py` is
+the legacy Postgres equivalent).
 
 ## Privacy
 
-- Encrypted memory sync; user-owned export/delete.
-- OAuth tokens are encrypted at rest (`services/privacy/`, `crypto.py`).
-- Hook logs must be PII-redacted.
-
----
-
-## Models
-
-```
-Fast path:  glm-5.3-flash, reasoning low (Explore, Pro)
-Agent path: glm-5.3-flash, reasoning high (Max)
-Embeddings: bge-base-en-v1.5 (Workers AI, 768-dim)
-Speech:     whisper-large-v3-turbo (Workers AI STT only; replies are always text)
-Browser AI: Workers AI (see above — no OpenAI anywhere)
-```
+- User-owned memory with export and delete.
+- OAuth tokens and vault secrets are encrypted at rest (`crypto.py`,
+  `services/privacy/`).
+- Logs and hook output must be PII-redacted. LLM telemetry records metadata,
+  never content.
 
 ---
 
 ## Deploys
 
-**Python backend** deploys itself on push to `main` when `apps/api/**` or
-`packages/db/**` changes (`.github/workflows/deploy-backend.yml`). Triggers `uv pytest`,
-then `wrangler deploy` which builds the Docker image and pushes to Cloudflare Containers.
+| Push to `main` touching         | Workflow              | Target                   |
+| ------------------------------- | --------------------- | ------------------------ |
+| `apps/api/**`, `packages/db/**` | `deploy-backend.yml`  | `yomi-backend` container |
+| `apps/web/**`                   | `deploy-landing.yml`  | `yomi-landing` Worker    |
+| `apps/sandbox/**`               | `deploy-computer.yml` | computer gateway         |
 
-**Dashboard** deploys itself on push to `main` when `apps/web/**` changes
-(`.github/workflows/deploy-landing.yml`). Uses npm + `next build` + `wrangler deploy`.
+**Not automatic:** D1 migrations and the storage gateway. Apply migrations
+before deploying code that needs them. Secrets are Worker Secrets forwarded to
+the container through `envVars` in `worker.ts`. All of this is in
+[`docs/runbook.md`](./docs/runbook.md).
 
-Secrets live as Worker Secrets (`wrangler secret put`), forwarded to the container
-via `envVars` in `apps/api/containers/worker.ts`. See `apps/api/README.md` for the full list.
+## Code style
 
-Manual deploy (break-glass):
+- **Python:** ruff (`E, F, I, UP, B, SIM`), 100-character lines, Python 3.11+,
+  async/await throughout.
+- **TypeScript:** ESLint + Prettier. No `as any`, no unused imports.
+- **Commits:** Conventional Commits (`feat:`, `fix:`, `refactor:`, `perf:`,
+  `style:`, `test:`, `chore:`, `docs:`). Lowercase, no trailing period, at most
+  72 characters.
+
+Before pushing:
+
 ```bash
-# Python container
-cd apps/api && npx wrangler deploy
-
-# Dashboard
-cd apps/web && npm run deploy:production
+npm run python:lint && npm run python:test
+npm run lint && npm run typecheck && npm run test && npm run docs:check
 ```
 
+## Docs: sources of truth
+
+Some facts live in code and are repeated in docs. When they change, update the
+docs in the same commit. `npm run docs:check` (`scripts/check-docs-sync.ts`)
+enforces the ones below in CI.
+
+| Fact                               | Source of truth                                              | Repeated in                                    |
+| ---------------------------------- | ------------------------------------------------------------ | ---------------------------------------------- |
+| Connector catalog                  | `packages/ui/src/catalog.ts`                                 | `docs/specs/connectors/00-index.md`, this file |
+| D1 schema                          | `apps/api/migrations-d1/`                                    | `docs/specs/11-database.md`                    |
+| Secrets forwarded to the container | `apps/api/containers/worker.ts`                              | `docs/runbook.md`                              |
+| Plans and credit costs             | `services/credit_pricing.py`, `packages/shared/src/plans.ts` | `README.md`, this file                         |
+
 ---
 
-## Code Style & Cleanup
+## Agent skills
 
-**Python:** ruff (E, F, I, UP, B, SIM), 100 char line length, Python 3.11+, async/await everywhere.
-**TypeScript (landing only):** ESLint + Prettier. No `as any`, no unused imports.
-Conventional commits: `feat:`, `fix:`, `refactor:`, `perf:`, `style:`, `test:`, `chore:`, `docs:`.
-Lowercase, no full stop, max 72 chars.
-
-Before pushing: `npm run python:test && npm run python:lint` or `cd apps/api && uv run pytest -q`.
-
----
-
-## Agent Skills
-
-### Issue tracker
-Issues live in GitHub Issues on `arka6fx/yomi` via the `gh` CLI. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-Default label vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`.
-See `docs/agents/triage-labels.md`.
-
-### Domain docs
-Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+- **Issue tracker:** GitHub Issues on `arka6fx/yomi`. See
+  [`docs/agents/issue-tracker.md`](./docs/agents/issue-tracker.md).
+- **Triage labels:** `needs-triage`, `needs-info`, `ready-for-agent`,
+  `ready-for-human`, `wontfix`. See
+  [`docs/agents/triage-labels.md`](./docs/agents/triage-labels.md).
+- **Domain docs:** one [`CONTEXT.md`](./CONTEXT.md) and
+  [`docs/adr/`](./docs/adr/) at the repo root. See
+  [`docs/agents/domain.md`](./docs/agents/domain.md).
