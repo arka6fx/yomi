@@ -5,6 +5,13 @@ All notable changes to Yomi are documented here. The format follows
 from conventional commits via
 [release-please](https://github.com/googleapis/release-please).
 
+## [1.4.1](https://github.com/arka6fx/yomi/compare/v1.4.0...v1.4.1) (2026-09-26)
+
+
+### Bug Fixes
+
+* history, routine outcomes, privacy on by default ([#160](https://github.com/arka6fx/yomi/issues/160)) ([1735a23](https://github.com/arka6fx/yomi/commit/1735a231d407833c31aee58b55e3fcc4838c0ae6))
+
 ## [1.4.0](https://github.com/arka6fx/yomi/compare/v1.3.0...v1.4.0) (2026-09-26)
 
 
