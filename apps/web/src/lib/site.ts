@@ -30,13 +30,17 @@ export function pageMetadata({
   title,
   description,
   path,
+  image,
 }: {
   title: string
   description: string
   path: string
+  /** A page-specific preview picture (e.g. a character's portrait); defaults to the site card. */
+  image?: string
 }): Metadata {
   const url = `${SITE_URL}${path}`
   const full = pageTitle(title)
+  const images = image ? [{ url: image, alt: full }] : [{ ...OG_IMAGE, alt: full }]
 
   return {
     title,
@@ -49,13 +53,14 @@ export function pageMetadata({
       url,
       title: full,
       description,
-      images: [{ ...OG_IMAGE, alt: full }],
+      images,
     },
     twitter: {
-      card: "summary_large_image",
+      // Portraits look cropped as a wide card; a page's own picture gets the square one.
+      card: image ? "summary" : "summary_large_image",
       title: full,
       description,
-      images: [OG_IMAGE.url],
+      images: [image ?? OG_IMAGE.url],
     },
   }
 }
