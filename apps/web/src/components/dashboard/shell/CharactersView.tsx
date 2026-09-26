@@ -21,6 +21,7 @@ import {
   Wand2,
   X,
 } from "lucide-react"
+import { CharacterPicturePicker } from "@/components/dashboard/shell/CharacterPicturePicker"
 import { Skeleton } from "@/components/dashboard/shell/motion"
 import { SURFACE } from "@/components/dashboard/shell/ui"
 import { matchesSearch } from "@/lib/search"
@@ -937,9 +938,19 @@ export function CharactersView({ token }: { token: string }) {
             )}
             {step === 1 && (
               <>
+                <CharacterPicturePicker
+                  token={token}
+                  basedOn={draft.basedOn || draft.name}
+                  imageUrl={draft.imageUrl}
+                  onPick={(imageUrl, imageCredit) => set({ imageUrl, imageCredit })}
+                />
                 <div className="flex items-center gap-4">
-                  <Avatar character={{ ...draft, name: draft.name || "?" }} size={88} />
+                  <Avatar
+                    character={{ ...draft, imageUrl: "", name: draft.name || "?" }}
+                    size={56}
+                  />
                   <div className="space-y-2">
+                    <span className={label}>no picture? an emoji and colour</span>
                     <div className="flex flex-wrap gap-1">
                       {EMOJIS.map((e) => (
                         <button
@@ -974,7 +985,7 @@ export function CharactersView({ token }: { token: string }) {
                   </div>
                 </div>
                 <label className="block">
-                  <span className={label}>describe how they look</span>
+                  <span className={label}>or describe how they look</span>
                   <textarea
                     rows={3}
                     maxLength={500}
@@ -984,15 +995,17 @@ export function CharactersView({ token }: { token: string }) {
                     className={cn(input, "resize-none")}
                   />
                 </label>
-                <label className="block">
-                  <span className={label}>picture link (optional)</span>
+                <details>
+                  <summary className="cursor-pointer list-none text-sm font-semibold text-muted-foreground hover:text-foreground">
+                    paste a link instead
+                  </summary>
                   <input
                     value={draft.imageUrl}
                     onChange={(e) => set({ imageUrl: e.target.value })}
                     placeholder="https://… (only pictures you have the right to use)"
-                    className={input}
+                    className={cn(input, "mt-2")}
                   />
-                </label>
+                </details>
                 {draft.imageUrl && (
                   <input
                     value={draft.imageCredit}

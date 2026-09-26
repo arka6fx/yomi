@@ -1,4 +1,4 @@
-"""User-uploaded images (profile pictures) kept in R2 behind the storage gateway."""
+"""User-uploaded images (profile and character pictures) kept in R2 behind the storage gateway."""
 
 from __future__ import annotations
 
@@ -7,7 +7,9 @@ import uuid
 
 MAX_AVATAR_BYTES = 2 * 1024 * 1024
 MEDIA_PREFIX = "/api/media/"
-_KEY_RE = re.compile(r"^avatars/[A-Za-z0-9_-]{1,64}/[a-f0-9-]{36}\.(png|jpg|webp|gif)$")
+_KEY_RE = re.compile(
+    r"^(avatars|characters)/[A-Za-z0-9_-]{1,64}/[a-f0-9-]{36}\.(png|jpg|webp|gif)$"
+)
 _TYPES = {"png": "image/png", "jpg": "image/jpeg", "webp": "image/webp", "gif": "image/gif"}
 
 
@@ -43,6 +45,17 @@ def check_avatar(data: bytes) -> tuple[str, str]:
 def avatar_key(user_id: str, ext: str) -> str:
     safe_user = re.sub(r"[^A-Za-z0-9_-]", "", user_id)[:64] or "user"
     return f"avatars/{safe_user}/{uuid.uuid4()}.{ext}"
+
+
+def character_key(user_id: str, ext: str) -> str:
+    safe_user = re.sub(r"[^A-Za-z0-9_-]", "", user_id)[:64] or "user"
+    return f"characters/{safe_user}/{uuid.uuid4()}.{ext}"
+
+
+def is_character_upload(url: str) -> bool:
+    """A picture someone uploaded for a character, served from /api/media/."""
+    key = url[len(MEDIA_PREFIX):] if url.startswith(MEDIA_PREFIX) else ""
+    return valid_key(key) and key.startswith("characters/")
 
 
 def valid_key(key: str) -> bool:
