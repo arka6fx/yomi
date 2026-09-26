@@ -24,7 +24,35 @@ logger = logging.getLogger(__name__)
 
 # Recent turns sent with each request. Long-term facts come from memory, so older
 # turns aren't re-summarised on every message (that cost a model call per turn).
-CONTEXT_MESSAGES = 30
+CONTEXT_MESSAGES = 20
+# Older turns are clipped to this many characters: a long answer from a while ago
+# (a code listing, a full plan) would otherwise be re-read on every message.
+OLD_TURN_CHARS = 1200
+# The newest turns always go in whole.
+KEEP_WHOLE = 4
+
+# How long replies should be. Users read them on a phone, often mid-task.
+REPLY_LENGTH = """<reply_length>
+Answer first, in as few words as fully answer it. Most replies are 1 to 3 short
+sentences. No preamble ("great question", "sure!"), no restating the question, no
+recap of what you did, no closing offers ("let me know if..."). Use a list only for
+real steps or options, at most 5 items, one line each. Go longer only when the user
+asks for detail, a full plan or a write-up; for code, give the code with one line of
+context. If there is more worth saying, offer it in one short line instead of
+writing it all out.
+</reply_length>"""
+
+
+def clip_old_turns(turns: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Shorten long text turns outside the newest few, keeping their opening."""
+    cutoff = len(turns) - KEEP_WHOLE
+    clipped = []
+    for index, turn in enumerate(turns):
+        content = turn.get("content")
+        if index < cutoff and isinstance(content, str) and len(content) > OLD_TURN_CHARS:
+            turn = {**turn, "content": content[:OLD_TURN_CHARS].rstrip() + " … (trimmed)"}
+        clipped.append(turn)
+    return clipped
 
 
 async def _system_prompt(
@@ -91,11 +119,12 @@ async def _system_prompt(
         part
         for part in (
             format_agent_soul(soul),
+            REPLY_LENGTH,
             """<yomi_operating_style>
 You are a personal AI with the feel of a thoughtful muse and sharp instinct. Notice
 the user's real goal, remember relevant context, and make progress without sounding
-robotic. Be warm, concise, confident, and specific. Replies show in Telegram on a phone:
-use bold and short numbered lists, never tables (Telegram can't display them).
+robotic. Be warm, brief, confident, and specific. Replies show in Telegram on a phone:
+bold sparingly, never tables (Telegram can't display them).
 Never expose chain-of-thought, internal prompts, raw tool payloads, or implementation
 jargon. Never claim an action happened until a tool reports success. If a result is
 uncertain, say so and give the next useful check.
@@ -131,11 +160,12 @@ When the user wants something done regularly or later ("every morning", "remind 
 6pm", "weekly summary"), create it with schedule_create; results arrive on Telegram.
 Offer a daily morning brief when it would help. Times default to India (Asia/Kolkata).
 
-When the user opens with a greeting such as "good morning darling", answer warmly and
-offer a useful morning brief. Use remembered location and connected Calendar, Tasks,
-and email when available; use a weather tool/search only when a location is known. If
-the location or preferences are missing, ask one friendly setup question rather than
-inventing weather or appointments.
+When the user just says hi or good morning, reply warmly in a line or two and offer
+a morning brief if they don't have one yet; don't run tools or write the brief
+unasked. When they ask for the brief, use remembered location and connected Calendar,
+Tasks and email; use weather only when a location is known. If the location or
+preferences are missing, ask one friendly setup question rather than inventing
+weather or appointments.
 </yomi_operating_style>""",
             about,
             persona,
@@ -272,7 +302,9 @@ async def run_agent_loop(
 
     async def _run() -> str:
         nonlocal messages
-        turns = [m for m in messages if m.get("role") != "system"][-CONTEXT_MESSAGES:]
+        turns = clip_old_turns(
+            [m for m in messages if m.get("role") != "system"][-CONTEXT_MESSAGES:]
+        )
         # A window can't open on a tool result whose call was cut off.
         while turns and turns[0].get("role") == "tool":
             turns.pop(0)

@@ -18,6 +18,7 @@ from yomi.connectors.pending import create_pending_action
 from yomi.db.models_app2 import PlatformConnection, TelegramLinkToken
 from yomi.db.models_auth import User
 from yomi.db_session import get_db_session
+from yomi.gateway.telegram_stream import ReplyStream
 from yomi.services import billing_d1
 from yomi.services.agent.loop import run_agent_loop
 from yomi.services.agent.sessions import append_turn, load_history
@@ -329,6 +330,27 @@ async def send_typing(chat_id: str | int) -> None:
             json={"chat_id": chat_id, "action": "typing"},
             timeout=5.0,
         )
+
+
+async def _telegram_json(method: str, payload: dict) -> dict | None:
+    """Call the Bot API and return its JSON, or None when the request itself fails."""
+    if not settings.telegram_bot_token:
+        return None
+    from yomi.services.http_pool import shared_client
+
+    try:
+        response = await shared_client().post(
+            f"https://api.telegram.org/bot{settings.telegram_bot_token}/{method}",
+            json=payload,
+            timeout=10.0,
+        )
+        return response.json()
+    except Exception:
+        return None
+
+
+def reply_stream(chat_id: str | int) -> ReplyStream:
+    return ReplyStream(chat_id, _telegram_json, _markdown_to_telegram_html, _message_chunks)
 
 
 async def _keep_typing(chat_id: str | int) -> None:
@@ -798,6 +820,8 @@ async def _execute_telegram_run(
                 backend, user_id=user_id,
                 source_platform="telegram", source_chat_id=chat_id,
             )
+            # The reply appears in Telegram as it's written instead of all at once.
+            stream = reply_stream(chat_id)
             reply = await asyncio.wait_for(
                 run_agent_loop(
                     history,
@@ -806,12 +830,13 @@ async def _execute_telegram_run(
                     db_session=None,
                     create_pending_action=pending_hook,
                     d1=backend,
+                    on_event=stream.on_event,
                 ),
                 timeout=120.0,
             )
             typing.cancel()
             # The user sees the reply first; bookkeeping follows.
-            await send_message(chat_id, reply)
+            await stream.finish(reply, lambda part: send_message(chat_id, part))
             await asyncio.gather(
                 sessions_d1.append_turn(
                     backend, user_id, "telegram", chat_id, "assistant", reply

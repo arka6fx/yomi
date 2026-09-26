@@ -159,7 +159,7 @@ cd apps/api && npx wrangler containers list  # container provisioned
 | -------------------------------- | --------------------------------------------------------------------------------------------------- |
 | Bot does not reply               | `getWebhookInfo` for `last_error_message`; `yomi-backend` logs in the Cloudflare dashboard          |
 | Inline buttons spin forever      | `allowed_updates` must include `callback_query` (see [Telegram](#telegram))                         |
-| First request after idle is slow | Expected: the container wakes from `sleepAfter`; the Worker retries while it boots                  |
+| First request after idle is slow | The cron keeps it warm; check the `*/10` cron still fires and `sleepAfter` is above 10m             |
 | Storage errors on every route    | `STORAGE_GATEWAY_URL` / `STORAGE_GATEWAY_SECRET` mismatch between `yomi-backend` and `yomi-storage` |
 | "no such table"                  | A D1 migration was not applied (see [migrations](#database-migrations-d1))                          |
 | Routines never fire              | `INTERNAL_API_KEY` missing, so the cron dispatch exits early                                        |

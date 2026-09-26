@@ -41,13 +41,13 @@ app and a computer-use sandbox. Everything runs on Cloudflare.
 
 The Worker is intentionally thin. It has three entry points:
 
-- **`fetch`** forwards every HTTP request to the container. While a hibernated
-  container wakes up (`sleepAfter = 5m`), it retries the transient "not
-  listening" failures with backoff and passes real application errors through
-  untouched.
+- **`fetch`** forwards every HTTP request to the container. If the container is
+  booting (after a deploy or a crash), it retries the transient "not listening"
+  failures with backoff and passes real application errors through untouched.
 - **`scheduled`** runs every 10 minutes and calls `POST /internal/dispatch`.
   That fires due routines, expires lapsed plans, and recovers agent runs whose
-  executor died.
+  executor died. Because it runs inside the container's `sleepAfter = 15m`, the
+  container never hibernates, so replies never wait on a cold boot.
 - **`email`** receives mail for `*@mail.getyomi.in` from Cloudflare Email
   Routing and posts the raw MIME to `/internal/inbound-email`. Unknown addresses
   are rejected at SMTP time.
