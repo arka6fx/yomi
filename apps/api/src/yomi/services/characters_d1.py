@@ -27,7 +27,7 @@ MAX_TAGS = 5
 TAGS = [
     "companion", "helper", "roleplay", "anime", "coach", "learning", "language practice",
     "fitness", "wellness", "comedy", "fantasy", "sci-fi", "cooking", "work", "games",
-    "movies & tv", "horror", "genshin",
+    "movies & tv", "horror", "genshin", "webtoon",
 ]
 LIMITS = {
     "name": 30, "appearance": 500, "personality": 4000, "tagline": 60,
