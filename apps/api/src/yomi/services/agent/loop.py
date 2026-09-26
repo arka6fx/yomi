@@ -2,6 +2,7 @@ import asyncio
 import base64
 import json
 import logging
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from sqlalchemy import select
@@ -10,7 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from yomi.conf import settings
 from yomi.services.agent.tools import build_user_registry, registry
 from yomi.services.evals import evaluate_reply
-from yomi.services.llm import chat_completion, first_message, model_for
+from yomi.services.llm import (
+    chat_completion,
+    first_message,
+    model_for,
+    stream_chat_completion,
+)
 from yomi.services.metering import ChargeInput, charge_usage
 from yomi.shared.text import format_agent_soul
 
@@ -138,6 +144,32 @@ inventing weather or appointments.
     )
 
 
+# What the user sees while a tool runs ("checking your inbox"). Matched against
+# the tool name in order; anything unlisted gets the generic label.
+_TOOL_LABELS = (
+    ("web_search", "searching the web"),
+    ("browser_", "reading a web page"),
+    ("web_", "using a website"),
+    ("computer_", "working on the computer"),
+    ("memory", "checking what i remember"),
+    ("vault_", "opening your vault"),
+    ("schedule_", "setting up a routine"),
+    ("email_", "checking your yomi email"),
+    ("gmail", "checking your inbox"),
+    ("calendar", "looking at your calendar"),
+    ("drive", "looking through your drive"),
+    ("apps_", "using your connected apps"),
+    ("message_trusted", "messaging your people"),
+    ("trusted_", "checking with your people"),
+    ("character_", "switching characters"),
+)
+
+
+def tool_label(name: str) -> str:
+    lowered = name.lower()
+    return next((label for key, label in _TOOL_LABELS if key in lowered), "working on it")
+
+
 def drop_old_screenshots(messages: list[dict[str, Any]]) -> None:
     """Keep only the newest screenshot's pixels in context.
 
@@ -210,7 +242,11 @@ async def run_agent_loop(
     db_session: AsyncSession | None = None,
     create_pending_action=None,
     d1: Any = None,
+    on_event: Callable[[dict[str, Any]], Awaitable[None]] | None = None,
 ) -> str:
+    """Run one turn. With ``on_event``, the reply streams as it's written
+    (``{"type": "text"}`` pieces) and each tool announces itself first
+    (``{"type": "tool"}``), so a live screen can show progress."""
     max_steps = max_steps or settings.agent_max_steps
     # Pro runs on the smarter engine (same model, deeper reasoning).
     purpose = "agent" if plan in ("pro", "max") else "fast"
@@ -246,14 +282,35 @@ async def run_agent_loop(
             is_last_step = step == max_steps - 1
             drop_old_screenshots(messages)
 
-            data = await chat_completion(
-                purpose, messages, tools=tools if tools and not is_last_step else None,
-                model=model,
-                user_id=user_id,
-                db_session=db_session,
-                endpoint="agent.loop",
-                d1=d1,
-            )
+            step_tools = tools if tools and not is_last_step else None
+            data = None
+            if on_event is not None:
+                streamed = False
+
+                async def on_text(piece: str) -> None:
+                    nonlocal streamed
+                    streamed = True
+                    await on_event({"type": "text", "text": piece})
+
+                try:
+                    data = await stream_chat_completion(
+                        purpose, messages, on_text, tools=step_tools, model=model,
+                        user_id=user_id, d1=d1, endpoint="agent.loop",
+                    )
+                except Exception:
+                    if streamed:
+                        raise
+                    # Nothing shown yet, so the plain call can take over unnoticed.
+                    logger.info("streaming failed; falling back to a plain completion")
+            if data is None:
+                data = await chat_completion(
+                    purpose, messages, tools=step_tools,
+                    model=model,
+                    user_id=user_id,
+                    db_session=db_session,
+                    endpoint="agent.loop",
+                    d1=d1,
+                )
             msg = first_message(data)
 
             # Keep only the chat fields; provider extras (reasoning traces,
@@ -273,6 +330,10 @@ async def run_agent_loop(
             for tool_call in tool_calls:
                 function = tool_call.get("function") or {}
                 tool_name = function.get("name", "")
+                if on_event is not None:
+                    await on_event(
+                        {"type": "tool", "name": tool_name, "label": tool_label(tool_name)}
+                    )
                 try:
                     if talk_only and tool_name != "character_exit":
                         raise PermissionError("this character only talks; tools are off")

@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
+from collections.abc import AsyncIterator, Awaitable, Callable
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -105,27 +110,20 @@ class SendIn(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
 
 
-@conversation_router.post("/shared/send")
-async def send_to_shared_conversation(
-    body: SendIn,
-    user: User = Depends(get_current_user),
-    d1: D1Backend | None = Depends(get_d1_backend),
-):
-    """Text Yomi from the dashboard. The message joins the same thread as Telegram,
-    so either place picks up where the other left off."""
-    import asyncio
-
+async def _take_turn(
+    d1: D1Backend,
+    user: User,
+    text: str,
+    on_event: Callable[[dict[str, Any]], Awaitable[None]] | None = None,
+) -> str:
+    """One dashboard message: it joins the same thread as Telegram, so either place
+    picks up where the other left off."""
     from yomi.gateway.telegram import get_lock
     from yomi.services import billing_d1, connectors_d1
     from yomi.services.agent import sessions_d1
     from yomi.services.agent.loop import run_agent_loop
     from yomi.services.metering import ChargeInput
 
-    if d1 is None:
-        raise HTTPException(status_code=501, detail="Requires the D1 storage backend")
-    text = body.text.strip()
-    if not text:
-        raise HTTPException(status_code=422, detail="Say something first")
     user_id = str(user.id)
     plan = getattr(user, "plan", None) or "explore"
     platform, chat_id = await sessions_d1.live_thread(d1, user_id)
@@ -147,7 +145,7 @@ async def send_to_shared_conversation(
             reply = await asyncio.wait_for(
                 run_agent_loop(
                     history, user_id, plan, db_session=None,
-                    create_pending_action=pending, d1=d1,
+                    create_pending_action=pending, d1=d1, on_event=on_event,
                 ),
                 timeout=120.0,
             )
@@ -155,7 +153,70 @@ async def send_to_shared_conversation(
             raise HTTPException(status_code=504, detail="Yomi took too long; try again") from exc
         reply = (reply or "").strip()
         await sessions_d1.append_turn(d1, user_id, platform, chat_id, "assistant", reply)
+    return reply
+
+
+def _clean(body: SendIn) -> str:
+    text = body.text.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="Say something first")
+    return text
+
+
+@conversation_router.post("/shared/send")
+async def send_to_shared_conversation(
+    body: SendIn,
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    """Text Yomi from the dashboard and wait for the whole reply."""
+    if d1 is None:
+        raise HTTPException(status_code=501, detail="Requires the D1 storage backend")
+    reply = await _take_turn(d1, user, _clean(body))
     return {"reply": {"role": "assistant", "content": reply}}
+
+
+@conversation_router.post("/shared/stream")
+async def stream_to_shared_conversation(
+    body: SendIn,
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    """Text Yomi from the dashboard and watch the reply arrive.
+
+    Newline-delimited JSON events: ``tool`` (what Yomi is doing), ``text`` (a piece
+    of the reply), then ``done`` with the full reply, or ``error``. The turn runs on
+    its own task, so closing the page mid-reply still saves the answer.
+    """
+    if d1 is None:
+        raise HTTPException(status_code=501, detail="Requires the D1 storage backend")
+    text = _clean(body)
+    events: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
+
+    async def turn() -> None:
+        try:
+            reply = await _take_turn(d1, user, text, on_event=events.put)
+            await events.put({"type": "done", "reply": reply})
+        except HTTPException as exc:
+            await events.put({"type": "error", "message": str(exc.detail)})
+        except Exception:
+            logger.exception("dashboard turn failed for %s", user.id)
+            await events.put({"type": "error", "message": "Yomi hit an error; try again"})
+        finally:
+            await events.put(None)
+
+    task = asyncio.create_task(turn())
+
+    async def lines() -> AsyncIterator[bytes]:
+        while (event := await events.get()) is not None:
+            yield (json.dumps(event) + "\n").encode()
+        await task
+
+    return StreamingResponse(
+        lines(),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
+    )
 
 
 @conversation_router.get("/{conversation_id}")

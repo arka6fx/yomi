@@ -8,9 +8,11 @@ httpx.HTTPError for the caller to map.
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 import uuid
+from collections.abc import Awaitable, Callable
 from typing import Any, Literal
 
 import httpx
@@ -134,6 +136,99 @@ async def chat_completion(
                 latency_ms, usage, None, d1,
             )
     return data
+
+
+async def stream_chat_completion(
+    purpose: Purpose,
+    messages: list[dict[str, Any]],
+    on_text: Callable[[str], Awaitable[None]],
+    tools: list[dict[str, Any]] | None = None,
+    model: str | None = None,
+    timeout: float = 120.0,
+    user_id: str | None = None,
+    d1: Any = None,
+    endpoint: str = "agent",
+) -> dict[str, Any]:
+    """Like :func:`chat_completion`, but streams: ``on_text`` gets each piece of the
+    reply as it's written. Returns the same response shape once the stream ends,
+    with any tool calls reassembled from their fragments."""
+    url, token, _ = chat_endpoint()
+    request_id = str(uuid.uuid4())
+    started = time.perf_counter()
+    selected_model = model or model_for(purpose)
+    payload: dict[str, Any] = {"model": selected_model, "messages": messages, "stream": True}
+    if tools:
+        payload["tools"] = tools
+    effort = _PURPOSE_EFFORT.get(purpose)
+    if effort:
+        payload["reasoning_effort"] = effort
+
+    content: list[str] = []
+    calls: dict[int, dict[str, Any]] = {}
+    usage: dict[str, int] = {}
+    finish: str | None = None
+    try:
+        from yomi.services.http_pool import shared_client
+
+        async with shared_client().stream(
+            "POST",
+            url,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json=payload,
+            timeout=httpx.Timeout(timeout, connect=10.0),
+        ) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    break
+                chunk = json.loads(data)
+                # Usage arrives piecemeal and then as a total; the largest is the total.
+                for key, value in (chunk.get("usage") or {}).items():
+                    if isinstance(value, int):
+                        usage[key] = max(usage.get(key, 0), value)
+                for choice in chunk.get("choices") or []:
+                    finish = choice.get("finish_reason") or finish
+                    delta = choice.get("delta") or {}
+                    if delta.get("content"):
+                        content.append(delta["content"])
+                        await on_text(delta["content"])
+                    for part in delta.get("tool_calls") or []:
+                        call = calls.setdefault(int(part.get("index") or 0), {
+                            "id": "", "type": "function", "function": {"name": "", "arguments": ""},
+                        })
+                        if part.get("id"):
+                            call["id"] = part["id"]
+                        fn = part.get("function") or {}
+                        if fn.get("name"):
+                            call["function"]["name"] = fn["name"]
+                        if fn.get("arguments"):
+                            call["function"]["arguments"] += fn["arguments"]
+    except Exception as exc:
+        latency_ms = int((time.perf_counter() - started) * 1000)
+        logger.warning(
+            "workers_ai_stream_failed request_id=%s purpose=%s model=%s latency_ms=%d error=%s",
+            request_id, purpose, selected_model, latency_ms, type(exc).__name__,
+        )
+        _trace(request_id, endpoint, purpose, selected_model, latency_ms, None,
+               type(exc).__name__, user_id)
+        raise
+
+    latency_ms = int((time.perf_counter() - started) * 1000)
+    _trace(request_id, endpoint, purpose, selected_model, latency_ms, usage, None, user_id)
+    if user_id and d1 is not None:
+        from yomi.services.http_pool import fire_and_forget
+
+        fire_and_forget(_record_completion_telemetry(
+            None, user_id, request_id, endpoint, purpose, selected_model,
+            latency_ms, usage, None, d1,
+        ))
+    message: dict[str, Any] = {"role": "assistant", "content": "".join(content) or None}
+    if calls:
+        message["tool_calls"] = [calls[i] for i in sorted(calls)]
+    return {"choices": [{"message": message, "finish_reason": finish}], "usage": usage}
 
 
 def _trace(

@@ -91,3 +91,12 @@ export function parseMarkdown(source: string): Block[] {
   flush()
   return blocks
 }
+
+/** While a reply is mid-word, close a bold or code mark it has opened, so the
+ * half-written markup never flashes on screen. */
+export function closeOpenMarks(text: string): string {
+  let out = text.replace(/\*{1,2}$|`$/, "")
+  if ((out.match(/\*\*/g)?.length ?? 0) % 2) out += "**"
+  if ((out.match(/`/g)?.length ?? 0) % 2) out += "`"
+  return out
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { parseInline, parseMarkdown } from "./chat-markdown"
+import { closeOpenMarks, parseInline, parseMarkdown } from "./chat-markdown"
 
 describe("chat markdown", () => {
   it("drops the blank lines a reply starts with", () => {
@@ -33,5 +33,12 @@ describe("chat markdown", () => {
     expect(parseMarkdown("```\n**not bold**\n```")).toEqual([
       { type: "code", text: "**not bold**" },
     ])
+  })
+
+  it("closes bold and code a reply is halfway through", () => {
+    expect(closeOpenMarks("**CI fail")).toBe("**CI fail**")
+    expect(closeOpenMarks("see `arka")).toBe("see `arka`")
+    expect(closeOpenMarks("done **")).toBe("done ")
+    expect(closeOpenMarks("**ok**")).toBe("**ok**")
   })
 })
