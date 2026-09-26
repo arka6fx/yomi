@@ -255,11 +255,24 @@ class TestUsersVerificationAccounts:
 
 
 class TestConsent:
-    async def test_check_consent_defaults_to_denied(self) -> None:
+    async def test_check_consent_defaults_to_allowed(self) -> None:
+        # Every purpose is on until the user switches it off.
         backend = Backend()
         backend.store.tables["user"].append(user_row())
         result = await auth_d1.check_consent(backend, "u-1", "memory")
-        assert result.allowed is False and result.decided is False
+        assert result.allowed is True and result.decided is False
+
+    async def test_revoke_switches_a_purpose_off(self) -> None:
+        backend = Backend()
+        backend.store.tables["user"].append(user_row())
+        await auth_d1.record_consent_decision(
+            backend, user_id="u-1", purposes=["analytics"],
+            status="revoked", context=ConsentContext(),
+        )
+        result = await auth_d1.check_consent(backend, "u-1", "analytics")
+        assert result.allowed is False and result.decided is True
+        prefs = await auth_d1.get_privacy_preferences(backend, "u-1")
+        assert prefs.analytics_enabled is False and prefs.memory_enabled is True
 
     async def test_check_consent_unknown_purpose(self) -> None:
         backend = Backend()
@@ -297,12 +310,12 @@ class TestConsent:
     async def test_preferences_round_trip(self) -> None:
         backend = Backend()
         prefs = await auth_d1.get_privacy_preferences(backend, "u-9")
-        assert prefs.memory_enabled is False
+        assert prefs.memory_enabled is True
         updated = await auth_d1.update_privacy_preferences(
-            backend, "u-9", {"memory_enabled": True}
+            backend, "u-9", {"memory_enabled": False}
         )
-        assert updated.memory_enabled is True
-        assert (await auth_d1.get_privacy_preferences(backend, "u-9")).memory_enabled is True
+        assert updated.memory_enabled is False and updated.analytics_enabled is True
+        assert (await auth_d1.get_privacy_preferences(backend, "u-9")).memory_enabled is False
 
     async def test_update_privacy_preferences_encodes_json(self) -> None:
         backend = Backend()

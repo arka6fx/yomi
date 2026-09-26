@@ -322,7 +322,7 @@ async def update_privacy_preferences(
     if existing is None:
         row = {"user_id": user_id, "updated_at": now}
         for key in BOOLEAN_PREFERENCE_KEYS:
-            row[key] = 1 if patch.get(key) is True else 0
+            row[key] = 0 if patch.get(key) is False else 1
         if "retention_overrides" in patch:
             row["retention_overrides"] = patch["retention_overrides"]
         await backend.store.atomic([backend.store.insert("privacy_preferences", row)])
@@ -448,17 +448,19 @@ async def check_consent(
     preferences = await get_privacy_preferences(backend, user_id)
     consents = await get_consent_snapshot(backend, user_id)
     consent = next((c for c in consents if c.purpose == purpose), None)
-    decided = consent is not None
+    # On by default: only an explicit decision can switch a purpose off.
+    if consent is None:
+        return ConsentCheckResult(allowed=True, reason=None, decided=False)
+    if consent.status != "granted":
+        return ConsentCheckResult(
+            allowed=False, reason=f"{purpose} consent was revoked", decided=True
+        )
     pref_key = PURPOSE_TO_PREFERENCE_KEY.get(purpose)
     if pref_key and not getattr(preferences, pref_key):
         return ConsentCheckResult(
-            allowed=False, reason=f"{purpose} preference is disabled", decided=decided
+            allowed=False, reason=f"{purpose} preference is disabled", decided=True
         )
-    if consent is None or consent.status != "granted":
-        return ConsentCheckResult(
-            allowed=False, reason=f"{purpose} consent has not been granted", decided=decided
-        )
-    return ConsentCheckResult(allowed=True, reason=None, decided=decided)
+    return ConsentCheckResult(allowed=True, reason=None, decided=True)
 
 
 async def grant_consent_if_undecided(

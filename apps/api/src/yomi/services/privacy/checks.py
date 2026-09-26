@@ -48,20 +48,20 @@ async def check_consent(
     consents = await get_consent_snapshot(session, user_id)
 
     consent = next((c for c in consents if c.purpose == purpose), None)
-    decided = consent is not None
 
+    # On by default: only an explicit decision can switch a purpose off.
+    if consent is None:
+        return ConsentCheckResult(allowed=True, reason=None, decided=False)
+    if consent.status != "granted":
+        return ConsentCheckResult(
+            allowed=False, reason=f"{purpose} consent was revoked", decided=True
+        )
     pref_key = PURPOSE_TO_PREFERENCE_KEY.get(purpose)
     if pref_key and not getattr(preferences, pref_key):
         return ConsentCheckResult(
-            allowed=False, reason=f"{purpose} preference is disabled", decided=decided
+            allowed=False, reason=f"{purpose} preference is disabled", decided=True
         )
-
-    if consent is None or consent.status != "granted":
-        return ConsentCheckResult(
-            allowed=False, reason=f"{purpose} consent has not been granted", decided=decided
-        )
-
-    return ConsentCheckResult(allowed=True, reason=None, decided=decided)
+    return ConsentCheckResult(allowed=True, reason=None, decided=True)
 
 
 # Contextual consent: grant purposes the user has never explicitly decided,
