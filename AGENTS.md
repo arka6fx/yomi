@@ -120,18 +120,19 @@ Agent loop: `apps/api/src/yomi/services/agent/loop.py`, with tools registered in
     Maps, Photos, HubSpot, Salesforce, Discord, LinkedIn, Outlook, Teams,
     OneDrive, Dropbox, Figma, YouTube, Zoom, Stripe, and more.
 
-## Plans and credits
+## Plans
 
-| Plan    | Price | Monthly credits |
-| ------- | ----- | --------------- |
-| Explore | $0    | 100 (renews)    |
-| Pro     | $5    | 300             |
-| Max     | $40   | 750             |
+| Plan | Price    | What changes                                                   |
+| ---- | -------- | -------------------------------------------------------------- |
+| Free | $0       | Unlimited chat and every feature; 3 active routines            |
+| Pro  | $5/month | Unlimited routines; the smarter engine (reasoning effort high) |
 
-Credit costs: fast chat 1, image analysis 1, voice 2/min, bot message 3, agent
-run 3 base (+1 per Composio tool call). Every charge goes through one
-chokepoint: `services/billing_d1.py → charge_usage()` (`services/metering.py` is
-the legacy Postgres equivalent).
+There are no credits. `services/billing_d1.py → charge_usage()` is still the one
+chokepoint every billable action calls, but it only logs a `usage_events` row
+for cost visibility; it never debits or blocks. The routine cap is
+`SCHEDULE_LIMITS` in `services/schedule_parser.py`. The retired Max plan maps to
+Pro. Plan definitions: `apps/api/src/yomi/shared/plans.py` and
+`apps/web/src/lib/plans.ts`.
 
 ## Privacy
 
@@ -178,12 +179,12 @@ Some facts live in code and are repeated in docs. When they change, update the
 docs in the same commit. `npm run docs:check` (`scripts/check-docs-sync.ts`)
 enforces the ones below in CI.
 
-| Fact                               | Source of truth                                              | Repeated in                                    |
-| ---------------------------------- | ------------------------------------------------------------ | ---------------------------------------------- |
-| Connector catalog                  | `packages/ui/src/catalog.ts`                                 | `docs/specs/connectors/00-index.md`, this file |
-| D1 schema                          | `apps/api/migrations-d1/`                                    | `docs/specs/11-database.md`                    |
-| Secrets forwarded to the container | `apps/api/containers/worker.ts`                              | `docs/runbook.md`                              |
-| Plans and credit costs             | `services/credit_pricing.py`, `packages/shared/src/plans.ts` | `README.md`, this file                         |
+| Fact                               | Source of truth                                | Repeated in                                    |
+| ---------------------------------- | ---------------------------------------------- | ---------------------------------------------- |
+| Connector catalog                  | `packages/ui/src/catalog.ts`                   | `docs/specs/connectors/00-index.md`, this file |
+| D1 schema                          | `apps/api/migrations-d1/`                      | `docs/specs/11-database.md`                    |
+| Secrets forwarded to the container | `apps/api/containers/worker.ts`                | `docs/runbook.md`                              |
+| Plans and limits                   | `shared/plans.py`, `apps/web/src/lib/plans.ts` | `README.md`, `docs/specs/13-pricing.md`        |
 
 ---
 

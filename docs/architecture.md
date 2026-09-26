@@ -65,7 +65,7 @@ FastAPI on uvicorn, port 8080 (`yomi.run:app`). Main areas:
 | `services/agent/`                   | Tool-calling agent loop, tool registry, sessions                       |
 | `connectors/`                       | First-class Gmail, Calendar, Drive tools and the Composio bridge       |
 | `services/memory/`, `services/rag/` | Long-term memory and retrieval                                         |
-| `services/metering.py`              | The single chokepoint that charges credits                             |
+| `services/billing_d1.py`            | Plans, subscriptions, and the `charge_usage` usage log                 |
 | `services/computer/`                | Client for the computer gateway                                        |
 | `services/*_d1.py`                  | Data access over D1                                                    |
 | `app/routes/`                       | REST API used by the dashboard (`/api/*`)                              |

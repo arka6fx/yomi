@@ -14,8 +14,9 @@ the agent loop, memory, and RAG.
 - Model access (Workers AI) and every provider key live only in the backend
   environment. Clients never receive them.
 - Dodo Payments is the payment processor.
-- Usage is gated by a single credit balance. `services/billing_d1.py`
-  `charge_usage()` is the only charging chokepoint.
+- Plans are Free and Pro. Every billable action goes through
+  `services/billing_d1.py` `charge_usage()`, which logs usage but no longer
+  debits or blocks (credits are retired).
 - Memory and RAG are backend-canonical.
 
 ## Routers
@@ -46,29 +47,25 @@ routes require the `x-yomi-internal` header to match `INTERNAL_API_KEY`.
 
 ## Billing
 
-Billing routes create Dodo checkout sessions for subscriptions and credit packs
-and receive Dodo webhooks at `POST /api/billing/webhook`. Webhooks update the
-user's `plan`, `subscription_status`, and payment records, and grant credits.
+Billing routes create Dodo checkout sessions for Pro and receive webhooks at
+`POST /api/billing/webhook`. Webhooks update the user's `plan`,
+`subscription_status`, and payment records.
 
-Self-serve plans: `explore`, `pro`, `max`.
+Self-serve plans: `explore` (shown as Free) and `pro`. The retired `max` plan is
+treated as `pro`; credit-pack purchases are refused.
 
-## Usage metering
+## Usage and limits
 
-`usage_events` is append-only. There are no per-feature monthly caps. Every
-billable action goes through `billing_d1.charge_usage()`:
+`usage_events` is append-only. `billing_d1.charge_usage()` records one row per
+billable action (chat, image, voice, agent run) for cost visibility and returns
+success; it never debits or blocks. The plan differences are enforced elsewhere:
 
-1. Check that the plan allows billable access (Explore active, paid subscription
-   active, or past-due grace).
-2. Require `balance >= credits_for_usage(kind)`, else block:
-   `subscription_required` on Explore, `credits_exhausted` on Pro and Max.
-3. Insert the `usage_events` row and consume credits, idempotently when an
-   idempotency key is given.
+- **Routines:** `SCHEDULE_LIMITS` in `services/schedule_parser.py` (Free 3, Pro
+  unlimited), checked by `schedules_d1.ensure_schedule_capacity()`.
+- **Engine:** Pro runs agent turns with reasoning effort high
+  (`services/agent/loop.py`); Free uses the fast path.
 
-There is no owner bypass. Every account is metered against its plan.
-
-Credit costs: fast chat 1 · image analysis 1 · voice 2/min · Telegram bot
-message 3 · agent run 3 base (+1 per Composio tool call). Monthly allotments:
-Explore 100, Pro 300, Max 750. See spec 13.
+See spec 13.
 
 ## LLM proxy
 
@@ -125,7 +122,8 @@ Memory and RAG routes require the matching privacy consent (`memory`,
 - `apps/api/src/yomi/app/deps.py`: session validation
 - `apps/api/src/yomi/gateway/telegram.py`: Telegram gateway
 - `apps/api/src/yomi/services/agent/loop.py`: agent loop
-- `apps/api/src/yomi/services/billing_d1.py`: credits and `charge_usage`
-- `apps/api/src/yomi/services/credit_pricing.py`: credit costs
+- `apps/api/src/yomi/services/billing_d1.py`: plans, subscriptions,
+  `charge_usage`
+- `apps/api/src/yomi/shared/plans.py`: plan definitions
 - `apps/api/src/yomi/services/transcription.py`: speech-to-text
 - `apps/api/src/yomi/services/memory/`, `services/rag/`: memory and RAG

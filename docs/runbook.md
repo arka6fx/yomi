@@ -139,8 +139,8 @@ for the Google console setup.
 
 ## Dodo Payments
 
-1. Create a live API key, the Pro and Max subscription products, and the three
-   credit-pack products.
+1. Create a live API key and the Pro subscription product. (Max and the credit
+   packs are retired; their product IDs are only read for old purchases.)
 2. Add the webhook `https://api.getyomi.in/api/billing/webhook` and copy its
    signing secret.
 3. Set `DODO_ENV=live` and the `DODO_LIVE_*` secrets, then redeploy the backend.
