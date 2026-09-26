@@ -53,7 +53,7 @@ export const RESOURCES: Resource[] = [
   { label: "Support", hint: "Talk to a human", href: "/support", icon: LifeBuoy },
   {
     label: "Referrals",
-    hint: "A free month of Pro per friend",
+    hint: "3 free days of Pro per friend",
     href: "/dashboard?tab=referrals",
     icon: Gift,
   },

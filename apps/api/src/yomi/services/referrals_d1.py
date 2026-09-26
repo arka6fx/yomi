@@ -18,8 +18,8 @@ from yomi.services.cloudflare_storage.deps import D1Backend
 from yomi.services.cloudflare_storage.store import parse_dt, utcnow_iso
 from yomi.services.referrals import NEW_ACCOUNT_WINDOW_S, REFERRAL_CAP
 
-# Both people get a month of Pro when an invite is redeemed.
-REFERRAL_PRO_DAYS = 30
+# Both people get 3 days of Pro when an invite is redeemed.
+REFERRAL_PRO_DAYS = 3
 
 logger = get_logger(__name__)
 

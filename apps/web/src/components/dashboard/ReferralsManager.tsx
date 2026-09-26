@@ -81,7 +81,7 @@ export function ReferralsManager({ token }: { token: string }) {
     <section className="space-y-6 pt-6">
       <PageHeader
         title="invite a friend"
-        subtitle="you and your friend both get a month of pro when they join yomi through your link."
+        subtitle="you and your friend both get 3 days of pro when they join yomi through your link."
       />
       <div className={cn(SURFACE, "p-5 sm:p-6")}>
         <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 p-3">

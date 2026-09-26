@@ -90,7 +90,7 @@ class TestRedeem:
             referred_user_created_at=datetime.now(UTC),
         )
         assert res == {"redeemed": True}
-        assert calls == [("referrer", 30), ("newbie", 30)]
+        assert calls == [("referrer", 3), ("newbie", 3)]
 
     async def test_invalid_self_old_and_cap(self) -> None:
         backend = Backend()

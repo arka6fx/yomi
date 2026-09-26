@@ -420,7 +420,7 @@ export const DOCS_CONTENT: Record<string, () => React.ReactNode> = {
       <H2 id="referrals">get pro free</H2>
       <p>
         invite a friend from the <A href="/dashboard?tab=referrals">referrals</A> tab and you both
-        get a month of pro.
+        get 3 days of pro.
       </p>
     </>
   ),

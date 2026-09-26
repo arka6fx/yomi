@@ -50,7 +50,7 @@ const QUESTIONS = [
   },
   {
     q: "how do i get pro for free?",
-    a: "Invite friends from your dashboard. Each new friend who joins through your link gets you both 30 days of Pro, for up to 20 friends.",
+    a: "Invite friends from your dashboard. Each new friend who joins through your link gets you both 3 days of Pro, for up to 20 friends.",
   },
 ]
 
@@ -169,7 +169,7 @@ export default function PricingPage() {
             <div>
               <p className="text-sm font-semibold text-white/80">get pro free</p>
               <h2 className="mt-2 text-balance text-3xl font-semibold leading-tight tracking-[-0.03em] sm:text-4xl">
-                invite a friend, you both get 30 days of pro.
+                invite a friend, you both get 3 days of pro.
               </h2>
               <p className="mt-3 max-w-lg text-[15px] text-white/85">
                 share your link from the dashboard. every new friend who joins adds another month,

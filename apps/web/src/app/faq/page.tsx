@@ -110,7 +110,7 @@ const SECTIONS: { title: string; items: QA[] }[] = [
       },
       {
         q: "how do i get pro for free?",
-        a: "Invite a friend from your dashboard. When they join through your link, you both get a month of Pro.",
+        a: "Invite a friend from your dashboard. When they join through your link, you both get 3 days of Pro.",
       },
       {
         q: "how do i cancel?",
