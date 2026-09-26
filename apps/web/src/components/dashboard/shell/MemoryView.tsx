@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Loader2, Pencil, Pin, Plus, Search, Trash2, X } from "lucide-react"
 import type { DashboardTab } from "@/components/dashboard/tabs"
+import { Skeleton } from "@/components/dashboard/shell/motion"
 import { cn } from "@/lib/utils"
 
 type Memory = {
@@ -315,7 +316,7 @@ export function MemoryView({
   )
 
   return (
-    <div className="space-y-8 pt-6">
+    <div className="page-fade space-y-8 pt-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">memory</h1>
@@ -390,8 +391,13 @@ export function MemoryView({
           </label>
 
           {loading ? (
-            <div className="flex items-center gap-2 py-12 text-sm text-muted-foreground">
-              <Loader2 size={15} className="animate-spin" /> loading…
+            <div className="space-y-6" aria-busy="true" aria-label="loading memories">
+              {[0, 1].map((n) => (
+                <div key={n} className="space-y-2">
+                  <Skeleton className="h-5 w-32 rounded-full" />
+                  <Skeleton className="h-40 rounded-[1.75rem]" />
+                </div>
+              ))}
             </div>
           ) : memories.length === 0 ? (
             <div className="py-16 text-center">
@@ -407,8 +413,12 @@ export function MemoryView({
             </div>
           ) : (
             <div className="space-y-6">
-              {groups.map(([group, items]) => (
-                <section key={group}>
+              {groups.map(([group, items], i) => (
+                <section
+                  key={group}
+                  className="rise"
+                  style={{ "--i": Math.min(i, 11) } as React.CSSProperties}
+                >
                   <h2 className="mb-2 flex items-baseline gap-2 text-lg font-bold tracking-tight">
                     {group}{" "}
                     <span className="text-sm font-medium text-muted-foreground">
@@ -526,8 +536,8 @@ function GraphPanel({
 
   if (!graph || !computed) {
     return (
-      <div className="flex items-center gap-2 py-16 text-sm text-muted-foreground">
-        <Loader2 size={15} className="animate-spin" /> drawing your memory…
+      <div aria-busy="true" aria-label="drawing your memory">
+        <Skeleton className="h-[420px] rounded-[1.75rem]" />
       </div>
     )
   }
