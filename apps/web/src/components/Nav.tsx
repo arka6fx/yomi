@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Menu, X } from "lucide-react"
+import { Menu } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { BrandMark } from "@/components/BrandMark"
-import { RESOURCES, ResourceRow, ResourcesMenu } from "@/components/ResourcesMenu"
+import { MobileMenu } from "@/components/MobileMenu"
+import { ResourcesMenu } from "@/components/ResourcesMenu"
 import { cn } from "@/lib/utils"
 
 const NAV_LINKS = [
@@ -39,6 +40,9 @@ export default function Nav() {
   const { data: session } = authClient.useSession()
   const router = useRouter()
   const pathname = usePathname()
+  const closeMenu = useCallback(() => setMenuOpen(false), [])
+
+  useEffect(() => setMenuOpen(false), [pathname])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 420)
@@ -80,62 +84,29 @@ export default function Nav() {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-2 md:hidden">
-          <Link href={cta.href} className="btn-ink px-4 py-2 text-sm">
-            {cta.label}
-          </Link>
+        <div className="flex items-center md:hidden">
           <button
-            className="grid size-10 place-items-center rounded-xl border border-white/80 bg-card/85 text-foreground shadow-sm backdrop-blur"
+            className="grid size-11 place-items-center rounded-2xl border border-white/90 bg-white text-foreground shadow-[0_4px_14px_-6px_rgba(16,24,40,0.35)]"
             onClick={() => setMenuOpen((v) => !v)}
             aria-label="Toggle menu"
             aria-expanded={menuOpen}
           >
-            {menuOpen ? <X size={18} /> : <Menu size={18} />}
+            <Menu size={22} />
           </button>
         </div>
-
-        {menuOpen && (
-          <div className="surface animate-menu-in absolute inset-x-4 top-full mt-2 p-2 md:hidden">
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.label}
-                href={link.href}
-                onClick={() => setMenuOpen(false)}
-                className="block rounded-xl px-3 py-2.5 text-[15px] font-medium text-foreground/80 hover:bg-muted"
-              >
-                {link.label}
-              </Link>
-            ))}
-            <p className="eyebrow mt-2 border-t border-border px-3 pb-1 pt-3">resources</p>
-            <div role="menu" aria-label="Resources">
-              {RESOURCES.map((item) => (
-                <ResourceRow key={item.label} item={item} onPick={() => setMenuOpen(false)} />
-              ))}
-            </div>
-            <div className="mt-1 border-t border-border pt-1">
-              {session ? (
-                <button
-                  onClick={() => {
-                    setMenuOpen(false)
-                    authClient.signOut().then(() => router.push("/"))
-                  }}
-                  className="block w-full rounded-xl px-3 py-2.5 text-left text-[15px] font-medium text-foreground/80 hover:bg-muted"
-                >
-                  Sign out
-                </button>
-              ) : (
-                <Link
-                  href="/signin"
-                  onClick={() => setMenuOpen(false)}
-                  className="block rounded-xl px-3 py-2.5 text-[15px] font-medium text-foreground/80 hover:bg-muted"
-                >
-                  Log in
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
       </header>
+
+      <MobileMenu
+        open={menuOpen}
+        onClose={closeMenu}
+        links={NAV_LINKS}
+        cta={cta}
+        signedIn={Boolean(session)}
+        onSignOut={() => {
+          closeMenu()
+          authClient.signOut().then(() => router.push("/"))
+        }}
+      />
 
       <Link
         href={cta.href}
