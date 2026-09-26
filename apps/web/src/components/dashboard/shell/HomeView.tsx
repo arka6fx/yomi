@@ -254,10 +254,10 @@ export function HomeView({
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-3 pt-6">
         <div>
-          <h1 className="text-5xl font-bold tracking-tight text-white drop-shadow-[0_2px_12px_rgba(14,116,184,0.35)] sm:text-6xl">
+          <h1 className="text-5xl font-bold tracking-tight text-foreground sm:text-6xl">
             {now ? greeting(now.getHours()) : "hello."}
           </h1>
-          <p className="mt-2 text-sm font-semibold text-white/85 drop-shadow-[0_1px_6px_rgba(14,116,184,0.35)]">
+          <p className="mt-2 text-sm font-medium text-foreground/60">
             {now
               ?.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })
               .toLowerCase()}

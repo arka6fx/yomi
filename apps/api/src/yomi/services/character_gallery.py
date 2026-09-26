@@ -13,6 +13,7 @@ from typing import Any
 
 from yomi.services.character_gallery_more import MORE_A
 from yomi.services.character_gallery_more_b import MORE_B
+from yomi.services.character_gallery_more_c import MORE_C
 
 _ANILIST = "https://s4.anilist.co/file/anilistcdn/character/large/"
 
@@ -435,6 +436,7 @@ GALLERY: list[dict[str, Any]] = [
     },
     {
         "slug": "captain-price", "name": "Captain Price", "emoji": "🎩", "color": "#78350f",
+        "featured": True,
         "based_on": "Captain John Price (Call of Duty)",
         "image_url": _fandom("callofduty/images/5/5c/JohnPrice_2026_MW4.png"),
         "image_credit": "Fandom",
@@ -538,6 +540,7 @@ GALLERY: list[dict[str, Any]] = [
     },
     {
         "slug": "leon-kennedy", "name": "Leon Kennedy", "emoji": "🧟", "color": "#1d4ed8",
+        "featured": True,
         "based_on": "Leon S. Kennedy (Resident Evil)",
         "image_url": _fandom("residentevil/images/7/7d/RE9_-_Leon_Render.png"),
         "image_credit": "Fandom",
@@ -558,6 +561,7 @@ GALLERY: list[dict[str, Any]] = [
     },
     {
         "slug": "arthur-morgan", "name": "Arthur Morgan", "emoji": "🤠", "color": "#92400e",
+        "featured": True,
         "based_on": "Arthur Morgan (Red Dead Redemption 2)",
         "image_url": _fandom("reddeadredemption/images/3/30/Arthur_Morgan_Level_2.jpg"),
         "image_credit": "Fandom",
@@ -581,6 +585,7 @@ GALLERY: list[dict[str, Any]] = [
     },
     {
         "slug": "ellie-williams", "name": "Ellie Williams", "emoji": "🎸", "color": "#65a30d",
+        "featured": True,
         "based_on": "Ellie Williams (The Last of Us)",
         "image_url": _fandom("thelastofus/images/3/34/Part_II_Ellie_infobox.png"),
         "image_credit": "Fandom",
@@ -641,6 +646,7 @@ GALLERY: list[dict[str, Any]] = [
     },
     {
         "slug": "steve-harrington", "name": "Steve Harrington", "emoji": "🍦", "color": "#f43f5e",
+        "featured": True,
         "based_on": "Steve Harrington (Stranger Things)",
         "image_url": _fandom("strangerthings8338/images/8/81/Steve_Harrington_1989.png"),
         "image_credit": "Fandom",
@@ -661,6 +667,7 @@ GALLERY: list[dict[str, Any]] = [
     },
     {
         "slug": "dean-winchester", "name": "Dean Winchester", "emoji": "🥧", "color": "#7c2d12",
+        "featured": True,
         "based_on": "Dean Winchester (Supernatural)",
         "image_url": _fandom("supernatural/images/d/da/Gimme_Shelter_12.jpg"),
         "image_credit": "Fandom",
@@ -681,6 +688,7 @@ GALLERY: list[dict[str, Any]] = [
     },
     {
         "slug": "wednesday-addams", "name": "Wednesday Addams", "emoji": "🖤", "color": "#18181b",
+        "featured": True,
         "based_on": "Wednesday Addams (The Addams Family)",
         "image_url": _fandom("addamsfamily/images/0/04/Charles_addams_wednesday.jpg"),
         "image_credit": "Fandom",
@@ -725,6 +733,7 @@ GALLERY: list[dict[str, Any]] = [
     },
     {
         "slug": "tony-stark", "name": "Tony Stark", "emoji": "🦾", "color": "#dc2626",
+        "featured": True,
         "based_on": "Tony Stark (Marvel)",
         "image_url": _fandom("marvelcinematicuniverse/images/9/9d/Iron_Man_Infobox.jpg"),
         "image_credit": "Fandom",
@@ -948,4 +957,4 @@ GALLERY: list[dict[str, Any]] = [
     },
 ]
 # Bigger casts built with character_gallery_fan.fan().
-GALLERY += MORE_A + MORE_B
+GALLERY += MORE_A + MORE_B + MORE_C
