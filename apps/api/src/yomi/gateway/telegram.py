@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import html
 import logging
 import re
@@ -262,6 +263,26 @@ async def download_file(file_id: str) -> bytes:
         res2 = await client.get(file_url)
         res2.raise_for_status()
         return res2.content
+
+
+async def send_typing(chat_id: str | int) -> None:
+    """Show "typing…" in the chat. Telegram clears it after ~5s or on the next message."""
+    if not settings.telegram_bot_token:
+        return
+    from yomi.services.http_pool import shared_client
+
+    with contextlib.suppress(Exception):
+        await shared_client().post(
+            f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendChatAction",
+            json={"chat_id": chat_id, "action": "typing"},
+            timeout=5.0,
+        )
+
+
+async def _keep_typing(chat_id: str | int) -> None:
+    while True:
+        await send_typing(chat_id)
+        await asyncio.sleep(4.5)
 
 
 async def set_reaction(chat_id: str | int, message_id: int, emoji: str) -> None:
@@ -650,29 +671,32 @@ async def _execute_telegram_run(
 
     lock = get_lock(chat_id)
     async with lock:
+        typing = asyncio.create_task(_keep_typing(chat_id))
         try:
             from yomi.services import runs_d1
 
-            await runs_d1.heartbeat(backend, run_id)
             if kind == "voice":
                 charge = ChargeInput(user=user, kind="voice", duration_seconds=duration_seconds)
             elif kind == "schedule":
                 charge = ChargeInput(user=user, kind="agent", units=1)
             else:
                 charge = ChargeInput(user=user, kind="chat", units=1)
-            # Run-scoped idempotency: a crash retry replays the recorded
-            # outcome instead of charging twice.
-            charge_res = await billing_d1.charge_usage(
-                backend, charge, idempotency_key=f"run:{run_id}:charge"
+            user_id = str(user["id"])
+            # These don't depend on each other; one gateway round trip each adds up,
+            # so run them together. History is read before this turn is saved and the
+            # new message is appended locally.
+            charge_res, history, _, _ = await asyncio.gather(
+                billing_d1.charge_usage(backend, charge, idempotency_key=f"run:{run_id}:charge"),
+                sessions_d1.load_history(backend, user_id, "telegram", chat_id),
+                runs_d1.heartbeat(backend, run_id),
+                sessions_d1.append_turn(backend, user_id, "telegram", chat_id, "user", text),
             )
             if not charge_res.ok:
                 await send_message(chat_id, charge_res.message)
                 await runs_d1.complete_run(backend, run_id, charge_res.message)
                 return
-
-            user_id = str(user["id"])
-            await sessions_d1.append_turn(backend, user_id, "telegram", chat_id, "user", text)
-            history = await sessions_d1.load_history(backend, user_id, "telegram", chat_id)
+            if not history or history[-1] != {"role": "user", "content": text}:
+                history.append({"role": "user", "content": text})  # save raced the read
             pending_hook = connectors_d1.create_pending_action(
                 backend, user_id=user_id,
                 source_platform="telegram", source_chat_id=chat_id,
@@ -688,11 +712,17 @@ async def _execute_telegram_run(
                 ),
                 timeout=120.0,
             )
-            await sessions_d1.append_turn(backend, user_id, "telegram", chat_id, "assistant", reply)
+            typing.cancel()
+            # The user sees the reply first; bookkeeping follows.
             await send_message(chat_id, reply)
-            if message_id is not None:
-                await set_reaction(chat_id, message_id, "👍")
-            await runs_d1.complete_run(backend, run_id, reply[:500])
+            await asyncio.gather(
+                sessions_d1.append_turn(
+                    backend, user_id, "telegram", chat_id, "assistant", reply
+                ),
+                set_reaction(chat_id, message_id, "👍") if message_id is not None
+                else asyncio.sleep(0),
+                runs_d1.complete_run(backend, run_id, reply[:500]),
+            )
         except TimeoutError:
             _record_error("agent", f"run {run_id} timed out after 120s")
             outcome = await runs_d1.fail_run(backend, run_id, "timed out after 120s")
@@ -705,6 +735,8 @@ async def _execute_telegram_run(
                 await send_message(chat_id, "That hit an error after retries — try again shortly.")
                 if message_id is not None:
                     await set_reaction(chat_id, message_id, "❌")
+        finally:
+            typing.cancel()
 
 
 @router.post("/telegram")

@@ -442,6 +442,9 @@ async def handle_composio_webhook_event(
         user_id = user_from_entity_id(fields["entity_id"])
         if user_id is None:
             return {"kind": "connection", "ignored": True}
+        from yomi.connectors.composio import forget_user_state
+
+        forget_user_state(user_id)  # the next message sees the new app at once
         toolkit = fields["toolkit"]
         existing = await backend.store.fetch_one(
             "SELECT id FROM composio_connections WHERE user_id = ? AND toolkit = ? LIMIT 1",
@@ -517,11 +520,20 @@ async def build_composio_tools_d1(
     create_pending_action: Callable[[dict], Awaitable[dict]] | None = None,
 ):
     """Composio tools plus call counter, with the mirror synced to D1."""
+    from yomi.connectors import composio as _composio
     from yomi.connectors.composio import build_composio_tools
 
+    had_state = user_id in _composio._state_cache
     tools, counter = await build_composio_tools(user_id, create_pending_action, db=None)
-    with suppress(Exception):
-        await sync_composio_connections(backend, user_id)
+    if not had_state:
+        # Mirror the connection snapshot only when it was just fetched, not per message.
+        from yomi.services.http_pool import fire_and_forget
+
+        async def _sync() -> None:
+            with suppress(Exception):
+                await sync_composio_connections(backend, user_id)
+
+        fire_and_forget(_sync())
     return tools, counter
 
 

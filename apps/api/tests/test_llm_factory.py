@@ -92,8 +92,12 @@ def _patch_httpx(monkeypatch, module, client=None):
     client = client or FakeClient()
     monkeypatch.setattr(
         module, "httpx",
-        SimpleNamespace(AsyncClient=lambda timeout=None: client, Timeout=lambda t: t),
+        SimpleNamespace(
+            AsyncClient=lambda timeout=None: client, Timeout=lambda t, **_kw: t
+        ),
     )
+    # chat_completion posts through the shared process-wide client
+    monkeypatch.setattr("yomi.services.http_pool.shared_client", lambda: client)
     return client
 
 

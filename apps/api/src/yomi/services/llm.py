@@ -84,14 +84,16 @@ async def chat_completion(
     if effort:
         payload["reasoning_effort"] = effort
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(timeout)) as client:
-            response = await client.post(
-                url,
-                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-                json=payload,
-            )
-            response.raise_for_status()
-            data = response.json()
+        from yomi.services.http_pool import shared_client
+
+        response = await shared_client().post(
+            url,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json=payload,
+            timeout=httpx.Timeout(timeout, connect=10.0),
+        )
+        response.raise_for_status()
+        data = response.json()
     except Exception as exc:
         logger.warning(
             "workers_ai_completion_failed request_id=%s purpose=%s model=%s latency_ms=%d error=%s",
@@ -115,10 +117,19 @@ async def chat_completion(
         usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0),
     )
     if user_id and (db_session or d1):
-        await _record_completion_telemetry(
-            db_session, user_id, request_id, endpoint, purpose, selected_model,
-            latency_ms, usage, None, d1,
-        )
+        if d1 is not None and db_session is None:
+            # A D1 write costs a gateway round trip; never make the reply wait on it.
+            from yomi.services.http_pool import fire_and_forget
+
+            fire_and_forget(_record_completion_telemetry(
+                None, user_id, request_id, endpoint, purpose, selected_model,
+                latency_ms, usage, None, d1,
+            ))
+        else:
+            await _record_completion_telemetry(
+                db_session, user_id, request_id, endpoint, purpose, selected_model,
+                latency_ms, usage, None, d1,
+            )
     return data
 
 

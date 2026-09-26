@@ -98,6 +98,18 @@ class FakeClient:
         return self.session
 
 
+
+@pytest.fixture(autouse=True)
+def _fresh_composio_caches():
+    """Connection state and action catalogues are cached per process."""
+    from yomi.connectors import composio
+
+    composio._state_cache.clear()
+    composio._catalog_cache.clear()
+    yield
+    composio._state_cache.clear()
+    composio._catalog_cache.clear()
+
 @pytest.fixture
 def configured(monkeypatch):
     monkeypatch.setattr("yomi.connectors.composio.settings.composio_api_key", "test-key")

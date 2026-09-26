@@ -11,7 +11,6 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
-import httpx
 from fastapi import HTTPException
 
 from yomi.conf import settings
@@ -29,12 +28,19 @@ class D1Backend:
     client: StorageClient
 
 
+def _backend() -> D1Backend:
+    from yomi.services.http_pool import shared_client
+
+    client = StorageClient.configured(shared_client())
+    return D1Backend(store=D1Store(client), client=client)
+
+
 @asynccontextmanager
 async def open_d1_backend() -> AsyncIterator[D1Backend]:
-    """Self-owned backend for background tasks and scripts (no request scope)."""
-    async with httpx.AsyncClient() as http:
-        client = StorageClient.configured(http)
-        yield D1Backend(store=D1Store(client), client=client)
+    """Self-owned backend for background tasks and scripts (no request scope).
+
+    Uses the process-wide HTTP client, so connections to the gateway stay warm."""
+    yield _backend()
 
 
 async def get_d1_backend():
@@ -44,8 +50,7 @@ async def get_d1_backend():
         yield None
         return
     try:
-        async with httpx.AsyncClient() as http:
-            client = StorageClient.configured(http)
-            yield D1Backend(store=D1Store(client), client=client)
+        backend = _backend()
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    yield backend

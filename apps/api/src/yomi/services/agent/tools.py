@@ -12,8 +12,13 @@ class ToolRegistry:
     def __init__(self):
         self._tools: dict[str, dict] = {}
         self._callables: dict[str, Callable] = {}
+        # Callable by name (approval replays, apps_run) but not sent to the model.
+        self._hidden: set[str] = set()
 
-    def register(self, name: str, description: str, parameters: dict, func: Callable) -> None:
+    def register(
+        self, name: str, description: str, parameters: dict, func: Callable,
+        hidden: bool = False,
+    ) -> None:
         self._tools[name] = {
             "type": "function",
             "function": {
@@ -23,9 +28,14 @@ class ToolRegistry:
             }
         }
         self._callables[name] = func
+        if hidden:
+            self._hidden.add(name)
 
     def get_openai_tools(self) -> list[dict]:
-        return list(self._tools.values())
+        return [tool for name, tool in self._tools.items() if name not in self._hidden]
+
+    def hidden_tools(self) -> list[dict]:
+        return [self._tools[name] for name in self._hidden if name in self._tools]
 
     async def execute(self, name: str, **kwargs) -> Any:
         func = self._callables.get(name)
@@ -247,6 +257,7 @@ async def build_user_registry(
     tool_registry = ToolRegistry()
     tool_registry._tools = dict(registry._tools)
     tool_registry._callables = dict(registry._callables)
+    tool_registry._hidden = set(registry._hidden)
 
     if d1 is not None:
         from yomi.services import connectors_d1 as _connectors_d1
@@ -291,7 +302,16 @@ async def build_user_registry(
         async def _run_composio(_tool=tool, **_kwargs):
             return await _tool.execute(_kwargs)
 
-        tool_registry.register(name, tool.description, tool.parameters, _run_composio)
+        # App actions number in the dozens per app (Notion alone was ~60k tokens of
+        # schema). Keep them out of every prompt; the model finds and runs them
+        # through apps_find / apps_run only when a task needs one.
+        tool_registry.register(
+            name, tool.description, tool.parameters, _run_composio, hidden=True
+        )
+    if composio_tools:
+        from yomi.services.agent.app_tools import register_app_tools
+
+        register_app_tools(tool_registry)
     tool_registry.composio_calls = composio_counter
     if computer_configured():
         register_computer_tools(tool_registry, user_id)

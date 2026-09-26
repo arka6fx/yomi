@@ -80,6 +80,9 @@ async def _lifespan(app: FastAPI):
     except Exception as exc:  # noqa: BLE001 — startup must not crash on a bad key
         logger.warning("[startup] composio webhook subscription skipped: %s", exc)
     yield
+    from yomi.services.http_pool import close_shared_client
+
+    await close_shared_client()
 
 
 def create_app() -> FastAPI:

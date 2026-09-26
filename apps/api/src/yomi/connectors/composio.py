@@ -38,6 +38,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any
@@ -450,6 +451,7 @@ async def get_connection_url(user_id: str, toolkit: str, callback_url: str | Non
 
 async def disconnect_connection(db: AsyncSession, user_id: str, toolkit: str) -> dict[str, Any]:
     """Delete the user's Composio connected account and its local mirror row."""
+    forget_user_state(user_id)
     client = get_composio()
     if client is None:
         raise ConnectorError("Composio integration is not configured on this server")
@@ -598,6 +600,7 @@ async def handle_webhook_event(
         if user_id is None:
             logger.warning("composio webhook for unknown entity %r ignored", fields["entity_id"])
             return {"kind": "connection", "ignored": True}
+        forget_user_state(user_id)
         toolkit = fields["toolkit"]
         row = (
             await db.execute(
@@ -641,6 +644,43 @@ async def handle_webhook_event(
     return {"kind": "unknown", "ignored": True}
 
 
+# Per-process caches. Looking these up on every message took 8-28s per turn.
+# Connection state changes rarely (and the connect/disconnect routes clear it);
+# a toolkit's action catalogue changes only when Composio ships new actions.
+STATE_TTL_S = 120.0
+CATALOG_TTL_S = 6 * 3600.0
+_state_cache: dict[str, tuple[float, Any, dict[str, dict[str, Any]]]] = {}
+_catalog_cache: dict[tuple[str, ...], tuple[float, list[Any]]] = {}
+
+
+def forget_user_state(user_id: str) -> None:
+    """Drop a user's cached connection state (after connecting or disconnecting)."""
+    _state_cache.pop(user_id, None)
+
+
+async def _cached_session_states(client: Any, user_id: str) -> tuple[Any, dict, bool]:
+    """(session, states, fresh) — fresh is False when served from cache."""
+    now = time.monotonic()
+    hit = _state_cache.get(user_id)
+    if hit and hit[0] > now:
+        return hit[1], hit[2], False
+    session = client.create(user_id=resolve_entity_id(user_id))
+    states = await fetch_toolkit_states(session)
+    _state_cache[user_id] = (now + STATE_TTL_S, session, states)
+    return session, states, True
+
+
+async def _cached_tool_items(client: Any, toolkits: list[str]) -> list[Any]:
+    key = tuple(sorted(toolkits))
+    now = time.monotonic()
+    hit = _catalog_cache.get(key)
+    if hit and hit[0] > now:
+        return hit[1]
+    items = await fetch_tool_items(client, list(key))
+    _catalog_cache[key] = (now + CATALOG_TTL_S, items)
+    return items
+
+
 async def build_composio_tools(
     user_id: str,
     create_pending_action: Callable[[dict], Awaitable[dict]] | None = None,
@@ -661,13 +701,12 @@ async def build_composio_tools(
         return {}, _noop_counter
 
     try:
-        session = client.create(user_id=resolve_entity_id(user_id))
-        states = await fetch_toolkit_states(session)
+        session, states, fresh = await _cached_session_states(client, user_id)
     except Exception as err:
         logger.warning("composio session lookup failed for %s: %s", user_id, err)
         return {}, _noop_counter
     connected = {slug for slug, state in states.items() if state["active"]} & configured
-    if db is not None:
+    if db is not None and fresh:
         try:
             await sync_connections(db, user_id, states, configured)
         except Exception as err:
@@ -713,7 +752,7 @@ async def build_composio_tools(
     async def _discover() -> None:
         if not connected:
             return
-        items = await fetch_tool_items(client, sorted(connected))
+        items = await _cached_tool_items(client, sorted(connected))
         by_toolkit: dict[str, list[Any]] = {}
         for item in items:
             if _is_deprecated(item):
