@@ -5,6 +5,24 @@ All notable changes to Yomi are documented here. The format follows
 from conventional commits via
 [release-please](https://github.com/googleapis/release-please).
 
+## [1.6.0](https://github.com/arka6fx/yomi/compare/v1.5.0...v1.6.0) (2026-09-26)
+
+
+### Features
+
+* add blue lock's isagi and rin, and the prince of stride cast ([2cb721e](https://github.com/arka6fx/yomi/commit/2cb721e4c9a82b7ee436cb5aff392fc929482984))
+* add kratos, pikachu, the destined one and more game characters ([8d6124a](https://github.com/arka6fx/yomi/commit/8d6124a65b52ceea59eaff5b301766e142aa33ab))
+* add marin, wakana gojo and the dress-up darling cast ([4745449](https://github.com/arka6fx/yomi/commit/4745449f1177390684a2ddb57f81ac33db1d0c81))
+* add omniscient reader and famous webtoon characters ([8a41f1a](https://github.com/arka6fx/yomi/commit/8a41f1a12b919084e0fd026125c751303c915b80))
+* **api:** send onboarding and win-back nudges ([2ce71e5](https://github.com/arka6fx/yomi/commit/2ce71e5405f61ce94e61a08d574d08b7b91f63c8))
+* let new people start on telegram without linking an account first ([49f5ea0](https://github.com/arka6fx/yomi/commit/49f5ea0c377079158231b9fc11e32fba7734f8bf))
+
+
+### Bug Fixes
+
+* no empty reply bubble while yomi thinks, and a full-screen chat on phones ([1d984df](https://github.com/arka6fx/yomi/commit/1d984df7008b68b4b500e9722b773d82155acfdf))
+* reject telegram updates without the webhook secret; refresh docs ([874c82d](https://github.com/arka6fx/yomi/commit/874c82d302555cae9b825ac2f70c44fc8ea7cf5b))
+
 ## [1.5.0](https://github.com/arka6fx/yomi/compare/v1.4.1...v1.5.0) (2026-09-26)
 
 
