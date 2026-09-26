@@ -233,6 +233,21 @@
     animation: bob 6s ease-in-out infinite;
   }
 
+  /* thick white die-cut border in eight directions so diagonals stay smooth */
+  .sticker-cut {
+    filter: drop-shadow(5px 0 0 #fff) drop-shadow(-5px 0 0 #fff) drop-shadow(0 5px 0 #fff)
+      drop-shadow(0 -5px 0 #fff) drop-shadow(3.5px 3.5px 0 #fff) drop-shadow(-3.5px -3.5px 0 #fff)
+      drop-shadow(3.5px -3.5px 0 #fff) drop-shadow(-3.5px 3.5px 0 #fff)
+      drop-shadow(0 12px 16px rgba(16, 40, 80, 0.22));
+  }
+
+  .sticker-cut svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
   .bubble-in {
     border-radius: 1.25rem;
     border-bottom-left-radius: 0.35rem;

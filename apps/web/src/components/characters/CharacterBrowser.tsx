@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useMemo, useState } from "react"
 import { ArrowRight, Plus, Search } from "lucide-react"
 import { Reveal } from "@/components/dashboard/shell/motion"
+import { useShuffled } from "@/lib/shuffle"
 import { cn } from "@/lib/utils"
 import {
   CharacterAvatar,
@@ -58,7 +59,13 @@ export function CharacterBrowser({
     () => characters.filter((c) => (tag === "all" || c.tags.includes(tag)) && matches(query, c)),
     [characters, tag, query],
   )
-  const featured = characters.filter((c) => c.featured)
+  // A different line-up on every visit: the featured row, "try these" and "try
+  // texting" each take their own slice of one random pick of characters with a
+  // picture, and the full list comes in a random order too.
+  const withPicture = useMemo(() => characters.filter((c) => c.imageUrl), [characters])
+  const { items: picks, ready } = useShuffled(withPicture)
+  const { items: everyone } = useShuffled(characters)
+  const hideUntilShuffled = ready ? "" : "invisible"
   const browsing = tag === "all" && !query.trim()
 
   function pick(next: string) {
@@ -177,13 +184,20 @@ export function CharacterBrowser({
           <>
             <Reveal i={0}>
               <SectionTitle>featured</SectionTitle>
-              <Grid characters={featured.slice(0, 6)} />
+              <div className={hideUntilShuffled}>
+                <Grid characters={picks.slice(0, 6)} />
+              </div>
             </Reveal>
 
             <Reveal i={1}>
               <SectionTitle>try these</SectionTitle>
-              <div className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-2">
-                {featured.slice(0, 10).map((c) => (
+              <div
+                className={cn(
+                  "-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-2",
+                  hideUntilShuffled,
+                )}
+              >
+                {picks.slice(6, 16).map((c) => (
                   <Link
                     key={c.slug}
                     href={`/characters/${c.slug}`}
@@ -207,7 +221,9 @@ export function CharacterBrowser({
               >
                 all characters
               </SectionTitle>
-              <Grid characters={characters.slice(0, shown)} />
+              <div className={hideUntilShuffled}>
+                <Grid characters={everyone.slice(0, shown)} />
+              </div>
               {characters.length > shown && (
                 <ShowMore left={characters.length - shown} onClick={() => setShown(shown + PAGE)} />
               )}
@@ -215,8 +231,8 @@ export function CharacterBrowser({
 
             <Reveal i={3}>
               <SectionTitle>try texting</SectionTitle>
-              <div className="grid gap-3 md:grid-cols-3">
-                {featured.slice(0, 3).map((c) => (
+              <div className={cn("grid gap-3 md:grid-cols-3", hideUntilShuffled)}>
+                {picks.slice(16, 19).map((c) => (
                   <div key={c.slug} className="surface flex flex-col p-4">
                     <Link href={`/characters/${c.slug}`} className="flex items-center gap-3">
                       <CharacterAvatar character={c} size={44} className="rounded-full" />

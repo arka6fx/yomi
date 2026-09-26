@@ -37,6 +37,7 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
       { label: "Privacy", href: "/privacy" },
       { label: "Terms of service", href: "/terms" },
       { label: "Copyright", href: "/copyright" },
+      { label: "Google data use", href: "/google-data" },
     ],
   },
 ]
