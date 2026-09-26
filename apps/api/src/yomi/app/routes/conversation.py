@@ -122,7 +122,7 @@ async def _take_turn(
     picks up where the other left off. ``images`` (data URLs) go to the model with
     this message only; the saved thread notes that photos were sent."""
     from yomi.gateway.telegram import get_lock
-    from yomi.services import billing_d1, connectors_d1
+    from yomi.services import billing_d1, connectors_d1, streaks_d1
     from yomi.services.agent import sessions_d1
     from yomi.services.agent.loop import run_agent_loop
     from yomi.services.metering import ChargeInput
@@ -143,7 +143,10 @@ async def _take_turn(
         if images:
             note = "(sent a photo)" if len(images) == 1 else f"(sent {len(images)} photos)"
             saved = f"{text}\n{note}".strip()
-        await sessions_d1.append_turn(d1, user_id, platform, chat_id, "user", saved)
+        await asyncio.gather(
+            sessions_d1.append_turn(d1, user_id, platform, chat_id, "user", saved),
+            streaks_d1.record_message_quietly(d1, user_id),
+        )
         if images:
             content: list[dict[str, Any]] = [{"type": "text", "text": text or "(a photo)"}]
             content += [{"type": "image_url", "image_url": {"url": url}} for url in images]

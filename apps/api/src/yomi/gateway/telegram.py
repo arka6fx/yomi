@@ -785,7 +785,7 @@ async def _execute_telegram_run(
     run_id: str,
     plan: str,
 ) -> None:
-    from yomi.services import connectors_d1, runs_d1
+    from yomi.services import connectors_d1, runs_d1, streaks_d1
     from yomi.services.agent import sessions_d1
 
     lock = get_lock(chat_id)
@@ -804,11 +804,15 @@ async def _execute_telegram_run(
             # These don't depend on each other; one gateway round trip each adds up,
             # so run them together. History is read before this turn is saved and the
             # new message is appended locally.
-            charge_res, history, _, _ = await asyncio.gather(
+            charge_res, history, _, _, _ = await asyncio.gather(
                 billing_d1.charge_usage(backend, charge, idempotency_key=f"run:{run_id}:charge"),
                 sessions_d1.load_history(backend, user_id, "telegram", chat_id),
                 runs_d1.heartbeat(backend, run_id),
                 sessions_d1.append_turn(backend, user_id, "telegram", chat_id, "user", text),
+                # A routine firing isn't the user writing; only real messages count.
+                streaks_d1.record_message_quietly(backend, user_id)
+                if kind != "schedule"
+                else asyncio.sleep(0),
             )
             if not charge_res.ok:
                 await send_message(chat_id, charge_res.message)

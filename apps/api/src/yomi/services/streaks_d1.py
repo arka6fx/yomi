@@ -6,16 +6,68 @@ imported from the original so the two paths can never drift.
 
 from __future__ import annotations
 
+from datetime import date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
+from yomi.logging import get_logger
 from yomi.services.cloudflare_storage.client import Statement
 from yomi.services.cloudflare_storage.deps import D1Backend
 from yomi.services.streaks import HANDLE_PATTERN, LEADERBOARD_LIMIT
 
 _STATS_COLS = (
     "current_streak, longest_streak, total_messages_sent, leaderboard_opt_in, "
-    "leaderboard_handle, leaderboard_show_photo, image, plan"
+    "leaderboard_handle, leaderboard_show_photo, image, plan, last_active_date"
 )
+
+logger = get_logger(__name__)
+
+# Streak days follow India time, like routines (see the agent's operating style).
+STREAK_TZ = ZoneInfo("Asia/Kolkata")
+
+
+def streak_today(now: datetime | None = None) -> date:
+    return (now or datetime.now(STREAK_TZ)).astimezone(STREAK_TZ).date()
+
+
+async def record_message(backend: D1Backend, user_id: str, today: date | None = None) -> None:
+    """Count one message the user sent and extend their daily streak.
+
+    One UPDATE, so two messages at once can't race: a message on the same day as the
+    last keeps the streak, one the day after extends it, anything later starts over.
+    """
+    day = today or streak_today()
+    yesterday = (day - timedelta(days=1)).isoformat()
+    today_s = day.isoformat()
+    new_streak = (
+        "CASE WHEN last_active_date = ? THEN current_streak "
+        "WHEN last_active_date = ? THEN current_streak + 1 ELSE 1 END"
+    )
+    await backend.store.atomic([
+        Statement(
+            "UPDATE user SET total_messages_sent = total_messages_sent + 1, "
+            f"longest_streak = MAX(longest_streak, {new_streak}), "
+            f"current_streak = {new_streak}, "
+            "last_active_date = ? WHERE id = ?",
+            [today_s, yesterday, today_s, yesterday, today_s, user_id],
+        )
+    ])
+
+
+async def record_message_quietly(backend: D1Backend, user_id: str) -> None:
+    """``record_message`` for the reply path: a streak write never fails a turn."""
+    try:
+        await record_message(backend, user_id)
+    except Exception:  # noqa: BLE001 - bookkeeping only
+        logger.warning("streak update failed for %s", user_id, exc_info=True)
+
+
+def _live_streak(row: dict[str, Any], today: date | None = None) -> int:
+    """A streak only counts while it's alive: last message today or yesterday."""
+    day = today or streak_today()
+    last = str(row.get("last_active_date") or "")[:10]
+    alive = {day.isoformat(), (day - timedelta(days=1)).isoformat()}
+    return int(row.get("current_streak") or 0) if last in alive else 0
 
 
 def _stats_dict(row: dict[str, Any] | None) -> dict[str, Any]:
@@ -31,7 +83,7 @@ def _stats_dict(row: dict[str, Any] | None) -> dict[str, Any]:
             "plan": "explore",
         }
     return {
-        "currentStreak": row.get("current_streak"),
+        "currentStreak": _live_streak(row),
         "longestStreak": row.get("longest_streak"),
         "totalMessagesSent": row.get("total_messages_sent"),
         "leaderboardOptIn": bool(row.get("leaderboard_opt_in")),
@@ -104,7 +156,8 @@ async def get_leaderboard(backend: D1Backend, user_id: str) -> dict[str, object]
     rows = await backend.store.fetch_all(
         "SELECT id, leaderboard_handle, total_messages_sent, image, "
         "leaderboard_show_photo, plan FROM user "
-        "WHERE leaderboard_opt_in = 1 AND deleted_at IS NULL "
+        # Only people who have actually messaged: empty and test sign-ups stay off.
+        "WHERE leaderboard_opt_in = 1 AND deleted_at IS NULL AND total_messages_sent > 0 "
         "ORDER BY total_messages_sent DESC, id ASC LIMIT ?",
         [LEADERBOARD_LIMIT],
     )
