@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import type { CSSProperties } from "react"
 import { CharacterAvatar } from "@/components/characters/CharacterAvatar"
 import { useShuffled } from "@/lib/shuffle"
 
@@ -23,8 +24,14 @@ export function HeroCharacters({ pool }: { pool: HeroCharacter[] }) {
         <Link
           key={character.slug}
           href={`/characters/${character.slug}`}
+          data-reveal="pop"
           className={`absolute hidden animate-float flex-col items-center motion-reduce:animate-none lg:flex ${spots[i]}`}
-          style={{ animationDelay: `${i * 1.8}s` }}
+          style={
+            {
+              animationDelay: `${i * 1.8}s`,
+              "--reveal-delay": `${700 + i * 250}ms`,
+            } as CSSProperties
+          }
         >
           <CharacterAvatar
             character={character}

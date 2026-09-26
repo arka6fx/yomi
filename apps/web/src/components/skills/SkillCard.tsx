@@ -40,6 +40,7 @@ export function SkillRowCard({ skill }: { skill: CatalogSkill }) {
   return (
     <Link
       href={`/skills/${skill.id}`}
+      data-reveal
       className="surface flex items-center gap-4 p-4 transition-transform hover:-translate-y-0.5"
     >
       <SkillOrb emoji={skill.emoji} />
@@ -60,6 +61,7 @@ export function SkillTile({ skill }: { skill: CatalogSkill }) {
   return (
     <Link
       href={`/skills/${skill.id}`}
+      data-reveal
       className="surface flex flex-col !rounded-[1.6rem] p-6 transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-[0_14px_34px_-14px_rgba(16,40,80,0.28)]"
     >
       <div className="flex items-start justify-between gap-3">
@@ -90,6 +92,7 @@ export function SkillAskPill({ skill }: { skill: CatalogSkill }) {
   return (
     <Link
       href={`/skills/${skill.id}`}
+      data-reveal
       className="surface flex items-center gap-3 !rounded-full py-2.5 pl-2.5 pr-5 transition-transform hover:-translate-y-0.5"
     >
       <SkillOrb emoji={skill.emoji} size={40} />

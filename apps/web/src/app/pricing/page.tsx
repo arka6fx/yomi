@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import type { CSSProperties } from "react"
 import Link from "next/link"
 import { ArrowRight, Check, ChevronDown, Plus } from "lucide-react"
 import { PlanButton } from "@/components/landing/PlanButton"
@@ -90,7 +91,12 @@ export default function PricingPage() {
             {PLANS.map((plan) => {
               const popular = plan.key === "pro"
               return (
-                <div key={plan.key} className="surface flex flex-col p-7">
+                <div
+                  key={plan.key}
+                  data-reveal
+                  style={{ "--reveal-delay": `${PLANS.indexOf(plan) * 110}ms` } as CSSProperties}
+                  className="surface lift flex flex-col p-7"
+                >
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xl font-semibold lowercase">{plan.name}</p>
                     <span
@@ -141,7 +147,7 @@ export default function PricingPage() {
               compare free and pro
               <ChevronDown size={16} className="transition-transform group-open:rotate-180" />
             </summary>
-            <div className="surface mt-6 divide-y divide-border">
+            <div data-reveal className="surface mt-6 divide-y divide-border">
               <div className="grid grid-cols-[1fr_auto_auto] gap-3 px-4 py-3 sm:gap-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:px-6">
                 <span />
                 <span className="w-16 text-right sm:w-24">free</span>

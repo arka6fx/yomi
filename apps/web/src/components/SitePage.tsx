@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactNode, CSSProperties } from "react"
 import { Mascot, type MascotPose } from "@/components/Mascot"
 import Nav from "@/components/Nav"
 import LandingFooter from "@/components/landing/LandingFooter"
@@ -30,12 +30,20 @@ export function PageIntro({
 }) {
   const intro = (
     <div className={center ? "mx-auto max-w-3xl text-center" : "max-w-3xl"}>
-      {eyebrow && <p className="eyebrow mb-4">{eyebrow}</p>}
-      <h1 className="text-5xl font-semibold leading-[1.02] tracking-[-0.04em] sm:text-6xl">
+      {eyebrow && <p className="hero-in eyebrow mb-4">{eyebrow}</p>}
+      <h1
+        className="hero-in text-5xl font-semibold leading-[1.02] tracking-[-0.04em] sm:text-6xl"
+        style={{ "--hero-delay": "0.06s" } as CSSProperties}
+      >
         {title}
       </h1>
       {children && (
-        <div className="mt-5 text-[17px] leading-relaxed text-muted-foreground">{children}</div>
+        <div
+          className="hero-in mt-5 text-[17px] leading-relaxed text-muted-foreground"
+          style={{ "--hero-delay": "0.16s" } as CSSProperties}
+        >
+          {children}
+        </div>
       )}
     </div>
   )

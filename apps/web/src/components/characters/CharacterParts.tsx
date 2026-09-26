@@ -39,6 +39,7 @@ export function CharacterCard({
     <div className="group/card relative">
       <Link
         href={`/characters/${character.slug}`}
+        data-reveal
         className="surface group relative flex gap-4 p-3 transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-12px_rgba(16,40,80,0.25)]"
       >
         <CharacterAvatar character={character} size={compact ? 84 : 112} />
@@ -100,7 +101,7 @@ export function TextOnTelegram({
 
 export function HowCharactersWork({ name }: { name?: string }) {
   return (
-    <div className="surface p-6 sm:p-8">
+    <div data-reveal className="surface p-6 sm:p-8">
       <p className="eyebrow">how it works</p>
       <div className="mt-3 max-w-2xl space-y-3 text-[15px] leading-relaxed text-muted-foreground">
         <p>

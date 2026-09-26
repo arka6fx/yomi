@@ -64,7 +64,7 @@ export default async function CharacterTagPage({ params }: { params: Promise<{ t
           ))}
         </Reveal>
 
-        <div className="surface mt-12 p-6 sm:p-8">
+        <div data-reveal className="surface mt-12 p-6 sm:p-8">
           <p className="eyebrow">not here?</p>
           <p className="mt-3 text-[15px] text-foreground/80">
             Make your own in a minute: a name and one line about who they are is enough.

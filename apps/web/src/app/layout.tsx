@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Inter, JetBrains_Mono } from "next/font/google"
 import { Providers } from "@/components/providers"
+import { MOTION_READY_SCRIPT, ScrollReveal } from "@/components/ScrollReveal"
 import { SITE_DESC, SITE_NAME, SITE_TITLE, TITLE_TEMPLATE } from "@/lib/site"
 import { cn } from "@/lib/utils"
 import "./globals.css"
@@ -75,14 +76,20 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={cn("antialiased", inter.variable, mono.variable)}>
+    <html
+      lang="en"
+      className={cn("antialiased", inter.variable, mono.variable)}
+      suppressHydrationWarning
+    >
       {/* warms the DNS/TLS handshake to the API host before the first fetch — react 19
           hoists link/meta tags rendered anywhere in the tree up into <head>.
           use-credentials matches how auth-client actually calls the API (cross-subdomain
           session cookies), otherwise the browser opens a second connection and this is wasted */}
       <link rel="preconnect" href="https://api.getyomi.in" crossOrigin="use-credentials" />
       <body className="bg-background text-foreground min-h-dvh">
+        <script dangerouslySetInnerHTML={{ __html: MOTION_READY_SCRIPT }} />
         <Providers>{children}</Providers>
+        <ScrollReveal />
       </body>
     </html>
   )

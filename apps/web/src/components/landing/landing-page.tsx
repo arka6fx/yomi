@@ -81,6 +81,11 @@ const GATED = [
 const TRY_THESE = SKILL_CATALOG.slice(0, 8)
 const FEATURED = ["morning-brief", "meal-log", "deadline-watch"].map((id) => getCatalogSkill(id)!)
 
+// Staggered reveal delay for the n-th item in a group.
+function stagger(n: number, step = 70, start = 0): React.CSSProperties {
+  return { "--reveal-delay": `${start + n * step}ms` } as React.CSSProperties
+}
+
 function CardLabel({ emoji, children }: { emoji: string; children: React.ReactNode }) {
   return (
     <p className="flex items-center gap-2 text-[15px] font-semibold text-foreground/75">
@@ -102,7 +107,7 @@ export function LandingPage() {
           <HeroStickers />
 
           <div className="relative z-10 mx-auto max-w-4xl px-4 pt-14 text-center sm:pt-20">
-            <h1 className="text-balance text-[2.75rem] font-semibold leading-[1.02] tracking-[-0.04em] text-white drop-shadow-[0_2px_12px_rgba(10,60,120,0.25)] sm:text-7xl">
+            <h1 className="hero-in text-balance text-[2.75rem] font-semibold leading-[1.02] tracking-[-0.04em] text-white drop-shadow-[0_2px_12px_rgba(10,60,120,0.25)] sm:text-7xl">
               the <span className="text-white/60">assistant</span>{" "}
               <Mascot
                 pose="waving"
@@ -112,8 +117,11 @@ export function LandingPage() {
               that actually gets your stuff done.
             </h1>
 
-            <div className="mt-10 flex flex-col items-center gap-3">
-              <Link href="/signup" className="btn-key px-7 py-3 text-[15px]">
+            <div
+              className="hero-in mt-10 flex flex-col items-center gap-3"
+              style={{ "--hero-delay": "0.18s" } as React.CSSProperties}
+            >
+              <Link href="/signup" className="btn-key beam px-7 py-3 text-[15px]">
                 text yomi
               </Link>
               <Link
@@ -131,13 +139,22 @@ export function LandingPage() {
               aria-hidden
               className="absolute left-4 top-60 hidden w-64 flex-col gap-3 lg:flex xl:left-0"
             >
-              <p className="bubble-in -rotate-2 px-4 py-2.5 text-[15px]">
+              <p
+                className="spring-up bubble-in -rotate-2 px-4 py-2.5 text-[15px]"
+                style={{ "--spring-delay": "1.1s" } as React.CSSProperties}
+              >
                 u said you’d reply to sarah today 👀
               </p>
-              <p className="bubble-out ml-auto w-fit rotate-1 px-4 py-2 text-[15px] font-medium">
+              <p
+                className="spring-up bubble-out ml-auto w-fit rotate-1 px-4 py-2 text-[15px] font-medium"
+                style={{ "--spring-delay": "1.6s" } as React.CSSProperties}
+              >
                 ugh. draft it for me
               </p>
-              <p className="bubble-in -rotate-1 px-4 py-2.5 text-[15px]">
+              <p
+                className="spring-up bubble-in -rotate-1 px-4 py-2.5 text-[15px]"
+                style={{ "--spring-delay": "2.1s" } as React.CSSProperties}
+              >
                 done. tap approve and it’s sent ✅
               </p>
             </div>
@@ -145,10 +162,16 @@ export function LandingPage() {
               aria-hidden
               className="absolute right-4 top-16 hidden w-60 flex-col gap-3 lg:flex xl:right-0"
             >
-              <p className="bubble-out ml-auto w-fit -rotate-1 px-4 py-2 text-[15px] font-medium">
+              <p
+                className="spring-up bubble-out ml-auto w-fit -rotate-1 px-4 py-2 text-[15px] font-medium"
+                style={{ "--spring-delay": "0.8s" } as React.CSSProperties}
+              >
                 what’s due this week?
               </p>
-              <p className="bubble-in rotate-2 px-4 py-2.5 text-[15px]">
+              <p
+                className="spring-up bubble-in rotate-2 px-4 py-2.5 text-[15px]"
+                style={{ "--spring-delay": "1.35s" } as React.CSSProperties}
+              >
                 psych essay friday, 2 PRs to review. want a plan?
               </p>
             </div>
@@ -161,14 +184,14 @@ export function LandingPage() {
 
         {/* ── Skills ───────────────────────────────────────────────────────── */}
         <section id="skills" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-          <div className="text-center">
+          <div className="text-center" data-reveal>
             <p className="eyebrow">skills</p>
             <h2 className="mt-3 text-3xl font-semibold sm:text-[2.6rem]">
               add a skill. yomi gets to work today.
             </h2>
           </div>
 
-          <div className="mt-10">
+          <div className="mt-10" data-reveal style={stagger(1, 90)}>
             <LandingSkillTabs />
           </div>
 
@@ -182,15 +205,20 @@ export function LandingPage() {
             </Link>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {TRY_THESE.map((skill) => (
-              <SkillAskPill key={skill.id} skill={skill} />
+            {TRY_THESE.map((skill, index) => (
+              <div key={skill.id} data-reveal style={stagger(index, 50)}>
+                <SkillAskPill skill={skill} />
+              </div>
             ))}
           </div>
         </section>
 
         {/* ── Statement ────────────────────────────────────────────────────── */}
         <section id="how-it-works" className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
-          <p className="mx-auto max-w-5xl text-center text-4xl font-semibold leading-[1.15] tracking-[-0.035em] sm:text-6xl lg:text-7xl">
+          <p
+            data-reveal
+            className="mx-auto max-w-5xl text-center text-4xl font-semibold leading-[1.15] tracking-[-0.035em] sm:text-6xl lg:text-7xl"
+          >
             meet yomi, an assistant that lives in your telegram{" "}
             <span className="inline-flex -space-x-3 align-middle" aria-hidden>
               {STEPS.map((step) => (
@@ -207,7 +235,12 @@ export function LandingPage() {
 
           <div className="mx-auto mt-16 grid max-w-5xl gap-4 sm:grid-cols-3">
             {STEPS.map((step, index) => (
-              <div key={step.label} className="surface p-6">
+              <div
+                key={step.label}
+                data-reveal
+                style={stagger(index, 90)}
+                className="surface lift p-6"
+              >
                 <div className="flex items-center gap-3">
                   <SkillOrb emoji={step.emoji} size={44} />
                   <span className="text-xs font-semibold text-muted-foreground">
@@ -225,26 +258,38 @@ export function LandingPage() {
 
         {/* ── Bento ────────────────────────────────────────────────────────── */}
         <section id="features" className="mx-auto max-w-6xl px-4 pb-24 sm:px-6">
-          <h2 className="text-center text-4xl font-semibold sm:text-5xl">
+          <h2 data-reveal className="text-center text-4xl font-semibold sm:text-5xl">
             yomi does more for you.
           </h2>
 
           <div className="mt-12 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
             {/* what it does */}
-            <div className="surface wash-lilac relative flex min-h-[420px] flex-col justify-between overflow-hidden p-8 sm:p-10">
+            <div
+              data-reveal
+              style={stagger(0, 110)}
+              className="surface lift wash-lilac relative flex min-h-[420px] flex-col justify-between overflow-hidden p-8 sm:p-10"
+            >
               <CardLabel emoji="🗓️">what it does</CardLabel>
               <div
                 aria-hidden
                 className="pointer-events-none absolute right-6 top-8 hidden w-[330px] rotate-[-4deg] space-y-3 sm:block"
               >
-                <div className="rounded-2xl bg-white/90 p-4 shadow-lg">
+                <div
+                  data-reveal="pop"
+                  style={stagger(0, 0, 350)}
+                  className="rounded-2xl bg-white/90 p-4 shadow-lg"
+                >
                   <p className="text-xs font-semibold text-muted-foreground">
                     ☀️ morning brief · 8:00
                   </p>
                   <p className="mt-2 text-sm font-semibold">3 meetings, 2 emails that matter</p>
                   <p className="text-xs text-muted-foreground">first one in 45 min · standup</p>
                 </div>
-                <div className="ml-10 rounded-2xl bg-white/90 p-4 shadow-lg">
+                <div
+                  data-reveal="pop"
+                  style={stagger(1, 220, 350)}
+                  className="ml-10 rounded-2xl bg-white/90 p-4 shadow-lg"
+                >
                   <p className="text-sm font-semibold">send reply to sarah?</p>
                   <p className="text-xs text-muted-foreground">“thursday works, see you at 4”</p>
                   <div className="mt-3 flex gap-2 text-xs font-semibold">
@@ -263,16 +308,32 @@ export function LandingPage() {
             </div>
 
             {/* money */}
-            <div className="surface wash-mint relative flex min-h-[420px] flex-col justify-between overflow-hidden p-8 sm:p-10">
+            <div
+              data-reveal
+              style={stagger(1, 110)}
+              className="surface lift wash-mint relative flex min-h-[420px] flex-col justify-between overflow-hidden p-8 sm:p-10"
+            >
               <CardLabel emoji="💳">money</CardLabel>
               <div aria-hidden className="mt-6 space-y-2.5">
-                <p className="bubble-in w-fit max-w-[85%] px-4 py-2 text-sm">
+                <p
+                  data-reveal="pop"
+                  style={stagger(0, 260, 300)}
+                  className="bubble-in w-fit max-w-[85%] px-4 py-2 text-sm"
+                >
                   you spent $182 this week. food delivery was half of it 👀
                 </p>
-                <p className="bubble-out ml-auto w-fit px-4 py-2 text-sm font-medium">
+                <p
+                  data-reveal="pop"
+                  style={stagger(1, 260, 300)}
+                  className="bubble-out ml-auto w-fit px-4 py-2 text-sm font-medium"
+                >
                   WAIT what 😭
                 </p>
-                <p className="bubble-in w-fit max-w-[85%] px-4 py-2 text-sm">
+                <p
+                  data-reveal="pop"
+                  style={stagger(2, 260, 300)}
+                  className="bubble-in w-fit max-w-[85%] px-4 py-2 text-sm"
+                >
                   every payment still needs your ok. want a weekly recap?
                 </p>
               </div>
@@ -286,7 +347,11 @@ export function LandingPage() {
 
           <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1.4fr]">
             {/* privacy */}
-            <div className="surface wash-sky relative flex min-h-[420px] flex-col justify-between overflow-hidden p-8 sm:p-10">
+            <div
+              data-reveal
+              style={stagger(0, 110)}
+              className="surface lift wash-sky relative flex min-h-[420px] flex-col justify-between overflow-hidden p-8 sm:p-10"
+            >
               <CardLabel emoji="🛡️">privacy</CardLabel>
               <div aria-hidden className="relative my-8 flex flex-wrap justify-center gap-2">
                 {["check my inbox", "book the 4pm", "log this receipt", "what did priya say?"].map(
@@ -313,23 +378,43 @@ export function LandingPage() {
             </div>
 
             {/* memory */}
-            <div className="surface wash-peach relative flex min-h-[420px] flex-col justify-between overflow-hidden p-8 sm:p-10">
+            <div
+              data-reveal
+              style={stagger(1, 110)}
+              className="surface lift wash-peach relative flex min-h-[420px] flex-col justify-between overflow-hidden p-8 sm:p-10"
+            >
               <CardLabel emoji="🧠">memory</CardLabel>
               <div
                 aria-hidden
                 className="absolute -right-6 top-10 hidden w-[300px] rotate-[6deg] rounded-[2.2rem] bg-[#16181d] p-2 shadow-2xl sm:block"
               >
                 <div className="space-y-2 rounded-[1.8rem] bg-[#f7f8fa] px-3 pb-10 pt-6">
-                  <p className="bubble-out ml-auto w-fit max-w-[90%] px-3 py-1.5 text-[13px] font-medium">
+                  <p
+                    data-reveal="pop"
+                    style={stagger(0, 260, 300)}
+                    className="bubble-out ml-auto w-fit max-w-[90%] px-3 py-1.5 text-[13px] font-medium"
+                  >
                     find a dinner spot for me and priya fri
                   </p>
-                  <p className="bubble-in w-fit max-w-[90%] px-3 py-1.5 text-[13px]">
+                  <p
+                    data-reveal="pop"
+                    style={stagger(1, 260, 300)}
+                    className="bubble-in w-fit max-w-[90%] px-3 py-1.5 text-[13px]"
+                  >
                     she’s vegetarian, right? looking for veg places near you
                   </p>
-                  <p className="bubble-out ml-auto w-fit max-w-[90%] px-3 py-1.5 text-[13px] font-medium">
+                  <p
+                    data-reveal="pop"
+                    style={stagger(2, 260, 300)}
+                    className="bubble-out ml-auto w-fit max-w-[90%] px-3 py-1.5 text-[13px] font-medium"
+                  >
                     wait u remembered that?? 🥹
                   </p>
-                  <p className="bubble-in w-fit max-w-[90%] px-3 py-1.5 text-[13px]">
+                  <p
+                    data-reveal="pop"
+                    style={stagger(3, 260, 300)}
+                    className="bubble-in w-fit max-w-[90%] px-3 py-1.5 text-[13px]"
+                  >
                     you told me in march. i don’t forget
                   </p>
                 </div>
@@ -343,7 +428,10 @@ export function LandingPage() {
           </div>
 
           {/* skills */}
-          <div className="surface wash-sky mt-5 grid items-center gap-10 overflow-hidden p-8 sm:p-10 lg:grid-cols-2">
+          <div
+            data-reveal
+            className="surface lift wash-sky mt-5 grid items-center gap-10 overflow-hidden p-8 sm:p-10 lg:grid-cols-2"
+          >
             <div>
               <CardLabel emoji="✨">skills</CardLabel>
               <h3 className="mt-16 text-4xl font-semibold leading-[1.05] sm:text-5xl">
@@ -366,6 +454,8 @@ export function LandingPage() {
               {FEATURED.map((skill, index) => (
                 <div
                   key={skill.id}
+                  data-reveal="pop"
+                  style={stagger(index, 120, 200)}
                   className={`flex w-40 flex-col items-center rounded-2xl bg-white/90 p-4 text-center shadow-lg ${
                     index === 1 ? "z-10 -translate-y-4 scale-110" : "opacity-80"
                   }`}
@@ -392,7 +482,7 @@ export function LandingPage() {
         {/* ── Approvals ────────────────────────────────────────────────────── */}
         <section id="approvals" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <div className="grid items-center gap-14 lg:grid-cols-[1fr_minmax(0,420px)] lg:gap-20">
-            <div>
+            <div data-reveal>
               <p className="eyebrow">approvals</p>
               <h2 className="mt-3 text-balance text-4xl font-semibold leading-[1.05] tracking-[-0.04em] sm:text-5xl">
                 nothing leaves without your ok.
@@ -404,8 +494,13 @@ export function LandingPage() {
               </p>
 
               <ul className="mt-8 grid gap-3 sm:grid-cols-2">
-                {GATED.map((item) => (
-                  <li key={item.label} className="surface flex items-start gap-3 p-4">
+                {GATED.map((item, index) => (
+                  <li
+                    key={item.label}
+                    data-reveal
+                    style={stagger(index, 80, 150)}
+                    className="surface lift flex items-start gap-3 p-4"
+                  >
                     <span className="text-2xl leading-none" aria-hidden>
                       {item.emoji}
                     </span>
@@ -429,7 +524,7 @@ export function LandingPage() {
               </div>
             </div>
 
-            <div className="relative mx-auto w-full max-w-[420px] pt-10">
+            <div data-reveal className="relative mx-auto w-full max-w-[420px] pt-10">
               <Mascot
                 pose="cool"
                 float
@@ -442,7 +537,7 @@ export function LandingPage() {
 
         {/* ── Connectors ───────────────────────────────────────────────────── */}
         <section id="connectors" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-          <div className="text-center">
+          <div className="text-center" data-reveal>
             <Mascot pose="laptop" className="mx-auto mb-5 w-24 sm:w-28" />
             <p className="eyebrow">integrations</p>
             <h2 className="mt-3 text-4xl font-semibold sm:text-5xl">
@@ -454,8 +549,13 @@ export function LandingPage() {
           </div>
 
           <div className="mx-auto mt-12 grid max-w-5xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {CONNECTORS.map((c) => (
-              <div key={c.id} className="surface flex items-center gap-3 p-4">
+            {CONNECTORS.map((c, index) => (
+              <div
+                key={c.id}
+                data-reveal
+                style={stagger(index % 6, 60)}
+                className="surface lift flex items-center gap-3 p-4"
+              >
                 <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white shadow-sm ring-1 ring-black/5">
                   <ConnectorIcon id={c.id} size={26} />
                 </span>
@@ -474,7 +574,7 @@ export function LandingPage() {
             aria-hidden
             className="absolute left-1/2 top-40 h-[1100px] w-[1600px] -translate-x-1/2 rounded-[50%] bg-gradient-to-b from-[#d4e8f6] via-[#e3eef7]/70 to-transparent"
           />
-          <div className="relative mx-auto max-w-4xl px-4 text-center">
+          <div className="relative mx-auto max-w-4xl px-4 text-center" data-reveal>
             <Mascot pose="waving" float className="mx-auto w-36 sm:w-44" />
             <h2 className="mt-8 text-5xl font-semibold leading-[1.02] tracking-[-0.04em] sm:text-7xl">
               meet the assistant that keeps your life on track.
@@ -483,7 +583,7 @@ export function LandingPage() {
               yomi lives in your telegram, remembers what you tell it, and checks in so things
               actually get done. free every month, forever.
             </p>
-            <Link href="/signup" className="btn-ink mt-8 px-6 py-3 text-[15px]">
+            <Link href="/signup" className="btn-ink beam mt-8 px-6 py-3 text-[15px]">
               text yomi <ArrowRight size={16} />
             </Link>
           </div>

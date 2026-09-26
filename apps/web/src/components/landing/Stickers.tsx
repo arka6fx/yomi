@@ -169,11 +169,12 @@ const SPOTS: Spot[] = [
 export function HeroStickers() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 hidden md:block">
-      {SPOTS.map(({ art: Art, className, tilt, delay }, i) => (
+      {SPOTS.map(({ art: Art, className, tilt }, i) => (
         <span
           key={i}
-          className={`sticker sticker-cut absolute ${className}`}
-          style={{ "--tilt": tilt, animationDelay: delay } as CSSProperties}
+          className={`sticker sticker-cut sticker-pop absolute ${className}`}
+          // pop in one after another, then settle into the bob
+          style={{ "--tilt": tilt, "--pop-delay": `${0.1 + i * 0.09}s` } as CSSProperties}
         >
           <Art />
         </span>

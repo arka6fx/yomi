@@ -167,7 +167,7 @@ export default async function CharacterPage({ params }: { params: Promise<{ slug
           </section>
         )}
 
-        <div className="surface mt-12 flex items-center gap-4 p-5">
+        <div data-reveal className="surface mt-12 flex items-center gap-4 p-5">
           <Mascot pose="waving" className="w-16 shrink-0" />
           <p className="text-[15px] text-muted-foreground">
             <span className="font-semibold text-foreground">yomi is still underneath.</span>{" "}

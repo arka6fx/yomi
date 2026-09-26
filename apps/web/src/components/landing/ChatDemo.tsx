@@ -230,10 +230,14 @@ export function ChatDemo() {
             return (
               <div key={index} className={mine ? "flex justify-end" : "flex"}>
                 <p
-                  className={`relative max-w-[82%] rounded-2xl px-3 pb-1.5 pt-1.5 text-[14.5px] leading-snug shadow-[0_1px_1px_rgba(0,0,0,0.13)] ${
+                  className={`spring-up relative max-w-[82%] rounded-2xl px-3 pb-1.5 pt-1.5 text-[14.5px] leading-snug shadow-[0_1px_1px_rgba(0,0,0,0.13)] ${
                     last ? (mine ? "rounded-br-[4px]" : "rounded-bl-[4px]") : ""
                   }`}
-                  style={{ background: mine ? TG.outgoing : TG.incoming }}
+                  // each new message springs up from its tail, like a real chat
+                  style={{
+                    background: mine ? TG.outgoing : TG.incoming,
+                    transformOrigin: mine ? "bottom right" : "bottom left",
+                  }}
                 >
                   {bubble.text}
                   <span

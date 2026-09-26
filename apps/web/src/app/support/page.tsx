@@ -53,6 +53,7 @@ export default function SupportPage() {
               <Link
                 key={channel.title}
                 href={channel.href}
+                data-reveal
                 className="surface group flex flex-col p-7 transition-transform hover:-translate-y-0.5"
                 target={channel.href.startsWith("http") ? "_blank" : undefined}
                 rel={channel.href.startsWith("http") ? "noopener noreferrer" : undefined}
@@ -76,7 +77,7 @@ export default function SupportPage() {
           })}
         </div>
 
-        <div className="surface mt-5 p-7">
+        <div data-reveal className="surface mt-5 p-7">
           <h2 className="text-xl font-semibold">before you write</h2>
           <ul className="mt-4 space-y-2.5 text-[15px] text-muted-foreground">
             {[

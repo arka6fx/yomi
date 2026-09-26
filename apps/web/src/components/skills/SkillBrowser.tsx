@@ -149,7 +149,7 @@ export function SkillGallery() {
         </p>
       )}
 
-      <div className="surface mt-10 max-w-2xl p-6 sm:p-7">
+      <div data-reveal className="surface mt-10 max-w-2xl p-6 sm:p-7">
         <p className="font-semibold text-foreground">build your own.</p>
         <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
           need something that isn&apos;t here? just tell yomi on telegram, like &ldquo;every friday

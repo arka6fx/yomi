@@ -43,7 +43,10 @@ export default async function SkillPage({ params }: { params: Promise<{ id: stri
           </Link>
         </div>
 
-        <div className="surface relative mt-14 flex flex-col items-center px-6 py-10 text-center sm:px-10">
+        <div
+          data-reveal
+          className="surface relative mt-14 flex flex-col items-center px-6 py-10 text-center sm:px-10"
+        >
           {/* the mascot perched on the card, reading up on the skill */}
           <Mascot
             pose="reading"
@@ -68,7 +71,7 @@ export default async function SkillPage({ params }: { params: Promise<{ id: stri
         </div>
 
         <p className="mb-3 ml-1 mt-8 text-sm text-muted-foreground">what it&apos;ll do</p>
-        <div className="surface divide-y divide-border">
+        <div data-reveal className="surface divide-y divide-border">
           <div className="flex items-start gap-3 p-5">
             <Clock size={18} className="mt-0.5 shrink-0 text-muted-foreground" />
             <div>
