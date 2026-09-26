@@ -52,8 +52,7 @@ Open [@yomi_assistant_bot](https://t.me/yomi_assistant_bot) and say hi. Connect
 your apps and manage everything else from the
 [dashboard](https://getyomi.in/dashboard).
 
-Free to start with 100 credits a month.
-**[→ See plans](https://getyomi.in/pricing)**
+Free forever, with unlimited chat. **[→ See plans](https://getyomi.in/pricing)**
 
 </td>
 <td width="50%" valign="top">

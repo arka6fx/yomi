@@ -76,11 +76,15 @@ Anything with side effects (sending, booking, paying, deleting, messaging
 someone) must go through `create_pending_action` so the user approves it first.
 Don't add a tool that acts irreversibly without that step.
 
-## Money and credits
+## Plans and usage
 
-Every billable action is charged through `services/billing_d1.charge_usage()`.
-Pass an `idempotency_key` when a retry could double-charge. Costs live in
-`services/credit_pricing.py`.
+Free and Pro only; credits are retired. Still call
+`services/billing_d1.charge_usage()` for every billable action: it logs the
+usage event (pass an `idempotency_key` when a retry could log twice) but never
+blocks. The real plan gate is the routine cap in `services/schedule_parser.py`
+(`SCHEDULE_LIMITS`), and Pro gets the `agent` engine in
+`services/agent/loop.py`. Plan definitions live in `shared/plans.py`; keep
+`apps/web/src/lib/plans.ts` in step.
 
 ## Telegram
 
