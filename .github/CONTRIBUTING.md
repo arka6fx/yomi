@@ -49,17 +49,21 @@ a new tool, service, or package.
 ## Workflow
 
 1. Branch from `main`: `git checkout -b feat/short-name` (or `fix/`, `docs/`).
-2. Make focused commits using
-   [Conventional Commits](https://www.conventionalcommits.org/): lowercase,
-   imperative, 72 characters at most, no trailing period.
+2. Make focused commits. Subjects are short
+   [Conventional Commits](https://www.conventionalcommits.org/):
+   `type(scope): summary`, lowercase, no trailing period, **60 characters at
+   most**. Detail goes in the body.
 
    ```text
-   feat: add calendar digest routine
-   fix: handle expired connector token
-   docs: document d1 migration workflow
+   feat(web): add the docs search palette
+   fix(api): handle an expired connector token
+   docs: explain d1 migrations
    ```
 
-   Types: `feat`, `fix`, `refactor`, `perf`, `style`, `test`, `chore`, `docs`.
+   Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`,
+   `ci`, `chore`, `revert`. `npm install` installs a `commit-msg` hook that
+   checks this, and CI checks the pull request title, which becomes the commit
+   on `main` when the PR is squash-merged.
 
 3. Run the checks below.
 4. Open a pull request against `main` using the template.

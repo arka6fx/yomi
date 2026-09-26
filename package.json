@@ -47,7 +47,9 @@
     "python:test": "cd apps/api && uv run pytest -q",
     "python:lint": "cd apps/api && uv run ruff check .",
     "python:dev": "cd apps/api && uv run uvicorn yomi.run:app --reload --port 8080",
-    "python:typecheck": "cd apps/api && uv run pyright src/"
+    "python:typecheck": "cd apps/api && uv run pyright src/",
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true",
+    "commit:check": "node --test scripts/commit-msg.test.mjs"
   },
   "devDependencies": {
     "@yomi/eslint-config": "0.0.0",
@@ -64,6 +66,3 @@
   },
   "packageManager": "npm@10.9.2"
 }
-
-
-
