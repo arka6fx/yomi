@@ -169,8 +169,8 @@ export function ChatDemo() {
   return (
     <div className="relative mx-auto h-[min(700px,calc(100dvh-10.5rem))] w-[min(360px,calc(100vw-2rem))] rounded-[3rem] bg-[#16181d] p-2.5 shadow-[0_40px_80px_rgba(10,20,40,0.45)]">
       <div
-        className="relative flex h-full flex-col overflow-hidden rounded-[2.4rem] text-white"
-        style={{ backgroundColor: TG.bg, backgroundImage: WALLPAPER }}
+        className="relative flex h-full flex-col overflow-hidden rounded-[2.4rem]"
+        style={{ backgroundColor: TG.bg, backgroundImage: WALLPAPER, color: TG.text }}
       >
         {/* status bar */}
         <div
@@ -191,7 +191,7 @@ export function ChatDemo() {
           className="flex items-center gap-3 px-3 pb-2.5 pt-1.5 shadow-[0_1px_0_rgba(0,0,0,0.35)]"
           style={{ background: TG.bar }}
         >
-          <ArrowLeft size={20} className="shrink-0 text-white/90" aria-hidden />
+          <ArrowLeft size={20} className="shrink-0 opacity-80" aria-hidden />
           <img
             src="/brand-mark-128.png"
             alt=""
@@ -205,7 +205,7 @@ export function ChatDemo() {
               {typing ? "typing…" : "bot"}
             </p>
           </div>
-          <EllipsisVertical size={20} className="shrink-0 text-white/80" aria-hidden />
+          <EllipsisVertical size={20} className="shrink-0 opacity-60" aria-hidden />
         </div>
 
         <div
@@ -215,7 +215,10 @@ export function ChatDemo() {
           aria-label="Conversation with Yomi"
         >
           <p className="flex justify-center pb-1.5">
-            <span className="rounded-full bg-black/30 px-2.5 py-0.5 text-[12px] font-medium text-white/85">
+            <span
+              className="rounded-full px-2.5 py-0.5 text-[12px] font-medium text-white"
+              style={{ background: TG.glass }}
+            >
               Today
             </span>
           </p>
@@ -225,17 +228,15 @@ export function ChatDemo() {
             return (
               <div key={index} className={mine ? "flex justify-end" : "flex"}>
                 <p
-                  className={`relative max-w-[82%] rounded-2xl px-3 pb-1.5 pt-1.5 text-[14.5px] leading-snug shadow-[0_1px_1px_rgba(0,0,0,0.25)] ${
+                  className={`relative max-w-[82%] rounded-2xl px-3 pb-1.5 pt-1.5 text-[14.5px] leading-snug shadow-[0_1px_1px_rgba(0,0,0,0.13)] ${
                     last ? (mine ? "rounded-br-[4px]" : "rounded-bl-[4px]") : ""
                   }`}
                   style={{ background: mine ? TG.outgoing : TG.incoming }}
                 >
                   {bubble.text}
                   <span
-                    className={`float-right ml-2 mt-1.5 inline-flex translate-y-0.5 items-center gap-0.5 text-[11px] ${
-                      mine ? "text-white/75" : ""
-                    }`}
-                    style={mine ? undefined : { color: TG.muted }}
+                    className={`float-right ml-2 mt-1.5 inline-flex translate-y-0.5 items-center gap-0.5 text-[11px] ${""}`}
+                    style={{ color: mine ? TG.outMuted : TG.muted }}
                   >
                     {time}
                     {mine && <Tick read={index < bubbles.length - 1 || typing} />}
@@ -260,8 +261,10 @@ export function ChatDemo() {
                     role="checkbox"
                     aria-checked={on}
                     onClick={() => toggle(topic.id)}
-                    className={`truncate rounded-lg px-2 py-2 text-[13px] font-medium backdrop-blur-sm transition-colors ${
-                      on ? "bg-[#7440d8]/80" : "bg-white/[0.09] hover:bg-white/[0.14]"
+                    className={`truncate rounded-lg px-2 py-2 text-[13px] font-medium text-white backdrop-blur-sm transition-colors ${
+                      on
+                        ? "bg-[#3390ec]"
+                        : "bg-[rgba(62,96,52,0.32)] hover:bg-[rgba(62,96,52,0.45)]"
                     }`}
                   >
                     {on ? "✓ " : ""}
@@ -285,7 +288,7 @@ export function ChatDemo() {
             <div className="max-w-[92%] pt-0.5">
               <Link
                 href="/signup"
-                className="flex items-center justify-center gap-1 rounded-lg bg-white/[0.09] py-2 text-[13px] font-semibold hover:bg-white/[0.14]"
+                className="flex items-center justify-center gap-1 rounded-lg bg-[rgba(62,96,52,0.32)] py-2 text-[13px] font-semibold text-white hover:bg-[rgba(62,96,52,0.45)]"
               >
                 open yomi on telegram <ArrowUpRight size={14} />
               </Link>
@@ -296,8 +299,8 @@ export function ChatDemo() {
         {/* composer: the bot's menu button, then the message field */}
         <div className="flex items-center gap-1.5 px-2 pb-5 pt-2" style={{ background: TG.bar }}>
           <span
-            className="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-[13px] font-semibold"
-            style={{ background: "#3390ec" }}
+            className="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-[13px] font-semibold text-white"
+            style={{ background: TG.accent }}
             aria-hidden
           >
             <AppWindow size={14} /> Dashboard
@@ -311,8 +314,8 @@ export function ChatDemo() {
           </span>
           <Paperclip size={18} className="shrink-0" style={{ color: TG.muted }} aria-hidden />
           <span
-            className="grid size-9 shrink-0 place-items-center rounded-full"
-            style={{ background: "#3390ec" }}
+            className="grid size-9 shrink-0 place-items-center rounded-full text-white"
+            style={{ background: TG.accent }}
             aria-hidden
           >
             <Mic size={17} />

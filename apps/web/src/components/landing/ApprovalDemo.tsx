@@ -30,8 +30,8 @@ export function ApprovalDemo() {
 
   return (
     <div
-      className="overflow-hidden rounded-[2rem] text-white shadow-[0_40px_80px_-30px_rgba(10,20,40,0.55)] ring-8 ring-[#16181d]"
-      style={{ backgroundColor: TG.bg, backgroundImage: WALLPAPER }}
+      className="overflow-hidden rounded-[2rem] shadow-[0_40px_80px_-30px_rgba(10,20,40,0.55)] ring-8 ring-[#16181d]"
+      style={{ backgroundColor: TG.bg, backgroundImage: WALLPAPER, color: TG.text }}
     >
       <div className="flex items-center gap-3 px-4 py-3" style={{ background: TG.bar }}>
         <img
@@ -52,11 +52,14 @@ export function ApprovalDemo() {
       <div className="space-y-2 px-3 py-4 text-[14.5px] leading-snug" aria-live="polite">
         <div className="flex justify-end">
           <p
-            className="max-w-[82%] rounded-2xl rounded-br-[4px] px-3 py-1.5"
+            className="max-w-[82%] rounded-2xl rounded-br-[4px] px-3 py-1.5 shadow-[0_1px_1px_rgba(0,0,0,0.13)]"
             style={{ background: TG.outgoing }}
           >
             email sarah the deck, say sorry it&apos;s late
-            <span className="float-right ml-2 mt-1.5 inline-flex translate-y-0.5 items-center gap-0.5 text-[11px] text-white/75">
+            <span
+              className="float-right ml-2 mt-1.5 inline-flex translate-y-0.5 items-center gap-0.5 text-[11px]"
+              style={{ color: TG.outMuted }}
+            >
               9:41 AM <CheckCheck size={14} aria-hidden />
             </span>
           </p>
@@ -64,12 +67,12 @@ export function ApprovalDemo() {
 
         <div className="max-w-[88%]">
           <div
-            className="rounded-2xl rounded-bl-[4px] px-3 py-2"
+            className="rounded-2xl rounded-bl-[4px] px-3 py-2 shadow-[0_1px_1px_rgba(0,0,0,0.13)]"
             style={{ background: TG.incoming }}
           >
             <p className="font-semibold">Approval needed</p>
             <p>{TITLE}</p>
-            <p className="mt-2 whitespace-pre-line text-[13.5px] text-white/80">{PREVIEW}</p>
+            <p className="mt-2 whitespace-pre-line text-[13.5px] opacity-80">{PREVIEW}</p>
             <p className="mt-1 text-right text-[11px]" style={{ color: TG.muted }}>
               9:41 AM
             </p>
@@ -80,7 +83,7 @@ export function ApprovalDemo() {
               type="button"
               onClick={approve}
               disabled={decided}
-              className="rounded-lg bg-white/[0.09] py-2 text-[13px] font-semibold transition-colors enabled:hover:bg-white/[0.16] disabled:opacity-50"
+              className="rounded-lg bg-[rgba(62,96,52,0.32)] py-2 text-[13px] font-semibold text-white transition-colors enabled:hover:bg-[rgba(62,96,52,0.45)] disabled:opacity-50"
             >
               ✅ Approve
             </button>
@@ -88,7 +91,7 @@ export function ApprovalDemo() {
               type="button"
               onClick={() => setStage("cancelled")}
               disabled={decided}
-              className="rounded-lg bg-white/[0.09] py-2 text-[13px] font-semibold transition-colors enabled:hover:bg-white/[0.16] disabled:opacity-50"
+              className="rounded-lg bg-[rgba(62,96,52,0.32)] py-2 text-[13px] font-semibold text-white transition-colors enabled:hover:bg-[rgba(62,96,52,0.45)] disabled:opacity-50"
             >
               ✖️ Reject
             </button>
@@ -97,14 +100,19 @@ export function ApprovalDemo() {
 
         {stage === "working" && (
           <p className="flex justify-center pt-1">
-            <span className="rounded-full bg-black/40 px-3 py-1 text-[12px]">Working on it…</span>
+            <span
+              className="rounded-full px-3 py-1 text-[12px] text-white"
+              style={{ background: TG.glass }}
+            >
+              Working on it…
+            </span>
           </p>
         )}
 
         {(stage === "done" || stage === "cancelled") && (
           <div className="flex">
             <p
-              className="max-w-[82%] rounded-2xl rounded-bl-[4px] px-3 py-1.5"
+              className="max-w-[82%] rounded-2xl rounded-bl-[4px] px-3 py-1.5 shadow-[0_1px_1px_rgba(0,0,0,0.13)]"
               style={{ background: TG.incoming }}
             >
               {stage === "done" ? `Done: ${TITLE}` : `Cancelled: ${TITLE}`}
@@ -119,7 +127,7 @@ export function ApprovalDemo() {
         )}
 
         {!decided ? (
-          <p className="pt-1 text-center text-[12px]" style={{ color: TG.muted }}>
+          <p className="pt-1 text-center text-[12px] font-medium" style={{ color: "#4a6a3e" }}>
             tap a button, this one&apos;s yours to decide
           </p>
         ) : (
@@ -128,8 +136,8 @@ export function ApprovalDemo() {
               <button
                 type="button"
                 onClick={() => setStage("waiting")}
-                className="inline-flex items-center gap-1 text-[12px] hover:text-white"
-                style={{ color: TG.muted }}
+                className="inline-flex items-center gap-1 text-[12px] font-medium hover:opacity-80"
+                style={{ color: "#4a6a3e" }}
               >
                 <RotateCcw size={12} /> try again
               </button>
