@@ -131,7 +131,7 @@ async def test_linking_telegram_later_gets_the_first_text(backend, monkeypatch):
 def test_gallery_is_complete_and_safe():
     gallery = characters_d1.gallery()
     names = [c["name"] for c in gallery]
-    assert names[:3] == ["Satoru Gojo", "Hello Kitty", "Ghost"] and len(names) == 216
+    assert names[:3] == ["Satoru Gojo", "Hello Kitty", "Ghost"] and len(names) == 232
     assert len({c["id"] for c in gallery}) == len(gallery)  # unique slugs
     assert sum("genshin" in c["tags"] for c in gallery) == 9
     for c in gallery:
