@@ -5,6 +5,26 @@ All notable changes to Yomi are documented here. The format follows
 from conventional commits via
 [release-please](https://github.com/googleapis/release-please).
 
+## [1.4.0](https://github.com/arka6fx/yomi/compare/v1.3.0...v1.4.0) (2026-09-26)
+
+
+### Features
+
+* 14 more skills and a sharper skills gallery ([#150](https://github.com/arka6fx/yomi/issues/150)) ([815f58b](https://github.com/arka6fx/yomi/commit/815f58b4b4dad863aecd5dce5a318512657a2339))
+* **docs:** rebuild the docs as a multi-page site ([#154](https://github.com/arka6fx/yomi/issues/154)) ([5f0a8c0](https://github.com/arka6fx/yomi/commit/5f0a8c03fff4bb91a76ae2ab13293983898e19cb))
+* resources dropdown in the site nav ([79d3e68](https://github.com/arka6fx/yomi/commit/79d3e6829baada337e88dd3604d8c045779e523c))
+* resources dropdown in the site nav ([9da0969](https://github.com/arka6fx/yomi/commit/9da09691a3b20830ecfe8c74d83b9df63a5af676))
+* **web:** add the crochet mascot across the site ([0f13674](https://github.com/arka6fx/yomi/commit/0f1367487f901f49abc371f4a608eaa5ff21edeb))
+* **web:** add the crochet mascot across the site ([25c7e90](https://github.com/arka6fx/yomi/commit/25c7e90b0a1456d84a85a21eafa36441bddd513f))
+* **web:** full-screen mobile menu like folk ([#156](https://github.com/arka6fx/yomi/issues/156)) ([ab3a4cc](https://github.com/arka6fx/yomi/commit/ab3a4ccec2346f4dff535f17b38aac62f2a1e69e))
+* **web:** swap the black logo for mascots on every page ([#159](https://github.com/arka6fx/yomi/issues/159)) ([98ee399](https://github.com/arka6fx/yomi/commit/98ee399592824488140330b4e4ab2c152d1752ab))
+* **web:** telegram phone and folk-style hero and footer ([#158](https://github.com/arka6fx/yomi/issues/158)) ([b29a5c5](https://github.com/arka6fx/yomi/commit/b29a5c54761225c25e8b396cc6f4172281969d76))
+
+
+### Bug Fixes
+
+* link the character picture credit and hide broken portraits ([#152](https://github.com/arka6fx/yomi/issues/152)) ([7c85022](https://github.com/arka6fx/yomi/commit/7c850224be20d3afe71a5ba1315ec385ad12e330))
+
 ## [1.3.0](https://github.com/arka6fx/yomi/compare/v1.2.0...v1.3.0) (2026-09-26)
 
 
