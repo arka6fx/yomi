@@ -72,7 +72,11 @@ async def test_secrets_are_encrypted_and_never_listed(backend):
     card = await _card(backend)
     raw = await backend.store.fetch_one("SELECT * FROM vault_items WHERE id = ?", [card["id"]])
     assert VISA.replace(" ", "") not in json.dumps(raw)
-    listed = json.dumps(await vault_d1.list_items(backend, USER))
+    # The random id and timestamps are left out: they can contain "123" by chance.
+    listed = json.dumps([
+        {k: v for k, v in item.items() if k != "id" and not k.endswith("At")}
+        for item in await vault_d1.list_items(backend, USER)
+    ])
     assert "4111111111111111" not in listed and "123" not in listed
 
 
