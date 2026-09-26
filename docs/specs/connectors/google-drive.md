@@ -66,7 +66,7 @@ use `gateWrite`.
 
 ## RAG auto-sync (drive sources)
 
-Full design: [ADR-0007](../../docs/adr/0007-google-drive-auto-sync-rag-r2.md).
+Full design: [ADR-0007](../../adr/0007-google-drive-auto-sync-rag-r2.md).
 Runtime: `apps/api/src/yomi/services/rag/drive.py`. Sync runs through the
 Composio `googledrive` toolkit (`GOOGLEDRIVE_LIST_FILES`,
 `GOOGLEDRIVE_GET_CHANGES_START_PAGE_TOKEN`, `GOOGLEDRIVE_LIST_CHANGES`,
@@ -79,7 +79,7 @@ Cloudflare R2 (`ingest/put|read|delete`) — the container never calls Amazon S3
   deletes its docs and chunks. v1 indexes **direct children only** (batch 20,
   max 1000 children, sync caps at 5 change pages per tick).
 - **Indexable content** (per [Indexable
-  export](../../CONTEXT.md)): Docs/Slides → `text/plain`, Sheets → `text/csv`,
+  export](../../../CONTEXT.md)): Docs/Slides → `text/plain`, Sheets → `text/csv`,
   native `txt`/`md`/`csv`/`tsv`/`html`/`xml`/`json` → `text/plain`. PDFs,
   images, and other binaries are counted as skipped, never fatal.
 - **Lifecycle.** `backfill` lists and ingests until drained → `active`; then

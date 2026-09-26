@@ -5,12 +5,12 @@ Documentation for people building and running Yomi. User-facing help is at
 
 ## Start here
 
-| Document                                   | Read it to                                                      |
-| ------------------------------------------ | --------------------------------------------------------------- |
-| [`architecture.md`](./architecture.md)     | Understand how the system fits together                         |
-| [`runbook.md`](./runbook.md)               | Deploy, migrate, configure secrets, and troubleshoot production |
-| [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | Set up a dev environment and open a pull request                |
-| [`../CONTEXT.md`](../CONTEXT.md)           | Learn the domain vocabulary                                     |
+| Document                                        | Read it to                                                      |
+| ----------------------------------------------- | --------------------------------------------------------------- |
+| [`architecture.md`](./architecture.md)          | Understand how the system fits together                         |
+| [`runbook.md`](./runbook.md)                    | Deploy, migrate, configure secrets, and troubleshoot production |
+| [`CONTRIBUTING.md`](../.github/CONTRIBUTING.md) | Set up a dev environment and open a pull request                |
+| [`../CONTEXT.md`](../CONTEXT.md)                | Learn the domain vocabulary                                     |
 
 ## Specifications
 

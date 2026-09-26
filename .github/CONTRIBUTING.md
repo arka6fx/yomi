@@ -43,7 +43,7 @@ The backend is the only thing that reads or writes storage. The web app talks to
 it over `/api/*`.
 
 Before adding a new capability, check the footprint ladder in
-[`AGENTS.md`](./AGENTS.md#footprint-ladder): extend existing code before adding
+[`AGENTS.md`](../AGENTS.md#footprint-ladder): extend existing code before adding
 a new tool, service, or package.
 
 ## Workflow
@@ -106,14 +106,14 @@ npm run docs:check         # docs agree with the connector catalog
 - If the change touches memory, encryption, retention, or personal data, say so
   in the description and explain how existing privacy guarantees are kept.
 - If it makes a structural decision, add an ADR in `docs/adr/`, starting from
-  [`0000-template.md`](./docs/adr/0000-template.md).
+  [`0000-template.md`](../docs/adr/0000-template.md).
 - If it adds a D1 migration, mention it so it gets applied before the deploy.
 
 ## Finding something to work on
 
 Issues labeled `ready-for-agent` or `ready-for-human` are ready to pick up. The
 label vocabulary is in
-[`docs/agents/triage-labels.md`](./docs/agents/triage-labels.md).
+[`docs/agents/triage-labels.md`](../docs/agents/triage-labels.md).
 
 ## Security
 

@@ -56,7 +56,7 @@ packages/db/       SQLAlchemy models for the legacy Postgres path
 packages/shared/   TypeScript contracts shared across apps
 packages/ui/       connector catalog + dashboard components
 docs/              architecture, runbook, specs, ADRs
-SOUL.md            Yomi's personality, always in the system prompt
+SOUL.md            personality notes (the live prompt is DEFAULT_AGENT_SOUL in shared/text.py)
 CONTEXT.md         domain glossary
 ```
 
@@ -105,7 +105,9 @@ npm run dev --workspace @yomi/web   # dashboard on :3000
 
 `harness = system prompt + tools + connectors + memory + hooks`
 
-`SOUL.md` is always part of the system prompt.
+The personality prompt is `DEFAULT_AGENT_SOUL` in
+`apps/api/src/yomi/shared/text.py`. `SOUL.md` holds longer-form personality
+notes and is not loaded at runtime.
 
 Agent loop: `apps/api/src/yomi/services/agent/loop.py`, with tools registered in
 `services/agent/tools.py`:
