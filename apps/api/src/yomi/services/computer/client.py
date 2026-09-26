@@ -199,3 +199,7 @@ class ComputerClient:
 
     async def browser_act(self, action: dict[str, Any]) -> dict[str, Any]:
         return await self._post("browser-act", dict(action))
+
+    async def save(self) -> dict[str, Any]:
+        """Snapshot the browser profile (logins) to storage now."""
+        return await self._post("save", {})

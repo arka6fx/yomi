@@ -26,3 +26,8 @@ new_sqlite_classes = ["Computer"]
 enabled = true
 
 # Configure with: npx wrangler secret put COMPUTER_GATEWAY_SECRET --config wrangler.toml
+
+# Saved Chrome profiles (logins) between desktop sleeps; see Computer.saveProfile.
+[[r2_buckets]]
+binding = "BACKUP_BUCKET"
+bucket_name = "yomi-computer-profiles"

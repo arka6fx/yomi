@@ -10,16 +10,116 @@
  * workspace is the Yomi user id supplied by the Python backend. Auth is a
  * single deployment secret; per-user authorization lives in Python.
  */
-import { getSandbox, Sandbox } from "@cloudflare/sandbox";
+import { getSandbox, Sandbox, type DirectoryBackup } from "@cloudflare/sandbox";
 
-export class Computer extends Sandbox {
+const PROFILE_DIR = "/home/yomi/chrome-profile";
+const PROFILE_KEY = "chrome-profile-backup";
+// Caches rebuild themselves; logins live in Cookies, Login Data and Local Storage.
+const PROFILE_EXCLUDES = [
+  "Cache", "Code Cache", "GPUCache", "GrShaderCache", "ShaderCache", "DawnCache",
+  "Service Worker/CacheStorage", "Service Worker/ScriptCache", "Crashpad",
+  "component_crx_cache", "optimization_guide_*", "Safe Browsing", "*.log", "Singleton*",
+];
+const PROFILE_TTL_S = 180 * 24 * 60 * 60;
+
+export class Computer extends Sandbox<Env> {
   // Idle desktops sleep fast: memory/disk bill only while running.
   sleepAfter = "5m";
+  private desktopReady = false;
+
+  private async controlFetch(method: string, path: string): Promise<{ status: number; json: unknown }> {
+    const response = await this.containerFetch(
+      new Request(`http://localhost${path}`, { method }),
+      8081,
+    );
+    let json: unknown = null;
+    try {
+      json = await response.json();
+    } catch {
+      json = null;
+    }
+    return { status: response.status, json };
+  }
+
+  /** Restore saved logins before Chrome's first start after a wake. */
+  async ensureDesktop(): Promise<void> {
+    if (this.desktopReady) return;
+    const health = await this.controlFetch("GET", "/health");
+    if ((health.json as { chrome?: boolean } | null)?.chrome) {
+      this.desktopReady = true;
+      return;
+    }
+    const backup = await this.ctx.storage.get<DirectoryBackup>(PROFILE_KEY);
+    if (backup) {
+      try {
+        await this.restoreBackup(backup);
+      } catch (error) {
+        // An expired or broken snapshot means signing in again, not a dead desktop.
+        console.error("profile restore failed", { error: String(error).slice(0, 200) });
+      }
+    }
+    await this.controlFetch("POST", "/browser/start");
+    this.desktopReady = true;
+  }
+
+  /** Snapshot Chrome's profile to R2. Chrome is closed first so cookies hit disk. */
+  async saveProfile(restart = true): Promise<{ saved: boolean }> {
+    const health = await this.controlFetch("GET", "/health");
+    if (!(health.json as { chrome?: boolean } | null)?.chrome && !this.desktopReady) {
+      return { saved: false }; // nothing was used this session
+    }
+    await this.controlFetch("POST", "/browser/stop");
+    try {
+      const backup = await this.createBackup({
+        dir: PROFILE_DIR,
+        name: "chrome-profile",
+        ttl: PROFILE_TTL_S,
+        excludes: PROFILE_EXCLUDES,
+        localBucket: true,
+      });
+      await this.ctx.storage.put(PROFILE_KEY, backup);
+    } finally {
+      if (restart) await this.controlFetch("POST", "/browser/start");
+    }
+    return { saved: true };
+  }
+
+  override async onStart(): Promise<void> {
+    this.desktopReady = false;
+    await super.onStart();
+  }
+
+  /** Before sleeping, keep whatever the user signed into. */
+  override async onActivityExpired(): Promise<void> {
+    try {
+      await this.saveProfile(false);
+    } catch (error) {
+      console.error("profile save before sleep failed", { error: String(error).slice(0, 200) });
+    }
+    await super.onActivityExpired();
+  }
 }
 
 interface Env {
   Computer: DurableObjectNamespace<Computer>;
   COMPUTER_GATEWAY_SECRET: string;
+  BACKUP_BUCKET: R2Bucket;
+}
+
+/** Live-view tokens are minted by the Python API: `<exp>.<hex hmac(workspace.exp)>`. */
+async function viewerTokenValid(token: string, workspace: string, secret: string): Promise<boolean> {
+  const [expText, signature] = token.split(".");
+  const exp = Number.parseInt(expText ?? "", 10);
+  if (!Number.isFinite(exp) || exp * 1000 < Date.now() || !signature) return false;
+  const key = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+  );
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${workspace}.${exp}`));
+  const expected = Array.from(new Uint8Array(mac), (b) => b.toString(16).padStart(2, "0")).join("");
+  if (expected.length !== signature.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < expected.length; i++) mismatch |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+  return mismatch === 0;
 }
 
 const CONTROL_BASE = "http://127.0.0.1:8081";
@@ -100,11 +200,30 @@ async function control(
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+
+    // Live view / take-over from the dashboard. Browsers can't send the bearer
+    // secret on a websocket, so this route takes a short-lived signed token.
+    const viewer = url.pathname.match(/^\/computer\/([^/]+)\/vnc$/);
+    if (viewer) {
+      const workspace = viewer[1];
+      if (!WORKSPACE_PATTERN.test(workspace)) return badRequest("Invalid workspace");
+      if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
+        return badRequest("Expected a websocket");
+      }
+      const token = url.searchParams.get("token") ?? "";
+      if (!(await viewerTokenValid(token, workspace, env.COMPUTER_GATEWAY_SECRET))) {
+        return unauthorized();
+      }
+      const sandbox = getSandbox(env.Computer, `yomi-${workspace}`);
+      await sandbox.ensureDesktop();
+      return sandbox.wsConnect(request, 6080);
+    }
+
     if (!checkAuth(request, env)) return unauthorized();
 
-    const url = new URL(request.url);
     const match = url.pathname.match(
-      /^\/computer\/([^/]+)\/(health|screenshot|windows|input|open|exec|browser-snapshot|browser-navigate|browser-act)$/,
+      /^\/computer\/([^/]+)\/(health|screenshot|windows|input|open|exec|browser-snapshot|browser-navigate|browser-act|save)$/,
     );
     if (request.method === "GET" && url.pathname === "/health") {
       return Response.json({ status: "ok" });
@@ -112,6 +231,15 @@ export default {
     if (!match) return badRequest("Unknown computer endpoint");
     const [, workspace, action] = match;
     if (!WORKSPACE_PATTERN.test(workspace)) return badRequest("Invalid workspace");
+
+    if (action === "save" && request.method === "POST") {
+      const stub = getSandbox(env.Computer, `yomi-${workspace}`);
+      return Response.json(await stub.saveProfile(true));
+    }
+    if (action !== "health") {
+      // Saved logins must be back in place before Chrome's first start after a wake.
+      await getSandbox(env.Computer, `yomi-${workspace}`).ensureDesktop();
+    }
 
     try {
       const sandbox = getSandbox(env.Computer, `yomi-${workspace}`) as unknown as SandboxHandle;

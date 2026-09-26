@@ -20,6 +20,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     scrot \
     xdotool \
     wmctrl \
+    squashfs-tools \
+    procps \
     fonts-dejavu-core \
     fonts-liberation \
     ca-certificates \
@@ -35,12 +37,13 @@ RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd6
 
 # Playwright's client only: it attaches to the desktop's Chrome over DevTools,
 # so no bundled browsers are downloaded.
-RUN python3 -m pip install --no-cache-dir --break-system-packages playwright==1.63.0
+RUN python3 -m pip install --no-cache-dir --break-system-packages \
+    playwright==1.63.0 websockify==0.13.0
 
 COPY control/ /opt/yomi/control/
 COPY startup.sh /opt/yomi/startup.sh
 RUN chmod +x /opt/yomi/startup.sh
 
-EXPOSE 5900 8081
+EXPOSE 5900 6080 8081
 
 CMD ["/opt/yomi/startup.sh"]

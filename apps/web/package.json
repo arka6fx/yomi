@@ -24,6 +24,7 @@
     "test:coverage": "vitest run --passWithNoTests --coverage"
   },
   "dependencies": {
+    "@novnc/novnc": "^1.7.0",
     "@yomi/shared": "0.0.0",
     "@yomi/ui": "0.0.0",
     "clsx": "^2.1.1",

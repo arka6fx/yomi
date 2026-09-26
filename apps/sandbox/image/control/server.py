@@ -137,14 +137,20 @@ class Handler(BaseHTTPRequestHandler):
 
     def _read_json(self) -> dict:
         length = int(self.headers.get("Content-Length") or 0)
-        if length <= 0 or length > MAX_BODY:
-            raise ValueError("missing or oversized body")
+        if length == 0:
+            return {}
+        if length < 0 or length > MAX_BODY:
+            raise ValueError("oversized body")
         return json.loads(self.rfile.read(length) or b"{}")
 
     def do_GET(self) -> None:  # noqa: N802
         try:
             if self.path == "/health":
-                self._send_json(200, {"ok": True, "display": f"{WIDTH}x{HEIGHT}"})
+                import chrome
+
+                self._send_json(
+                    200, {"ok": True, "display": f"{WIDTH}x{HEIGHT}", "chrome": chrome.running()}
+                )
             elif self.path == "/screenshot" or self.path.startswith("/screenshot?"):
                 import base64
                 from urllib.parse import urlparse, parse_qs
@@ -175,6 +181,17 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, do_input(self._read_json()))
             elif self.path == "/open":
                 self._send_json(200, open_url(str(self._read_json().get("url", ""))))
+            elif self.path == "/browser/start":
+                import chrome
+
+                self._send_json(200, {"ok": chrome.start()})
+            elif self.path == "/browser/stop":
+                import chrome
+                from browser_driver import driver
+
+                driver().forget()
+                chrome.stop()
+                self._send_json(200, {"ok": True})
             elif self.path == "/browser/navigate":
                 from browser_driver import driver
 

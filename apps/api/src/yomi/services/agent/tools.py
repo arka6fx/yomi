@@ -238,6 +238,29 @@ def register_computer_tools(tool_registry: ToolRegistry, user_id: str) -> None:
         },
         func=computer_input,
     )
+    async def computer_handoff(reason: str) -> str:
+        from yomi.app.routes.computer import computer_page_url
+
+        return (
+            f"Ask the user to open {computer_page_url()} to take over the computer "
+            f"({reason}). They can type there; their logins are kept for next time. "
+            "Wait for them to say they're done, then continue with web_page."
+        )
+
+    tool_registry.register(
+        name="computer_handoff",
+        description=(
+            "When a site needs something only the user should do (sign in, an OTP, a captcha, "
+            "confirming a payment page), get the link where they can see and control the "
+            "computer. Share the link with the user in your reply."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {"reason": {"type": "string", "description": "e.g. 'sign in to Zomato'"}},
+            "required": ["reason"],
+        },
+        func=computer_handoff,
+    )
     tool_registry.register(
         name="web_open",
         description=(

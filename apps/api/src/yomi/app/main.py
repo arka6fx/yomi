@@ -113,6 +113,8 @@ def create_app() -> FastAPI:
     app.include_router(trust_router)
     from yomi.app.routes.media import media_router
     app.include_router(media_router)
+    from yomi.app.routes.computer import computer_router
+    app.include_router(computer_router)
     from yomi.app.routes.characters import characters_router
     app.include_router(characters_router)
     from yomi.app.routes.skills import skills_router

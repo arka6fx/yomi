@@ -17,7 +17,7 @@ import { ProfileManager } from "@/components/dashboard/ProfileManager"
 import { ConversationManager } from "@/components/dashboard/ConversationManager"
 import { HistoryManager } from "@/components/dashboard/HistoryManager"
 import { StatusManager } from "@/components/dashboard/StatusManager"
-import type { DashboardTab } from "@/components/dashboard/tabs"
+import { DASHBOARD_TABS, type DashboardTab } from "@/components/dashboard/tabs"
 import { DashboardHome, type PlanSummary } from "@/components/dashboard/DashboardHome"
 import { TelegramCard } from "@/components/dashboard/TelegramCard"
 import { AppShell } from "@/components/dashboard/shell/AppShell"
@@ -25,6 +25,7 @@ import { HomeView } from "@/components/dashboard/shell/HomeView"
 import { SkillsView } from "@/components/dashboard/shell/SkillsView"
 import { RoutinesView } from "@/components/dashboard/shell/RoutinesView"
 import { CharactersView } from "@/components/dashboard/shell/CharactersView"
+import { ComputerView } from "@/components/dashboard/shell/ComputerView"
 import { MemoryView } from "@/components/dashboard/shell/MemoryView"
 import { PageHeader } from "@/components/dashboard/shell/ui"
 import { AgentActivityManager } from "@/components/dashboard/AgentActivityManager"
@@ -217,6 +218,11 @@ function DashboardContent() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     setDesiredPlan(params.get("plan"))
+    // Links from Telegram (e.g. "take over your computer") open a specific page.
+    const tab = params.get("tab")
+    if (tab && (DASHBOARD_TABS as readonly string[]).includes(tab)) {
+      setActiveTab(tab as DashboardTab)
+    }
     if (params.has("welcome")) setShowWelcome(true)
 
     const success = params.has("integration_success")
@@ -785,6 +791,16 @@ function DashboardContent() {
             transition={{ duration: 0.3 }}
           >
             <CharactersView token={session.session.token} />
+          </motion.div>
+        )}
+
+        {activeTab === "computer" && session && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <ComputerView token={session.session.token} />
           </motion.div>
         )}
 

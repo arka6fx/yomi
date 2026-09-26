@@ -111,10 +111,13 @@ class BrowserDriver:
     def _connect(self):
         from playwright.sync_api import sync_playwright
 
+        import chrome
+
         if self._browser is not None and self._browser.is_connected():
             return self._browser
         if self._pw is None:
             self._pw = sync_playwright().start()
+        chrome.start()
         last: Exception | None = None
         for _ in range(20):  # Chrome may still be starting after a boot
             try:
@@ -162,6 +165,20 @@ class BrowserDriver:
         return locator
 
     # -- public API (called from HTTP threads) --------------------------------
+    def forget(self) -> None:
+        """Chrome is about to close: drop the stale DevTools connection."""
+
+        def job():
+            if self._browser is not None:
+                try:
+                    self._browser.close()
+                except Exception:  # noqa: BLE001 — already gone
+                    pass
+            self._browser = None
+            self._page = None
+
+        self._call(job, timeout=15)
+
     def snapshot(self) -> dict[str, Any]:
         return self._call(lambda: self._snapshot(self._current()))
 

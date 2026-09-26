@@ -27,6 +27,7 @@ import {
   Users,
   X,
   Zap,
+  Monitor,
 } from "lucide-react"
 import type { DashboardTab } from "@/components/dashboard/tabs"
 import { TELEGRAM_BOT_URL } from "@/lib/site"
@@ -42,6 +43,7 @@ const PILLS: { tab: DashboardTab; label: string; icon: typeof Home }[] = [
 
 const TILES: { tab: DashboardTab; label: string; icon: typeof Home }[] = [
   { tab: "vault", label: "vault", icon: Lock },
+  { tab: "computer", label: "computer", icon: Monitor },
   { tab: "trusted", label: "trusted people", icon: Users },
   { tab: "email", label: "email", icon: Mail },
   { tab: "memory", label: "memory", icon: Brain },
