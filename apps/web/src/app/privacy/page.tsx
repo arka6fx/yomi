@@ -234,6 +234,34 @@ export default function PrivacyPage() {
                 never store card details.
               </li>
               <li>
+                <strong className="text-foreground">AniList and TVMaze</strong>: public lookups when
+                you build a character from an existing show or anime. Only the name you type is
+                sent.
+              </li>
+              <li>
+                <strong className="text-foreground">OpenStreetMap Nominatim</strong>: turns a
+                location you share on Telegram into a place name. Only the coordinates are sent.
+              </li>
+              <li>
+                <strong className="text-foreground">Sentry</strong>: error monitoring for our
+                servers. Error reports exclude request bodies, cookies and headers, so your messages
+                and tokens are not sent.
+              </li>
+              <li>
+                <strong className="text-foreground">Langfuse</strong>: reliability monitoring of AI
+                model calls. We send timing, token counts and error codes with a hashed account id,
+                never your messages or Yomi&apos;s replies.
+              </li>
+              <li>
+                <strong className="text-foreground">PostHog</strong>: product analytics on this
+                website and dashboard (which pages are used). Page text is masked, there is no
+                session recording, and Do Not Track is honoured.
+              </li>
+              <li>
+                <strong className="text-foreground">Resend</strong>: transactional email, such as
+                the welcome email when you sign up.
+              </li>
+              <li>
                 <strong className="text-foreground">AWS RDS (Postgres)</strong>: encrypted database
                 hosting for account data, usage events, and encrypted OAuth tokens.
               </li>

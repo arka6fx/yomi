@@ -27,6 +27,9 @@ jobs:
       NEXT_PUBLIC_BACKEND_URL: https://api.getyomi.in
       NEXT_PUBLIC_API_URL: https://api.getyomi.in
       NEXT_PUBLIC_APP_URL: https://getyomi.in
+      # analytics stays off until the POSTHOG_KEY repo variable is set
+      NEXT_PUBLIC_POSTHOG_KEY: ${{ vars.POSTHOG_KEY }}
+      NEXT_PUBLIC_POSTHOG_HOST: ${{ vars.POSTHOG_HOST }}
     steps:
       - uses: actions/checkout@v4
 

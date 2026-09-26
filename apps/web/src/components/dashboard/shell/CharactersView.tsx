@@ -40,6 +40,17 @@ type Character = {
   mine: boolean
 }
 
+type Found = {
+  name: string
+  work: string
+  basedOn: string
+  description: string
+  imageUrl: string
+  imageCredit: string
+  url: string
+  source: "anilist" | "tvmaze"
+}
+
 type Data = {
   mine: Character[]
   saved: Character[]
@@ -145,6 +156,7 @@ export function CharactersView({ token }: { token: string }) {
   const [notice, setNotice] = useState("")
   const [query, setQuery] = useState("")
   const [tag, setTag] = useState("all")
+  const [found, setFound] = useState<Found[] | null>(null)
   const [wizard, setWizard] = useState<{
     step: number
     draft: Draft
@@ -475,6 +487,33 @@ export function CharactersView({ token }: { token: string }) {
       }
     }
 
+    async function findThem() {
+      const q = (draft.basedOn || draft.name).trim()
+      if (q.length < 2) return
+      setBusy("lookup")
+      setError("")
+      try {
+        const res = await call(`/lookup?q=${encodeURIComponent(q)}`)
+        if (!res.ok) throw new Error()
+        setFound(((await res.json()) as { results: Found[] }).results)
+      } catch {
+        setError("Couldn’t search right now")
+      } finally {
+        setBusy(null)
+      }
+    }
+
+    function pick(f: Found) {
+      set({
+        name: draft.name.trim() ? draft.name : f.name.slice(0, 30),
+        basedOn: f.basedOn,
+        imageUrl: f.imageUrl || draft.imageUrl,
+        imageCredit: f.imageUrl ? f.imageCredit : draft.imageCredit,
+        description: draft.description || f.description,
+      })
+      setFound(null)
+    }
+
     async function save(thenTalk: boolean) {
       const payload = { ...draft, firstLines: draft.firstLines.filter((l) => l.trim()) }
       const res = await act("save-character", () =>
@@ -548,16 +587,72 @@ export function CharactersView({ token }: { token: string }) {
                     className={cn(input, "text-lg")}
                   />
                 </label>
-                <label className="block">
-                  <span className={label}>based on (optional)</span>
+                <div>
+                  <span className={label}>
+                    based on (optional)
+                    <button
+                      onClick={() => void findThem()}
+                      disabled={
+                        busy === "lookup" || (draft.basedOn || draft.name).trim().length < 2
+                      }
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-[#2b8fff] disabled:opacity-50"
+                    >
+                      {busy === "lookup" ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <Search size={12} />
+                      )}{" "}
+                      find them
+                    </button>
+                  </span>
                   <input
                     maxLength={120}
                     value={draft.basedOn}
                     onChange={(e) => set({ basedOn: e.target.value })}
-                    placeholder="e.g. a character from a show you love"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void findThem()
+                    }}
+                    placeholder="e.g. Gojo, or Walter White (Breaking Bad)"
                     className={input}
+                    aria-label="based on"
                   />
-                </label>
+                </div>
+                {found && (
+                  <div className="space-y-1.5">
+                    {found.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        no matches. try their full name, or add the show in brackets.
+                      </p>
+                    ) : (
+                      found.map((f) => (
+                        <button
+                          key={`${f.source}:${f.basedOn}`}
+                          onClick={() => pick(f)}
+                          className="flex w-full items-center gap-3 rounded-2xl bg-muted/60 p-2 text-left hover:bg-muted"
+                        >
+                          <Avatar
+                            character={{
+                              name: f.name,
+                              emoji: "",
+                              color: "#2b8fff",
+                              imageUrl: f.imageUrl,
+                            }}
+                            size={44}
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold">{f.name}</span>
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {f.work || "unknown work"} · {f.imageCredit}
+                            </span>
+                          </span>
+                        </button>
+                      ))
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      pictures and info from AniList and TVMaze. only the name you typed is sent.
+                    </p>
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">
                   fan-made characters are fine. real private people, minors in any sexual context,
                   and pretending to be Yomi are not.{" "}
@@ -900,7 +995,10 @@ export function CharactersView({ token }: { token: string }) {
             {view === "mine" ? "discover" : "your characters"}
           </button>
           <button
-            onClick={() => setWizard({ step: 0, draft: EMPTY_DRAFT, editId: null })}
+            onClick={() => {
+              setFound(null)
+              setWizard({ step: 0, draft: EMPTY_DRAFT, editId: null })
+            }}
             className={primary}
             style={blue}
           >
