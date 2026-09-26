@@ -2,19 +2,20 @@
 // things that genuinely need the browser are client islands (ChatDemo, LandingSkillTabs,
 // OauthErrorRedirect, Nav) and the decorative motion is CSS.
 import Link from "next/link"
-import { ArrowRight, Check, Lock, Shield } from "lucide-react"
+import { ArrowRight, Lock } from "lucide-react"
 
 import LandingFooter from "@/components/landing/LandingFooter"
 import { ApprovalDemo } from "@/components/landing/ApprovalDemo"
 import { ChatDemo } from "@/components/landing/ChatDemo"
+import { HeroCharacters, type HeroCharacter } from "@/components/landing/HeroCharacters"
 import { Manifesto } from "@/components/landing/Manifesto"
-import { CharacterAvatar } from "@/components/characters/CharacterAvatar"
+import { HeroStickers } from "@/components/landing/Stickers"
 import { OauthErrorRedirect } from "@/components/landing/OauthErrorRedirect"
 import { Mascot } from "@/components/Mascot"
 import Nav from "@/components/Nav"
 import { LandingSkillTabs } from "@/components/skills/SkillBrowser"
 import { Byline, SkillAskPill, SkillOrb } from "@/components/skills/SkillCard"
-import { getCharacter } from "@/lib/characters"
+import { CHARACTERS } from "@/lib/characters"
 import { SKILL_CATALOG, getCatalogSkill } from "@/lib/skills-catalog"
 // Deliberately the /icons subpath, not the package root. The root barrel also re-exports
 // three "use client" components, so importing anything from it makes those client entry
@@ -63,35 +64,11 @@ const STEPS = [
   },
 ]
 
-// Emoji stickers scattered around the hero. Positions are percentages of the hero box.
-const STICKERS: { emoji: string; className: string; tilt: string; delay: string }[] = [
-  { emoji: "📬", className: "left-[9%] top-[16%] text-7xl", tilt: "-12deg", delay: "0s" },
-  { emoji: "💬", className: "right-[10%] top-[14%] text-7xl", tilt: "8deg", delay: "1.2s" },
-  { emoji: "😊", className: "-left-4 top-[40%] text-8xl", tilt: "-6deg", delay: "0.6s" },
-  { emoji: "📅", className: "right-[6%] top-[40%] text-7xl", tilt: "10deg", delay: "2s" },
-  { emoji: "✈️", className: "right-[20%] top-[58%] text-6xl", tilt: "-8deg", delay: "0.9s" },
-  { emoji: "🔒", className: "right-[9%] top-[80%] text-7xl", tilt: "12deg", delay: "2.4s" },
-  { emoji: "🎯", className: "left-[6%] top-[84%] text-7xl", tilt: "-10deg", delay: "1.4s" },
-]
-
 // Real characters floating beside the phone, like friends you could text next.
-const HERO_CHARACTERS = [
-  {
-    slug: "shouyou-hinata",
-    label: "text Shoyo Hinata",
-    className: "left-[13%] top-0",
-    delay: "0s",
-  },
-  {
-    slug: "hello-kitty",
-    label: "text Hello Kitty",
-    className: "right-[12%] top-[340px]",
-    delay: "1.8s",
-  },
-].flatMap((spot) => {
-  const character = getCharacter(spot.slug)
-  return character ? [{ ...spot, character }] : []
-})
+// Characters that can float beside the phone; HeroCharacters picks two per visit.
+const HERO_POOL: HeroCharacter[] = CHARACTERS.filter((c) => c.imageUrl)
+  .slice(0, 60)
+  .map(({ slug, name, color, imageUrl }) => ({ slug, name, color, imageUrl }))
 
 // Everything that changes something outside the chat waits for a tap.
 const GATED = [
@@ -122,22 +99,7 @@ export function LandingPage() {
         <section id="hero" className="sky relative overflow-hidden pb-24">
           <Nav />
 
-          <div aria-hidden className="pointer-events-none absolute inset-0 hidden md:block">
-            {STICKERS.map((sticker) => (
-              <span
-                key={sticker.emoji}
-                className={`sticker absolute ${sticker.className}`}
-                style={
-                  {
-                    "--tilt": sticker.tilt,
-                    animationDelay: sticker.delay,
-                  } as React.CSSProperties
-                }
-              >
-                {sticker.emoji}
-              </span>
-            ))}
-          </div>
+          <HeroStickers />
 
           <div className="relative z-10 mx-auto max-w-4xl px-4 pt-14 text-center sm:pt-20">
             <h1 className="text-balance text-[2.75rem] font-semibold leading-[1.02] tracking-[-0.04em] text-white drop-shadow-[0_2px_12px_rgba(10,60,120,0.25)] sm:text-7xl">
@@ -191,23 +153,7 @@ export function LandingPage() {
               </p>
             </div>
 
-            {HERO_CHARACTERS.map(({ slug, label, className, delay, character }) => (
-              <Link
-                key={slug}
-                href={`/characters/${slug}`}
-                className={`absolute hidden animate-float flex-col items-center motion-reduce:animate-none lg:flex ${className}`}
-                style={{ animationDelay: delay }}
-              >
-                <CharacterAvatar
-                  character={character}
-                  size={104}
-                  className="rounded-full shadow-[0_18px_36px_-12px_rgba(16,40,80,0.45)] ring-4 ring-white"
-                />
-                <span className="-mt-3 rounded-full bg-white px-3 py-1 text-[13px] font-semibold text-foreground shadow-[0_4px_12px_-4px_rgba(16,24,40,0.3)]">
-                  {label}
-                </span>
-              </Link>
-            ))}
+            <HeroCharacters pool={HERO_POOL} />
 
             <ChatDemo />
           </div>
@@ -519,226 +465,6 @@ export function LandingPage() {
                 </span>
               </div>
             ))}
-          </div>
-        </section>
-
-        {/* ── What is Yomi? ────────────────────────────────────────────────── */}
-        <section id="about" className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-          <p className="eyebrow">about</p>
-          <h2 className="mt-3 text-4xl font-semibold sm:text-5xl">what is yomi?</h2>
-          <div className="mt-6 space-y-4 text-[15px] leading-relaxed text-muted-foreground">
-            <p>
-              Yomi is an AI productivity assistant that connects to the apps you already use so you
-              can query, analyze, and act on your work using natural language, without switching
-              apps or copy-pasting context.
-            </p>
-            <p>
-              Ask Yomi to find a file, summarize a document, or pull context from your workspace,
-              all from a single interface or via Telegram. Yomi only accesses your data when you ask
-              a question, and for no other purpose.
-            </p>
-          </div>
-        </section>
-
-        {/* ── How Yomi Uses Google Data ─────────────────────────────────────── */}
-        <section id="google-data" className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
-          <div className="mx-auto max-w-3xl">
-            <p className="eyebrow">Google Sign-In &amp; Data Policy</p>
-            <h2 className="mt-3 text-4xl font-semibold sm:text-5xl">
-              why yomi needs google sign-in
-            </h2>
-            <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">
-              Yomi uses Google Sign-In to authenticate your identity and to request permission to
-              access your Drive data. Below you will find exactly why sign-in is required and how
-              your data is handled.
-            </p>
-          </div>
-
-          <div className="mx-auto mt-10 max-w-3xl space-y-5">
-            <div className="surface p-7 text-[15px] leading-relaxed text-muted-foreground">
-              <p className="eyebrow mb-4">app purpose</p>
-              <p>
-                Yomi is a personal AI assistant. It accesses your Google Drive, with your explicit
-                permission, to answer questions you ask in natural language. For example:
-                &ldquo;Find the Q3 report in my Drive.&rdquo; or &ldquo;What does the product spec
-                say about pricing?&rdquo; Yomi reads data on-demand per request and never stores it.
-              </p>
-              <p className="mt-3 text-sm">
-                Yomi&apos;s use of Google API data complies with the{" "}
-                <a
-                  href="https://developers.google.com/terms/api-services-user-data-policy"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-foreground underline underline-offset-2"
-                >
-                  Google API Services User Data Policy
-                </a>
-                , including the Limited Use requirements.
-              </p>
-            </div>
-
-            <div className="surface p-7 text-[15px] leading-relaxed text-muted-foreground">
-              <p className="eyebrow mb-5">why google sign-in is required</p>
-              <div className="space-y-5">
-                <p>
-                  <strong className="font-semibold text-foreground">
-                    To verify your identity.
-                  </strong>{" "}
-                  Yomi uses Google&apos;s authentication system to confirm who you are, so it can
-                  securely associate your connected apps, settings, and preferences with your
-                  account. Anonymous access is not possible because Yomi operates on your personal
-                  file data, so it cannot function without knowing which Google account to query.
-                </p>
-                <p>
-                  <strong className="font-semibold text-foreground">
-                    To request permission to access your Drive.
-                  </strong>{" "}
-                  Google&apos;s OAuth consent screen lets you choose exactly which services Yomi may
-                  access. Yomi cannot retrieve your Drive files without your explicit authorization.
-                  Each permission is granted individually and can be revoked at any time from your
-                  Yomi dashboard or from{" "}
-                  <a
-                    href="https://myaccount.google.com/permissions"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-foreground underline underline-offset-2"
-                  >
-                    Google Account settings
-                  </a>
-                  .
-                </p>
-                <p>
-                  <strong className="font-semibold text-foreground">
-                    Your data is never stored, sold, or shared.
-                  </strong>{" "}
-                  When you ask a question, Yomi fetches only the data needed to answer it and
-                  discards it immediately after responding. No Drive files are retained on
-                  Yomi&apos;s servers between requests. Your Google data is never sold, never used
-                  to train AI models, and is not shared with third parties except the providers
-                  required to deliver the features you use: our AI inference provider, and — for
-                  connected apps routed through Composio — Composio, which manages those
-                  integrations on our behalf.
-                </p>
-              </div>
-            </div>
-
-            <div className="surface p-7 text-[15px] leading-relaxed text-muted-foreground">
-              <p>
-                Yomi only accesses Google data after you explicitly authorize access through
-                Google&apos;s OAuth consent flow. You may revoke access at any time.
-              </p>
-              <p className="mt-4 font-semibold text-foreground">
-                Depending on the integrations you enable, Yomi may request:
-              </p>
-              <div className="mt-3 flex items-start gap-3">
-                <Check size={16} className="mt-1 shrink-0 text-brand" />
-                <div>
-                  <p className="font-semibold text-foreground">Google Drive</p>
-                  <p className="font-mono text-xs">drive.file</p>
-                  <p className="mt-1">
-                    <strong className="font-semibold text-foreground">Purpose:</strong> To search,
-                    read, and navigate files you choose to share with Yomi. For example: &ldquo;Find
-                    the Q3 budget spreadsheet&rdquo; or &ldquo;What does the product spec say about
-                    pricing?&rdquo;
-                  </p>
-                </div>
-              </div>
-              <p className="mt-4">
-                Yomi does not sell user data. Google API data is used only to respond to your
-                current request and is discarded immediately after.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Data & Integrations transparency ─────────────────────────────── */}
-        <section id="data-use" className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
-          <div className="mx-auto max-w-3xl">
-            <p className="eyebrow">Transparency</p>
-            <h2 className="mt-3 text-4xl font-semibold sm:text-5xl">what yomi accesses, and why</h2>
-            <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">
-              Yomi only reads data when you ask a question. Nothing is stored between queries. You
-              can revoke any integration at any time.
-            </p>
-          </div>
-
-          <div className="surface mx-auto mt-10 max-w-3xl overflow-hidden !p-0">
-            {[
-              {
-                provider: "Google Drive",
-                scopes: "drive.file",
-                why: "To list and read files you choose to share with Yomi, so you can ask questions about their content.",
-              },
-              {
-                provider: "Notion",
-                scopes: "Public integration",
-                why: "To search pages, read content, and create or update pages and database entries.",
-              },
-            ].map((row, i) => (
-              <div
-                key={row.provider}
-                className={`flex flex-col gap-1 px-7 py-5 text-[15px] sm:flex-row sm:gap-4 ${
-                  i < 1 ? "border-b border-border" : ""
-                }`}
-              >
-                <div className="w-44 shrink-0 font-semibold">{row.provider}</div>
-                <div className="flex flex-1 flex-col gap-1">
-                  <p className="font-mono text-xs text-muted-foreground">{row.scopes}</p>
-                  <p className="text-muted-foreground">{row.why}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="surface mx-auto mt-5 max-w-3xl p-7 text-[15px] leading-relaxed text-muted-foreground">
-            <p className="mb-3 font-semibold text-foreground">How your data is protected</p>
-            <p className="mb-3">
-              Data from integrations is used only to answer your current query and is never stored
-              after the request completes. OAuth tokens are encrypted at rest using AES-256-GCM and
-              are never shared with third parties.
-            </p>
-            <p className="mb-3">
-              Yomi&apos;s use of Google API data complies with the{" "}
-              <Link
-                href="https://developers.google.com/terms/api-services-user-data-policy"
-                className="font-medium text-foreground underline underline-offset-2"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Google API Services User Data Policy
-              </Link>
-              , including the Limited Use requirements. You can disconnect any integration instantly
-              from your dashboard or from{" "}
-              <Link
-                href="https://myaccount.google.com/permissions"
-                className="font-medium text-foreground underline underline-offset-2"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Google Account settings
-              </Link>
-              .
-            </p>
-            <p>
-              Read our full{" "}
-              <Link
-                href="/privacy"
-                className="font-medium text-foreground underline underline-offset-2"
-              >
-                Privacy Policy
-              </Link>{" "}
-              for details on data handling and your rights.
-            </p>
-          </div>
-
-          <div className="mx-auto mt-6 flex max-w-3xl flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Link href="/privacy" className="btn-key px-5 py-2.5 text-sm">
-              <Shield size={14} />
-              View Privacy Policy
-            </Link>
-            <Link href="/terms" className="btn-key px-5 py-2.5 text-sm">
-              View Terms of Service
-            </Link>
           </div>
         </section>
 

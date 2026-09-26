@@ -25,6 +25,7 @@ import { Skeleton } from "@/components/dashboard/shell/motion"
 import { SURFACE } from "@/components/dashboard/shell/ui"
 import { matchesSearch } from "@/lib/search"
 import { TELEGRAM_BOT_URL } from "@/lib/site"
+import { shuffled } from "@/lib/shuffle"
 import { cn } from "@/lib/utils"
 import { Mascot } from "@/components/Mascot"
 
@@ -91,6 +92,9 @@ type Draft = {
   imageUrl: string
   imageCredit: string
 }
+
+// How many characters the "featured" line-up shows.
+const SPOTLIGHT = 12
 
 const EMPTY_DRAFT: Draft = {
   name: "",
@@ -183,7 +187,7 @@ export function CharactersView({ token }: { token: string }) {
   const [busy, setBusy] = useState<string | null>(null)
   const [notice, setNotice] = useState("")
   const [query, setQuery] = useState("")
-  // Discover opens on the featured picks; "all" lists everyone (featured first).
+  // Discover opens on the featured picks; "all" lists everyone, in a random order.
   const [tag, setTag] = useState("featured")
   const [found, setFound] = useState<Found[] | null>(null)
   const [guess, setGuess] = useState<Found | null>(null)
@@ -302,14 +306,27 @@ export function CharactersView({ token }: { token: string }) {
     }
   }
 
+  // Shuffled once per visit, so discover looks different each time you open it.
+  const gallery = useMemo(() => shuffled(data?.gallery ?? []), [data])
+  // "featured" is a fresh random line-up of characters that have a picture.
+  const spotlight = useMemo(
+    () =>
+      new Set(
+        gallery
+          .filter((c) => c.imageUrl)
+          .slice(0, SPOTLIGHT)
+          .map((c) => c.id),
+      ),
+    [gallery],
+  )
   const shown = useMemo(
     () =>
-      (data?.gallery ?? []).filter(
+      gallery.filter(
         (c) =>
-          (tag === "all" || (tag === "featured" ? c.featured : c.tags.includes(tag))) &&
+          (tag === "all" || (tag === "featured" ? spotlight.has(c.id) : c.tags.includes(tag))) &&
           matchesSearch(query, [c.name, c.tagline, c.basedOn, c.tags.join(" "), c.description]),
       ),
-    [data, query, tag],
+    [gallery, spotlight, query, tag],
   )
 
   if (!data) {
@@ -349,7 +366,7 @@ export function CharactersView({ token }: { token: string }) {
             <Flame size={11} className="fill-current" /> {c.chatsThisWeek} this week
           </span>
         ) : (
-          c.featured && (
+          spotlight.has(c.id) && (
             <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-500">
               <Star size={11} className="fill-current" /> featured
             </span>
@@ -392,7 +409,7 @@ export function CharactersView({ token }: { token: string }) {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-4xl font-bold tracking-tight">{opened.name}</h1>
-              {opened.featured && (
+              {spotlight.has(opened.id) && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-500">
                   <Star size={11} className="fill-current" /> featured
                 </span>
