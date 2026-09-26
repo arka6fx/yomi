@@ -237,6 +237,45 @@
   }
 }
 
+@keyframes skelPulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+@keyframes skelSweep {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@keyframes shimmerSlide {
+  0% {
+    background-position: 125% 0;
+  }
+  100% {
+    background-position: -125% 0;
+  }
+}
+@keyframes rise {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes pageFade {
+  0% {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @layer utilities {
   .animate-nav-in {
     animation: navSlideIn 0.5s ease-out both;
@@ -295,6 +334,70 @@
     color: transparent;
     filter: drop-shadow(0 18px 30px rgba(31, 147, 221, 0.25));
     user-select: none;
+  }
+
+  /* ── loading motion (dashboard) ─────────────────────────────────── */
+  /* placeholder block: soft pulse with a light band sweeping across */
+  .skel {
+    position: relative;
+    overflow: hidden;
+    border-radius: 24px;
+    background: rgba(31, 42, 47, 0.06);
+    animation: skelPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  .skel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      100deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.55) 50%,
+      transparent 70%
+    );
+    animation: skelSweep 1.6s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  }
+  .dark .skel {
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .dark .skel::after {
+    background: linear-gradient(
+      100deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.08) 50%,
+      transparent 70%
+    );
+  }
+  /* thin text-line placeholder: a gradient that slides across */
+  .shimmer {
+    background-color: rgba(31, 42, 47, 0.05);
+    background-image: linear-gradient(
+      100deg,
+      rgba(31, 42, 47, 0) 25%,
+      rgba(31, 42, 47, 0.07) 50%,
+      rgba(31, 42, 47, 0) 75%
+    );
+    background-size: 250% 100%;
+    animation: shimmerSlide 1.4s ease-in-out infinite;
+  }
+  /* cards rising into place, one after another (set --i on each) */
+  .rise {
+    animation: rise 0.55s cubic-bezier(0.32, 0.72, 0, 1) both;
+    animation-delay: calc(var(--i, 0) * 60ms);
+  }
+  .page-fade {
+    animation: pageFade 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .skel,
+    .skel::after,
+    .shimmer,
+    .rise,
+    .page-fade {
+      animation: none;
+    }
   }
 
   /* hide scrollbars while keeping horizontal scroll */

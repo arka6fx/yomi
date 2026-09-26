@@ -17,6 +17,7 @@ import {
   Zap,
 } from "lucide-react"
 import type { DashboardTab } from "@/components/dashboard/tabs"
+import { Reveal, Skeleton } from "@/components/dashboard/shell/motion"
 import { TELEGRAM_BOT_URL } from "@/lib/site"
 import { cn } from "@/lib/utils"
 
@@ -261,7 +262,7 @@ export function HomeView({
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-3 pt-6">
+      <Reveal i={0} className="flex flex-wrap items-end justify-between gap-3 pt-6">
         <div>
           <h1 className="text-5xl font-bold tracking-tight text-foreground sm:text-6xl">
             {now ? greeting(now.getHours()) : "hello."}
@@ -288,7 +289,7 @@ export function HomeView({
             <Flame size={14} className="text-orange-500" /> {data.streak} day streak
           </button>
         )}
-      </div>
+      </Reveal>
 
       {unhealthyCount > 0 && (
         <button
@@ -311,122 +312,133 @@ export function HomeView({
       )}
 
       {!hideSetup && doneCount < steps.length && (
-        <section className={cn(CARD, "p-6")} aria-labelledby="setup-heading">
-          <div className="flex items-center justify-between">
-            <h2 id="setup-heading" className="text-sm font-semibold">
-              set up yomi
-            </h2>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              {doneCount} of {steps.length}
-              <button onClick={hide} className="hover:text-foreground">
-                hide
-              </button>
+        <Reveal i={1}>
+          <section className={cn(CARD, "p-6")} aria-labelledby="setup-heading">
+            <div className="flex items-center justify-between">
+              <h2 id="setup-heading" className="text-sm font-semibold">
+                set up yomi
+              </h2>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                {doneCount} of {steps.length}
+                <button onClick={hide} className="hover:text-foreground">
+                  hide
+                </button>
+              </div>
             </div>
-          </div>
-          <div
-            className="mt-4 h-1.5 overflow-hidden rounded-full bg-muted"
-            role="progressbar"
-            aria-label="setup progress"
-            aria-valuenow={doneCount}
-            aria-valuemin={0}
-            aria-valuemax={steps.length}
-          >
             <div
-              className="h-full rounded-full bg-[#2b8fff] transition-all"
-              style={{ width: `${(doneCount / steps.length) * 100}%` }}
-            />
-          </div>
-          <ul className="mt-5 grid gap-x-8 gap-y-3 sm:grid-cols-2">
-            {steps.map((step) => (
-              <li key={step.label}>
-                <button
-                  onClick={() =>
-                    step.tab === "home"
-                      ? document
-                          .getElementById("link-telegram")
-                          ?.scrollIntoView({ behavior: "smooth" })
-                      : onNavigate(step.tab)
-                  }
-                  className="flex items-start gap-2.5 text-left"
-                >
-                  <span
-                    className={cn(
-                      "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border",
-                      step.done
-                        ? "border-[#2b8fff] bg-[#2b8fff] text-white"
-                        : "border-muted-foreground/40",
-                    )}
+              className="mt-4 h-1.5 overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-label="setup progress"
+              aria-valuenow={doneCount}
+              aria-valuemin={0}
+              aria-valuemax={steps.length}
+            >
+              <div
+                className="h-full rounded-full bg-[#2b8fff] transition-all"
+                style={{ width: `${(doneCount / steps.length) * 100}%` }}
+              />
+            </div>
+            <ul className="mt-5 grid gap-x-8 gap-y-3 sm:grid-cols-2">
+              {steps.map((step) => (
+                <li key={step.label}>
+                  <button
+                    onClick={() =>
+                      step.tab === "home"
+                        ? document
+                            .getElementById("link-telegram")
+                            ?.scrollIntoView({ behavior: "smooth" })
+                        : onNavigate(step.tab)
+                    }
+                    className="flex items-start gap-2.5 text-left"
                   >
-                    {step.done && <Check size={10} strokeWidth={3} />}
-                  </span>
-                  <span>
                     <span
                       className={cn(
-                        "block text-sm",
+                        "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border",
                         step.done
-                          ? "text-muted-foreground line-through"
-                          : "font-medium text-foreground",
+                          ? "border-[#2b8fff] bg-[#2b8fff] text-white"
+                          : "border-muted-foreground/40",
                       )}
                     >
-                      {step.label}
+                      {step.done && <Check size={10} strokeWidth={3} />}
                     </span>
-                    {!step.done && step.hint && (
-                      <span className="block text-xs text-muted-foreground">{step.hint}</span>
-                    )}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
+                    <span>
+                      <span
+                        className={cn(
+                          "block text-sm",
+                          step.done
+                            ? "text-muted-foreground line-through"
+                            : "font-medium text-foreground",
+                        )}
+                      >
+                        {step.label}
+                      </span>
+                      {!step.done && step.hint && (
+                        <span className="block text-xs text-muted-foreground">{step.hint}</span>
+                      )}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </Reveal>
       )}
 
-      <section
-        aria-label="who yomi is right now"
-        className={cn(CARD, "flex items-center gap-4 p-5")}
-      >
-        {active ? (
-          <Portrait character={active} className="size-14 rounded-2xl" />
-        ) : (
-          <img src="/brand-mark-128.png" alt="" className="size-14 rounded-2xl" />
-        )}
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-muted-foreground">who yomi is right now</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-xl font-bold">{active ? active.name : "yomi"}</h2>
-            <span
-              className={cn(
-                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
-                telegramLinked ? "bg-sky-500/10 text-sky-600" : "bg-muted text-muted-foreground",
-              )}
-            >
+      <Reveal i={2}>
+        <section
+          aria-label="who yomi is right now"
+          className={cn(CARD, "flex items-center gap-4 p-5")}
+        >
+          {active ? (
+            <Portrait character={active} className="size-14 rounded-2xl" />
+          ) : (
+            <img src="/brand-mark-128.png" alt="" className="size-14 rounded-2xl" />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-muted-foreground">who yomi is right now</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl font-bold">{active ? active.name : "yomi"}</h2>
               <span
                 className={cn(
-                  "size-1.5 rounded-full",
-                  telegramLinked ? "bg-sky-500" : "bg-muted-foreground",
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
+                  telegramLinked ? "bg-sky-500/10 text-sky-600" : "bg-muted text-muted-foreground",
                 )}
-              />
-              {telegramLinked ? "on telegram" : "telegram not linked"}
-            </span>
+              >
+                <span
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    telegramLinked ? "bg-sky-500" : "bg-muted-foreground",
+                  )}
+                />
+                {telegramLinked ? "on telegram" : "telegram not linked"}
+              </span>
+            </div>
+            <p className="truncate text-sm text-muted-foreground">
+              {active
+                ? "they answer your texts. say “back to yomi” any time."
+                : "the usual yomi. tap a character below to switch who answers your texts."}
+            </p>
           </div>
-          <p className="truncate text-sm text-muted-foreground">
-            {active
-              ? "they answer your texts. say “back to yomi” any time."
-              : "the usual yomi. tap a character below to switch who answers your texts."}
-          </p>
-        </div>
-      </section>
+        </section>
+      </Reveal>
 
       <Row
+        i={3}
         title="your characters"
         action={{ label: "discover", icon: Compass, onClick: () => onNavigate("characters") }}
       >
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {characters.slice(0, 4).map((c) => (
+          {data.characters === null &&
+            [0, 1, 2].map((n) => <Skeleton key={n} className="min-h-[220px]" />)}
+          {characters.slice(0, 4).map((c, idx) => (
             <button
               key={c.id}
               onClick={() => onNavigate("characters")}
-              className={cn(CARD, "overflow-hidden text-left transition hover:-translate-y-0.5")}
+              style={{ "--i": idx } as React.CSSProperties}
+              className={cn(
+                CARD,
+                "rise overflow-hidden text-left transition hover:-translate-y-0.5",
+              )}
             >
               <Portrait character={c} className="aspect-[4/5] w-full" />
               <div className="p-3">
@@ -447,15 +459,19 @@ export function HomeView({
       </Row>
 
       <Row
+        i={4}
         title={mySkills.length ? "your skills" : "try a skill"}
         action={{ label: "browse all", icon: ArrowRight, onClick: () => onNavigate("skills") }}
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {shownSkills.map((s) => (
+          {data.skills === null &&
+            [0, 1].map((n) => <Skeleton key={n} className="min-h-[92px] rounded-[1.75rem]" />)}
+          {shownSkills.map((s, idx) => (
             <button
               key={s.id}
               onClick={() => onNavigate("skills")}
-              className={cn(CARD, "flex items-start gap-3 p-4 text-left")}
+              style={{ "--i": idx } as React.CSSProperties}
+              className={cn(CARD, "rise flex items-start gap-3 p-4 text-left")}
             >
               <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-muted text-xl">
                 {s.emoji}
@@ -491,7 +507,7 @@ export function HomeView({
         </div>
       </Row>
 
-      <Row title="today">
+      <Row i={5} title="today">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Tile icon={Zap} title="routines" onClick={() => onNavigate("schedules")}>
             {nextRoutine?.nextRunAt ? (
@@ -595,16 +611,18 @@ function Portrait({ character, className }: { character: HomeCharacter; classNam
 }
 
 function Row({
+  i = 0,
   title,
   action,
   children,
 }: {
+  i?: number
   title: string
   action?: { label: string; icon: typeof Zap; onClick: () => void }
   children: React.ReactNode
 }) {
   return (
-    <section>
+    <Reveal i={i}>
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-xl font-bold tracking-tight">{title}</h2>
         {action && (
@@ -619,7 +637,7 @@ function Row({
         )}
       </div>
       {children}
-    </section>
+    </Reveal>
   )
 }
 
