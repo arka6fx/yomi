@@ -74,14 +74,15 @@ async def list_characters(
     saved = await characters_d1.saved_ids(backend, user.id)
     active = await characters_d1.active(backend, user.id)
     settings = await characters_d1.settings_by_id(backend, user.id)
+    stats = await characters_d1.gallery_stats(backend, user.id)
+
+    def dress(characters: list) -> list:
+        return characters_d1.apply_stats(characters_d1.apply_settings(characters, settings), stats)
+
     return {
-        "mine": characters_d1.apply_settings(
-            await characters_d1.list_mine(backend, user.id), settings
-        ),
-        "saved": characters_d1.apply_settings(
-            [characters_d1.gallery_character(cid) for cid in saved], settings  # type: ignore[misc]
-        ),
-        "gallery": characters_d1.apply_settings(characters_d1.gallery(), settings),
+        "mine": dress(await characters_d1.list_mine(backend, user.id)),
+        "saved": dress([characters_d1.gallery_character(cid) for cid in saved]),
+        "gallery": dress(characters_d1.gallery()),
         "active": active,
         "tags": characters_d1.TAGS,
         "templates": list(TEMPLATES),
@@ -149,6 +150,23 @@ async def save_character(
     try:
         await characters_d1.set_saved(
             _require(d1), user.id, character_id, bool(body.get("saved", True))
+        )
+    except characters_d1.CharacterError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True}
+
+
+@characters_router.post("/{character_id}/like")
+async def like_character(
+    character_id: str,
+    request: Request,
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    body = await _json(request)
+    try:
+        await characters_d1.set_liked(
+            _require(d1), user.id, character_id, bool(body.get("liked", True))
         )
     except characters_d1.CharacterError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

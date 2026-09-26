@@ -248,3 +248,48 @@ async def test_shared_character_link_switches_the_chat(backend, monkeypatch):
     assert "isn't available" in sent[-1][1]
     await telegram._start_shared_character(backend, "stranger", "chat-9", "satoru-gojo")
     assert "Link your Yomi account" in sent[-1][1]
+
+
+async def test_gallery_counts_chats_this_week_and_likes(backend):
+    backend.store.db.execute(
+        "INSERT INTO \"user\" (id, name, email, created_at, updated_at) "
+        "VALUES ('bob', 'Bob', 'bob@example.com', 'now', 'now')"
+    )
+    await characters_d1.activate(backend, USER, GOJO)
+    await characters_d1.activate(backend, "bob", GOJO)
+    backend.store.db.execute(  # an old chat counts in total, not this week
+        "INSERT INTO character_chats (id, user_id, character_id, created_at) "
+        "VALUES ('old', 'bob', ?, '2020-01-01T00:00:00+00:00')",
+        [GOJO],
+    )
+    await characters_d1.set_liked(backend, "bob", GOJO, True)
+    await characters_d1.set_liked(backend, "bob", GOJO, True)  # one like per person
+    stats = await characters_d1.gallery_stats(backend, USER)
+    assert stats[GOJO] == {"chats": 3, "chatsThisWeek": 2, "likes": 1, "liked": False}
+    assert stats["gallery:hello-kitty"]["chats"] == 0
+    await characters_d1.set_liked(backend, USER, GOJO, True)
+    assert (await characters_d1.gallery_stats(backend, USER))[GOJO]["liked"]
+    await characters_d1.set_liked(backend, USER, GOJO, False)
+    assert (await characters_d1.gallery_stats(backend, USER))[GOJO]["likes"] == 1
+    made = await characters_d1.create(backend, USER, MINE)
+    with pytest.raises(characters_d1.CharacterError):
+        await characters_d1.set_liked(backend, USER, made["id"], True)
+
+
+def test_like_route_and_listing(backend):
+    from yomi.app.deps import get_current_user
+    from yomi.app.main import app
+    from yomi.services.cloudflare_storage.deps import get_d1_backend
+
+    app.dependency_overrides[get_d1_backend] = lambda: backend
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        id=USER, email="a@example.com", role="user", plan="explore"
+    )
+    try:
+        http = TestClient(app)
+        assert http.post(f"/api/characters/{GOJO}/like", json={"liked": True}).status_code == 200
+        gojo = next(c for c in http.get("/api/characters").json()["gallery"] if c["id"] == GOJO)
+        assert gojo["likes"] == 1 and gojo["liked"] is True and gojo["chats"] == 0
+        assert http.post("/api/characters/nope/like", json={}).status_code == 400
+    finally:
+        app.dependency_overrides.clear()

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from yomi.services.cloudflare_storage.client import Statement
@@ -387,8 +388,64 @@ async def activate(backend: D1Backend, user_id: str, character_id: str) -> dict[
             "VALUES (?, ?, ?)",
             [user_id, character_id, utcnow_iso()],
         ))
+        statements.append(Statement(
+            "INSERT INTO character_chats (id, user_id, character_id, created_at) "
+            "VALUES (?, ?, ?, ?)",
+            [new_id(), user_id, character_id, utcnow_iso()],
+        ))
     await backend.store.atomic(statements)
     return character
+
+
+async def gallery_stats(backend: D1Backend, user_id: str) -> dict[str, dict[str, Any]]:
+    """Chats (all time and this week) and likes per gallery character, plus your ♥."""
+    week_ago = (datetime.now(UTC) - timedelta(days=7)).isoformat()
+    chats = await backend.store.fetch_all(
+        "SELECT character_id, COUNT(*) AS chats, "
+        "SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) AS week "
+        "FROM character_chats GROUP BY character_id",
+        [week_ago],
+    )
+    likes = await backend.store.fetch_all(
+        "SELECT character_id, COUNT(*) AS likes, "
+        "MAX(CASE WHEN user_id = ? THEN 1 ELSE 0 END) AS liked "
+        "FROM character_likes GROUP BY character_id",
+        [user_id],
+    )
+    stats: dict[str, dict[str, Any]] = {
+        cid: {"chats": 0, "chatsThisWeek": 0, "likes": 0, "liked": False}
+        for cid in _GALLERY_BY_ID
+    }
+    for row in chats:
+        if (s := stats.get(str(row["character_id"]))) is not None:
+            s["chats"], s["chatsThisWeek"] = int(row["chats"]), int(row["week"] or 0)
+    for row in likes:
+        if (s := stats.get(str(row["character_id"]))) is not None:
+            s["likes"], s["liked"] = int(row["likes"]), bool(row["liked"])
+    return stats
+
+
+def apply_stats(
+    characters: list[dict[str, Any]], stats: dict[str, dict[str, Any]]
+) -> list[dict[str, Any]]:
+    return [{**c, **stats[c["id"]]} if c["id"] in stats else c for c in characters]
+
+
+async def set_liked(backend: D1Backend, user_id: str, character_id: str, liked: bool) -> None:
+    if character_id not in _GALLERY_BY_ID:
+        raise CharacterError("only gallery characters can be liked")
+    if liked:
+        stmt = Statement(
+            "INSERT OR IGNORE INTO character_likes (user_id, character_id, created_at) "
+            "VALUES (?, ?, ?)",
+            [user_id, character_id, utcnow_iso()],
+        )
+    else:
+        stmt = Statement(
+            "DELETE FROM character_likes WHERE user_id = ? AND character_id = ?",
+            [user_id, character_id],
+        )
+    await backend.store.atomic([stmt])
 
 
 async def deactivate(backend: D1Backend, user_id: str) -> bool:

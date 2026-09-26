@@ -14,6 +14,8 @@ import {
   Search,
   Share2,
   Sparkles,
+  Flame,
+  Heart,
   Star,
   Trash2,
   Wand2,
@@ -42,6 +44,11 @@ type Character = {
   imageCredit: string
   source: "mine" | "gallery"
   mine: boolean
+  // gallery characters only
+  chats?: number
+  chatsThisWeek?: number
+  likes?: number
+  liked?: boolean
   textsFirst: boolean
   usesTools: boolean
 }
@@ -322,15 +329,34 @@ export function CharactersView({ token }: { token: string }) {
     <button onClick={() => setOpenId(c.id)} className={card}>
       <div className="flex items-start justify-between">
         <Avatar character={c} />
-        {c.featured && (
+        {c.chatsThisWeek ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-500">
-            <Star size={11} className="fill-current" /> featured
+            <Flame size={11} className="fill-current" /> {c.chatsThisWeek} this week
           </span>
+        ) : (
+          c.featured && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-500">
+              <Star size={11} className="fill-current" /> featured
+            </span>
+          )
         )}
       </div>
       <p className="mt-4 text-lg font-bold tracking-tight">{c.name}</p>
       <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{c.tagline}</p>
-      <p className="mt-4 text-xs text-muted-foreground">{from}</p>
+      <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+        <span>{from}</span>
+        {!c.mine && (
+          <span className="flex items-center gap-2.5">
+            <span className="inline-flex items-center gap-1" title="chats">
+              <MessageCircle size={12} /> {c.chats ?? 0}
+            </span>
+            <span className="inline-flex items-center gap-1" title="likes">
+              <Heart size={12} className={cn(c.liked && "fill-current text-rose-500")} />{" "}
+              {c.likes ?? 0}
+            </span>
+          </span>
+        )}
+      </div>
     </button>
   )
 
@@ -362,6 +388,30 @@ export function CharactersView({ token }: { token: string }) {
               {opened.mine ? "made by you" : "from the yomi gallery"}
               {opened.basedOn ? ` · based on ${opened.basedOn}` : ""}
             </p>
+            {!opened.mine && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold">
+                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1.5">
+                  <MessageCircle size={12} /> {opened.chats ?? 0} chats
+                </span>
+                <button
+                  aria-pressed={!!opened.liked}
+                  aria-label={opened.liked ? "unlike" : "like"}
+                  disabled={busy === "like"}
+                  onClick={() =>
+                    void act("like", () =>
+                      call(`/${encodeURIComponent(opened.id)}/like`, {
+                        method: "POST",
+                        body: JSON.stringify({ liked: !opened.liked }),
+                      }),
+                    )
+                  }
+                  className="inline-flex items-center gap-1 rounded-full bg-card px-3 py-1.5 shadow-sm hover:bg-muted disabled:opacity-60"
+                >
+                  <Heart size={12} className={cn(opened.liked && "fill-current text-rose-500")} />{" "}
+                  {opened.likes ?? 0}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
