@@ -1,11 +1,24 @@
 import Link from "next/link"
 import { BadgeCheck, Clock, MessageCircle } from "lucide-react"
-import { APP_NAMES, type CatalogSkill } from "@/lib/skills-catalog"
+import { APP_NAMES, shortSchedule, type CatalogSkill } from "@/lib/skills-catalog"
 
 export function Byline() {
   return (
     <span className="inline-flex items-center gap-1 text-[13px] text-muted-foreground">
       by yomi team <BadgeCheck size={13} className="text-brand" aria-label="official" />
+    </span>
+  )
+}
+
+// Rounded-square "app icon" for the gallery tiles.
+export function SkillIcon({ emoji, size = 56 }: { emoji: string; size?: number }) {
+  return (
+    <span
+      className="skill-icon shrink-0"
+      style={{ width: size, height: size, fontSize: size * 0.5 }}
+      aria-hidden
+    >
+      {emoji}
     </span>
   )
 }
@@ -47,13 +60,13 @@ export function SkillTile({ skill }: { skill: CatalogSkill }) {
   return (
     <Link
       href={`/skills/${skill.id}`}
-      className="surface flex flex-col p-6 transition-transform hover:-translate-y-0.5"
+      className="surface flex flex-col !rounded-[1.6rem] p-6 transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-[0_14px_34px_-14px_rgba(16,40,80,0.28)]"
     >
       <div className="flex items-start justify-between gap-3">
-        <SkillOrb emoji={skill.emoji} size={56} />
+        <SkillIcon emoji={skill.emoji} size={54} />
         <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
           {skill.kind === "routine" ? <Clock size={12} /> : <MessageCircle size={12} />}
-          {skill.schedule ?? "just ask"}
+          {skill.schedule ? shortSchedule(skill.schedule) : "just ask"}
         </span>
       </div>
       <h3 className="mt-5 text-xl font-semibold text-foreground">{skill.name}</h3>

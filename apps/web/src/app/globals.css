@@ -211,6 +211,19 @@
       inset 0 2px 2px #fff;
   }
 
+  /* glossy rounded-square app icon for skill tiles */
+  .skill-icon {
+    display: grid;
+    place-items: center;
+    border-radius: 28%;
+    background: linear-gradient(180deg, #ffffff 0%, #eef1f5 55%, #dfe4ea 100%);
+    box-shadow:
+      0 6px 14px -6px rgba(16, 24, 40, 0.3),
+      inset 0 -2px 4px rgba(16, 24, 40, 0.07),
+      inset 0 1px 1px #fff;
+    border: 1px solid rgba(255, 255, 255, 0.9);
+  }
+
   /* white die-cut outline around an emoji, like a sticker */
   .sticker {
     display: inline-block;
