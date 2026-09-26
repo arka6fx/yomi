@@ -45,6 +45,7 @@ MOVE_TABLES = (
     "trust_settings",
     "characters",
     "character_saves",
+    "character_settings",
     "active_characters",
     "generated_suggestions",
     "suggestion_decisions",

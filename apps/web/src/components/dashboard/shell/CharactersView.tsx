@@ -6,9 +6,13 @@ import {
   ArrowLeft,
   Check,
   Loader2,
+  ArrowDown,
+  ArrowUp,
   MessageCircle,
+  Pencil,
   Plus,
   Search,
+  Share2,
   Sparkles,
   Star,
   Trash2,
@@ -38,6 +42,8 @@ type Character = {
   imageCredit: string
   source: "mine" | "gallery"
   mine: boolean
+  textsFirst: boolean
+  usesTools: boolean
 }
 
 type Found = {
@@ -111,6 +117,18 @@ const STEPS = [
   "ready?",
 ]
 
+const words = (s: string) =>
+  s
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((w) => w.length >= 3)
+
+// "gojo" matches "Satoru Gojou": some typed word starts a word of the real name.
+function sameName(typed: string, name: string) {
+  const theirs = words(name)
+  return words(typed).some((w) => theirs.some((t) => t.startsWith(w)))
+}
+
 function Avatar({
   character,
   size = 56,
@@ -157,6 +175,8 @@ export function CharactersView({ token }: { token: string }) {
   const [query, setQuery] = useState("")
   const [tag, setTag] = useState("all")
   const [found, setFound] = useState<Found[] | null>(null)
+  const [guess, setGuess] = useState<Found | null>(null)
+  const [notThem, setNotThem] = useState("")
   const [wizard, setWizard] = useState<{
     step: number
     draft: Draft
@@ -185,6 +205,30 @@ export function CharactersView({ token }: { token: string }) {
   useEffect(() => {
     void load()
   }, [load])
+
+  // Recognise a known character from the name alone ("gojo" → Satoru Gojo).
+  const guessName =
+    wizard?.step === 0 && !wizard.draft.basedOn.trim() ? wizard.draft.name.trim() : ""
+  useEffect(() => {
+    setGuess(null)
+    if (guessName.length < 3 || guessName === notThem) return
+    let stale = false
+    const timer = setTimeout(async () => {
+      try {
+        const res = await call(`/lookup?q=${encodeURIComponent(guessName)}`)
+        if (!res.ok || stale) return
+        const { results } = (await res.json()) as { results: Found[] }
+        const hit = results.find((f) => sameName(guessName, f.name))
+        if (!stale && hit) setGuess(hit)
+      } catch {
+        // a guess is only a nicety
+      }
+    }, 700)
+    return () => {
+      stale = true
+      clearTimeout(timer)
+    }
+  }, [guessName, notThem, call])
 
   const all = useMemo(() => {
     const map = new Map<string, Character>()
@@ -224,9 +268,27 @@ export function CharactersView({ token }: { token: string }) {
     setNotice(
       body.textedYou
         ? `${character.name} just texted you on Telegram.`
-        : `${character.name} is on. Link Telegram so they can text you first.`,
+        : character.textsFirst
+          ? `${character.name} is on. Link Telegram so they can text you first.`
+          : `${character.name} is on. Text them on Telegram.`,
     )
     window.open(TELEGRAM_BOT_URL, "_blank", "noopener")
+  }
+
+  // Opens Telegram straight into this gallery character, for you or anyone you send it to.
+  async function share(character: Character) {
+    const url = `${TELEGRAM_BOT_URL}?start=char_${character.id.replace(/^gallery:/, "")}`
+    const text = `text ${character.name} on yomi`
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: character.name, text, url })
+        return
+      }
+      await navigator.clipboard.writeText(url)
+      setNotice("link copied. anyone who opens it can text them on telegram.")
+    } catch {
+      // the share sheet was dismissed
+    }
   }
 
   const shown = useMemo(() => {
@@ -351,24 +413,33 @@ export function CharactersView({ token }: { token: string }) {
               {inMine ? "in your characters" : "add to your characters"}
             </button>
           )}
+          <button
+            onClick={() =>
+              // A gallery character is edited as your own copy; the original stays as is.
+              setWizard({
+                step: 0,
+                editId: opened.mine ? opened.id : null,
+                draft: {
+                  ...EMPTY_DRAFT,
+                  ...opened,
+                  firstLines: opened.firstLines.length ? opened.firstLines : [""],
+                },
+              })
+            }
+            className={cn(pillButton, "inline-flex items-center gap-1.5")}
+          >
+            <Pencil size={13} /> {opened.mine ? "edit" : "make it yours"}
+          </button>
+          {!opened.mine && (
+            <button
+              onClick={() => void share(opened)}
+              className={cn(pillButton, "inline-flex items-center gap-1.5")}
+            >
+              <Share2 size={13} /> share
+            </button>
+          )}
           {opened.mine && (
             <>
-              <button
-                onClick={() =>
-                  setWizard({
-                    step: 0,
-                    editId: opened.id,
-                    draft: {
-                      ...EMPTY_DRAFT,
-                      ...opened,
-                      firstLines: opened.firstLines.length ? opened.firstLines : [""],
-                    },
-                  })
-                }
-                className={pillButton}
-              >
-                edit
-              </button>
               <button
                 onClick={async () => {
                   if (await act("delete", () => call(`/${opened.id}`, { method: "DELETE" })))
@@ -415,6 +486,54 @@ export function CharactersView({ token }: { token: string }) {
           </div>
         )}
 
+        <div className={cn(SURFACE, "divide-y divide-border")}>
+          {(
+            [
+              ["textsFirst", "texts you first", "they say hello when you switch to them."],
+              [
+                "usesTools",
+                "does things for you",
+                "they keep yomi’s tools: reminders, calendar, email, the web.",
+              ],
+            ] as const
+          ).map(([key, title, hint]) => {
+            const on = opened[key]
+            return (
+              <div key={key} className="flex items-center gap-4 px-5 py-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">{title}</p>
+                  <p className="text-xs text-muted-foreground">{hint}</p>
+                </div>
+                <button
+                  role="switch"
+                  aria-checked={on}
+                  aria-label={title}
+                  disabled={busy === `setting:${key}`}
+                  onClick={() =>
+                    void act(`setting:${key}`, () =>
+                      call(`/${encodeURIComponent(opened.id)}/settings`, {
+                        method: "POST",
+                        body: JSON.stringify({ [key]: !on }),
+                      }),
+                    )
+                  }
+                  className={cn(
+                    "relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-60",
+                    on ? "bg-[#2b8fff]" : "bg-muted",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "absolute top-1 size-5 rounded-full bg-white shadow transition-all",
+                      on ? "left-6" : "left-1",
+                    )}
+                  />
+                </button>
+              </div>
+            )
+          })}
+        </div>
+
         <p className="flex items-start gap-1.5 border-t border-border pt-4 text-xs text-muted-foreground">
           <Sparkles size={13} className="mt-0.5 shrink-0" />
           <span>
@@ -451,16 +570,20 @@ export function CharactersView({ token }: { token: string }) {
       setWizard((w) => (w ? { ...w, draft: { ...w.draft, ...patch } } : w))
     const go = (n: number) => setWizard((w) => (w ? { ...w, step: n } : w))
     const firstOk = draft.firstLines.some((l) => l.trim())
-    const canNext = [draft.name.trim(), true, draft.personality.trim(), firstOk, true][step]
+    // Someone known (based on) can skip the personality: yomi already knows them.
+    const talkOk = draft.personality.trim() || draft.basedOn.trim()
+    const canNext = [draft.name.trim(), true, talkOk, firstOk, true][step]
 
-    async function writeForMe(template?: string) {
-      setBusy("draft")
+    // `only` rewrites just the tagline or one first line instead of filling the gaps.
+    async function writeForMe(template?: string, only?: "tagline" | number) {
+      setBusy(only === undefined ? "draft" : `draft:${only}`)
       setError("")
       try {
         const res = await call("/draft", {
           method: "POST",
           body: JSON.stringify({
             name: draft.name,
+            basedOn: draft.basedOn,
             appearance: draft.appearance,
             personality: draft.personality,
             template,
@@ -474,17 +597,46 @@ export function CharactersView({ token }: { token: string }) {
           detail?: string
         }
         if (!res.ok) throw new Error(body.detail ?? "Couldn’t write that")
-        set({
-          personality: body.personality || draft.personality,
-          tagline: draft.tagline || body.tagline || "",
-          description: draft.description || body.description || "",
-          firstLines: firstOk ? draft.firstLines : [body.firstLine || ""],
-        })
+        if (only === "tagline") {
+          set({ tagline: body.tagline || draft.tagline })
+        } else if (typeof only === "number") {
+          set({
+            firstLines: draft.firstLines.map((l, i) => (i === only ? body.firstLine || l : l)),
+          })
+        } else {
+          set({
+            personality: body.personality || draft.personality,
+            tagline: draft.tagline || body.tagline || "",
+            description: draft.description || body.description || "",
+            firstLines: firstOk ? draft.firstLines : [body.firstLine || ""],
+          })
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Couldn’t write that")
       } finally {
         setBusy(null)
       }
+    }
+
+    function moveLine(i: number, by: -1 | 1) {
+      const lines = [...draft.firstLines]
+      const [line] = lines.splice(i, 1)
+      lines.splice(i + by, 0, line ?? "")
+      set({ firstLines: lines })
+    }
+
+    // A plain function, not a component, so it isn't remounted on every render.
+    function writeButton(target: "tagline" | number) {
+      const mine = busy === `draft:${target}`
+      return (
+        <button
+          onClick={() => void writeForMe(undefined, target)}
+          disabled={busy?.startsWith("draft") || !draft.name.trim()}
+          className="inline-flex items-center gap-1 text-xs font-semibold text-[#2b8fff] disabled:opacity-50"
+        >
+          {mine ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />} write for me
+        </button>
+      )
     }
 
     async function findThem() {
@@ -587,6 +739,45 @@ export function CharactersView({ token }: { token: string }) {
                     className={cn(input, "text-lg")}
                   />
                 </label>
+                {guess && !draft.basedOn.trim() && (
+                  <div className="flex items-center gap-3 rounded-2xl bg-sky-500/10 p-2.5">
+                    <Avatar
+                      character={{
+                        name: guess.name,
+                        emoji: "",
+                        color: "#2b8fff",
+                        imageUrl: guess.imageUrl,
+                      }}
+                      size={40}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold">
+                        based on {guess.basedOn}?
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        yomi knows their world
+                      </span>
+                    </span>
+                    <button
+                      onClick={() => {
+                        pick(guess)
+                        setGuess(null)
+                      }}
+                      className="rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background"
+                    >
+                      that’s them
+                    </button>
+                    <button
+                      onClick={() => {
+                        setNotThem(draft.name.trim())
+                        setGuess(null)
+                      }}
+                      className="rounded-full px-2 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                    >
+                      not them
+                    </button>
+                  </div>
+                )}
                 <div>
                   <span className={label}>
                     based on (optional)
@@ -773,7 +964,9 @@ export function CharactersView({ token }: { token: string }) {
                     ))}
                   </div>
                   <p className="mt-1.5 text-xs text-muted-foreground">
-                    write for me drafts it with AI; edit anything after.
+                    {draft.basedOn.trim()
+                      ? `yomi already knows who ${draft.basedOn} is. this is where you say what’s different about your version, or leave it empty.`
+                      : "write for me drafts it with AI; edit anything after."}
                   </p>
                 </div>
               </>
@@ -782,8 +975,13 @@ export function CharactersView({ token }: { token: string }) {
               <>
                 <label className="block">
                   <span className={label}>
-                    tagline{" "}
-                    <span className="text-xs text-muted-foreground">{draft.tagline.length}/60</span>
+                    tagline
+                    <span className="flex items-center gap-3">
+                      {writeButton("tagline")}
+                      <span className="text-xs text-muted-foreground">
+                        {draft.tagline.length}/60
+                      </span>
+                    </span>
                   </span>
                   <input
                     maxLength={60}
@@ -813,7 +1011,7 @@ export function CharactersView({ token }: { token: string }) {
                   </p>
                   <div className="space-y-2">
                     {draft.firstLines.map((line, i) => (
-                      <div key={i} className="flex gap-2">
+                      <div key={i} className="rounded-2xl bg-muted p-1.5">
                         <textarea
                           rows={2}
                           maxLength={2000}
@@ -826,19 +1024,44 @@ export function CharactersView({ token }: { token: string }) {
                             })
                           }
                           placeholder="the first thing they say"
-                          className={cn(input, "resize-none")}
+                          aria-label={`first line ${i + 1}`}
+                          className={cn(input, "resize-none bg-card")}
                         />
-                        {draft.firstLines.length > 1 && (
+                        <div className="flex items-center gap-1 px-1 pt-1">
                           <button
-                            onClick={() =>
-                              set({ firstLines: draft.firstLines.filter((_, j) => j !== i) })
-                            }
-                            aria-label="Remove line"
-                            className="self-start rounded-full p-2 text-muted-foreground hover:bg-muted"
+                            onClick={() => moveLine(i, -1)}
+                            disabled={i === 0}
+                            aria-label="Move up"
+                            className="rounded-full p-1.5 text-muted-foreground hover:bg-card disabled:opacity-30"
                           >
-                            <Trash2 size={14} />
+                            <ArrowUp size={13} />
                           </button>
-                        )}
+                          <button
+                            onClick={() => moveLine(i, 1)}
+                            disabled={i === draft.firstLines.length - 1}
+                            aria-label="Move down"
+                            className="rounded-full p-1.5 text-muted-foreground hover:bg-card disabled:opacity-30"
+                          >
+                            <ArrowDown size={13} />
+                          </button>
+                          {draft.firstLines.length > 1 && (
+                            <button
+                              onClick={() =>
+                                set({ firstLines: draft.firstLines.filter((_, j) => j !== i) })
+                              }
+                              aria-label="Remove line"
+                              className="rounded-full p-1.5 text-muted-foreground hover:bg-card"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                          <span className="ml-auto flex items-center gap-3">
+                            <span className="text-xs text-muted-foreground">
+                              {line.length}/2000
+                            </span>
+                            {writeButton(i)}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>

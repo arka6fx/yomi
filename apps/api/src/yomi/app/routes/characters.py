@@ -52,8 +52,10 @@ async def _telegram_chat(backend: D1Backend, user_id: str) -> str | None:
 
 async def say_first_line(backend: D1Backend, user_id: str, character: dict[str, Any]) -> bool:
     """The character texts first: send its opening line and keep it in the thread."""
+    if not character.get("textsFirst", True) or not character.get("firstLines"):
+        return False
     chat_id = await _telegram_chat(backend, user_id)
-    if chat_id is None or not character.get("firstLines"):
+    if chat_id is None:
         return False
     from yomi.gateway.telegram import send_message
     from yomi.services.agent import sessions_d1
@@ -71,10 +73,15 @@ async def list_characters(
     backend = _require(d1)
     saved = await characters_d1.saved_ids(backend, user.id)
     active = await characters_d1.active(backend, user.id)
+    settings = await characters_d1.settings_by_id(backend, user.id)
     return {
-        "mine": await characters_d1.list_mine(backend, user.id),
-        "saved": [characters_d1.gallery_character(cid) for cid in saved],
-        "gallery": characters_d1.gallery(),
+        "mine": characters_d1.apply_settings(
+            await characters_d1.list_mine(backend, user.id), settings
+        ),
+        "saved": characters_d1.apply_settings(
+            [characters_d1.gallery_character(cid) for cid in saved], settings  # type: ignore[misc]
+        ),
+        "gallery": characters_d1.apply_settings(characters_d1.gallery(), settings),
         "active": active,
         "tags": characters_d1.TAGS,
         "templates": list(TEMPLATES),
@@ -148,6 +155,23 @@ async def save_character(
     return {"ok": True}
 
 
+@characters_router.post("/{character_id}/settings")
+async def character_settings(
+    character_id: str,
+    request: Request,
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    """The per-character switches: texts you first, does things for you."""
+    try:
+        character = await characters_d1.set_settings(
+            _require(d1), user.id, character_id, await _json(request)
+        )
+    except characters_d1.CharacterError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"character": character}
+
+
 @characters_router.post("/{character_id}/activate")
 async def activate_character(
     character_id: str,
@@ -200,7 +224,8 @@ async def draft_character(
 
     template = TEMPLATES.get(str(body.get("template") or ""), "")
     brief = (
-        f"Name: {name}\nLooks: {str(body.get('appearance') or '')[:500]}\n"
+        f"Name: {name}\nBased on: {str(body.get('basedOn') or 'original')[:120]}\n"
+        f"Looks: {str(body.get('appearance') or '')[:500]}\n"
         f"Style: {template}\nNotes: {str(body.get('personality') or '')[:1500]}"
     )
     data = await chat_completion(

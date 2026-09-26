@@ -87,6 +87,10 @@ GALLERY: list[dict[str, Any]] = [
 _GALLERY_BY_ID = {GALLERY_PREFIX + c["slug"]: c for c in GALLERY}
 
 
+# Per-user switches; a missing character_settings row means these defaults.
+DEFAULT_SETTINGS = {"textsFirst": True, "usesTools": True}
+
+
 class CharacterError(ValueError):
     pass
 
@@ -117,7 +121,7 @@ def gallery_character(character_id: str) -> dict[str, Any] | None:
         "basedOn": item.get("based_on", ""), "featured": bool(item.get("featured")),
         "imageUrl": item.get("image_url", ""), "imageCredit": item.get("image_credit", ""),
         "starters": item.get("starters", []),
-        "source": "gallery", "mine": False,
+        "source": "gallery", "mine": False, **DEFAULT_SETTINGS,
     }
 
 
@@ -135,7 +139,7 @@ def _row_view(row: dict) -> dict[str, Any]:
         "basedOn": row.get("based_on") or "", "featured": False, "starters": [],
         "imageUrl": row.get("image_url") or "", "imageCredit": row.get("image_credit") or "",
         "source": "mine", "mine": True, "chats": row.get("chats", 0),
-        "updatedAt": row.get("updated_at"),
+        "updatedAt": row.get("updated_at"), **DEFAULT_SETTINGS,
     }
 
 
@@ -166,7 +170,10 @@ def validate(fields: dict[str, Any]) -> dict[str, Any]:
     first_lines = [line for line in first_lines if line][:MAX_FIRST_LINES]
     if not first_lines:
         raise CharacterError("give them at least one first line")
-    if not _clean(fields.get("personality"), LIMITS["personality"]):
+    # A character based on someone known can lean on who they already are.
+    if not _clean(fields.get("personality"), LIMITS["personality"]) and not _clean(
+        fields.get("basedOn"), LIMITS["based_on"]
+    ):
         raise CharacterError("describe how they talk")
     tags = [t for t in (fields.get("tags") or []) if t in TAGS][:MAX_TAGS]
     image_url = _clean(fields.get("imageUrl"), LIMITS["image_url"])
@@ -204,13 +211,67 @@ async def list_mine(backend: D1Backend, user_id: str) -> list[dict[str, Any]]:
     return [_row_view(r) for r in rows]
 
 
+def _with_settings(character: dict[str, Any], row: dict | None) -> dict[str, Any]:
+    if row is None or row.get("texts_first") is None:
+        return character
+    return {
+        **character,
+        "textsFirst": bool(row["texts_first"]),
+        "usesTools": bool(row["uses_tools"]),
+    }
+
+
+async def settings_by_id(backend: D1Backend, user_id: str) -> dict[str, dict]:
+    rows = await backend.store.fetch_all(
+        "SELECT character_id, texts_first, uses_tools FROM character_settings WHERE user_id = ?",
+        [user_id],
+    )
+    return {str(r["character_id"]): r for r in rows}
+
+
+def apply_settings(
+    characters: list[dict[str, Any]], settings: dict[str, dict]
+) -> list[dict[str, Any]]:
+    return [_with_settings(c, settings.get(c["id"])) for c in characters]
+
+
+async def set_settings(
+    backend: D1Backend, user_id: str, character_id: str, fields: dict[str, Any]
+) -> dict[str, Any]:
+    character = await get(backend, user_id, character_id)
+    if character is None:
+        raise CharacterError("character not found")
+    texts_first = bool(fields.get("textsFirst", character["textsFirst"]))
+    uses_tools = bool(fields.get("usesTools", character["usesTools"]))
+    await backend.store.atomic([Statement(
+        "INSERT INTO character_settings (user_id, character_id, texts_first, uses_tools, "
+        "updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(user_id, character_id) DO UPDATE SET "
+        "texts_first = excluded.texts_first, uses_tools = excluded.uses_tools, "
+        "updated_at = excluded.updated_at",
+        [user_id, character_id, int(texts_first), int(uses_tools), utcnow_iso()],
+    )])
+    return {**character, "textsFirst": texts_first, "usesTools": uses_tools}
+
+
 async def get(backend: D1Backend, user_id: str, character_id: str) -> dict[str, Any] | None:
+    settings = await backend.store.fetch_one(
+        "SELECT texts_first, uses_tools FROM character_settings "
+        "WHERE user_id = ? AND character_id = ?",
+        [user_id, character_id],
+    )
+    return await _load(backend, user_id, character_id, settings)
+
+
+async def _load(
+    backend: D1Backend, user_id: str, character_id: str, settings: dict | None
+) -> dict[str, Any] | None:
     if character_id.startswith(GALLERY_PREFIX):
-        return gallery_character(character_id)
+        character = gallery_character(character_id)
+        return _with_settings(character, settings) if character else None
     row = await backend.store.fetch_one(
         "SELECT * FROM characters WHERE id = ? AND user_id = ?", [character_id, user_id]
     )
-    return _row_view(row) if row else None
+    return _with_settings(_row_view(row), settings) if row else None
 
 
 async def create(backend: D1Backend, user_id: str, fields: dict[str, Any]) -> dict[str, Any]:
@@ -256,11 +317,15 @@ async def delete(backend: D1Backend, user_id: str, character_id: str) -> bool:
             [user_id, character_id],
         ),
         Statement(
+            "DELETE FROM character_settings WHERE user_id = ? AND character_id = ?",
+            [user_id, character_id],
+        ),
+        Statement(
             "DELETE FROM characters WHERE id = ? AND user_id = ? RETURNING id",
             [character_id, user_id],
         ),
     ])
-    return bool(results and results[1].get("results"))
+    return bool(results and results[2].get("results"))
 
 
 async def saved_ids(backend: D1Backend, user_id: str) -> list[str]:
@@ -289,10 +354,14 @@ async def set_saved(backend: D1Backend, user_id: str, character_id: str, saved: 
 
 
 async def active(backend: D1Backend, user_id: str) -> dict[str, Any] | None:
+    # Runs on every agent turn: read the switches in the same trip as the active id.
     row = await backend.store.fetch_one(
-        "SELECT character_id FROM active_characters WHERE user_id = ?", [user_id]
+        "SELECT a.character_id, s.texts_first, s.uses_tools FROM active_characters a "
+        "LEFT JOIN character_settings s "
+        "ON s.user_id = a.user_id AND s.character_id = a.character_id WHERE a.user_id = ?",
+        [user_id],
     )
-    return await get(backend, user_id, str(row["character_id"])) if row else None
+    return await _load(backend, user_id, str(row["character_id"]), row) if row else None
 
 
 async def activate(backend: D1Backend, user_id: str, character_id: str) -> dict[str, Any]:
@@ -348,10 +417,23 @@ def persona_prompt(character: dict[str, Any]) -> str:
         f"<active_character name={json.dumps(character['name'])}>",
         f"For this conversation you are {character['name']}, a fictional character the user "
         "chose. Reply in their voice, personality and texting style. Stay in character, but "
-        "you still have every Yomi tool, the approval rules still apply, and you never claim "
-        "to be a real human: if asked, say you're an AI character played by Yomi.",
-        f"Personality and voice:\n{character['personality']}",
+        + (
+            "you still have every Yomi tool, the approval rules still apply, "
+            if character.get("usesTools", True)
+            else "in this chat you only talk: you have no tools, so if the user asks you to do "
+            "something (reminders, email, the web), say in character that they can switch on "
+            "'does things for you' in the dashboard or say 'back to yomi'. "
+        )
+        + "and you never claim to be a real human: if asked, say you're an AI character "
+        "played by Yomi.",
     ]
+    if character.get("personality"):
+        parts.append(f"Personality and voice:\n{character['personality']}")
+    elif character.get("basedOn"):
+        parts.append(
+            f"Play them as they are in {character['basedOn']}: their personality, voice and "
+            "way of talking, adapted to texting."
+        )
     if character.get("appearance"):
         parts.append(f"Appearance: {character['appearance']}")
     if character.get("basedOn"):

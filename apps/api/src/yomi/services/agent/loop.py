@@ -22,9 +22,13 @@ CONTEXT_MESSAGES = 30
 
 
 async def _system_prompt(
-    db_session: AsyncSession | None, d1: Any, user_id: str
+    db_session: AsyncSession | None, d1: Any, user_id: str, context: dict | None = None
 ) -> str:
-    """Build the stable Yomi voice and operating contract for every turn."""
+    """Build the stable Yomi voice and operating contract for every turn.
+
+    ``context`` (optional) receives the active character, so the loop can apply its
+    switches without reading it again.
+    """
     soul: str | None = None
     bio = ""
     character = None
@@ -47,6 +51,8 @@ async def _system_prompt(
             logger.debug("could not load profile for %s: %r", user_id, profile)
         if isinstance(active, dict):
             character = active
+            if context is not None:
+                context["character"] = active
         elif isinstance(active, Exception):
             logger.debug("could not load active character for %s: %r", user_id, active)
     elif db_session is not None:
@@ -211,15 +217,21 @@ async def run_agent_loop(
     # d1 alone suffices for the user registry (tokens resolve via gateway);
     # db_session=None simply means "no Postgres", not "no user tools".
     # Tools and the system prompt don't depend on each other: fetch them together.
+    prompt_context: dict = {}
     if db_session is not None or d1 is not None:
         active, base_prompt = await asyncio.gather(
             build_user_registry(db_session, user_id, create_pending_action, d1),
-            _system_prompt(db_session, d1, user_id),
+            _system_prompt(db_session, d1, user_id, prompt_context),
         )
     else:
         active = registry
-        base_prompt = await _system_prompt(db_session, d1, user_id)
+        base_prompt = await _system_prompt(db_session, d1, user_id, prompt_context)
     tools = active.get_openai_tools()
+    character = prompt_context.get("character")
+    talk_only = bool(character) and not character.get("usesTools", True)
+    if talk_only:
+        # A talk-only character keeps just the way back to plain Yomi.
+        tools = [t for t in tools if t.get("function", {}).get("name") == "character_exit"]
 
     async def _run() -> str:
         nonlocal messages
@@ -261,6 +273,8 @@ async def run_agent_loop(
                 function = tool_call.get("function") or {}
                 tool_name = function.get("name", "")
                 try:
+                    if talk_only and tool_name != "character_exit":
+                        raise PermissionError("this character only talks; tools are off")
                     args = json.loads(function.get("arguments") or "{}")
                     result = await active.execute(tool_name, **args)
                     messages.append(format_tool_result(tool_call.get("id", ""), result))

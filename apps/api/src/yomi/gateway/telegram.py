@@ -411,6 +411,32 @@ async def _greet_as_active_character(d1: D1Backend, tg_user_id: str, chat_id: st
         logger.warning("could not greet as the active character", exc_info=True)
 
 
+async def _start_shared_character(
+    d1: D1Backend | None, tg_user_id: str, chat_id: str, slug: str
+) -> None:
+    from yomi.services import characters_d1
+
+    character_id = characters_d1.GALLERY_PREFIX + slug
+    if d1 is None or characters_d1.gallery_character(character_id) is None:
+        await send_message(chat_id, "That character isn't available any more.")
+        return
+    from yomi.app.routes.characters import say_first_line
+    from yomi.services import connectors_d1 as _connectors_d1
+
+    owner = await _connectors_d1.resolve_platform_user(d1, "telegram", tg_user_id, chat_id)
+    if owner is None:
+        await send_message(
+            chat_id,
+            "Link your Yomi account first: open the dashboard, go to Settings, then send "
+            "/start <code> here. After that, tap the character link again.",
+        )
+        return
+    character = await characters_d1.activate(d1, owner, character_id)
+    # They tapped the link to talk, so say hello even if "texts you first" is off.
+    if not await say_first_line(d1, owner, {**character, "textsFirst": True}):
+        await send_message(chat_id, f"{character['emoji']} you're now talking to {character['name']}.")
+
+
 async def _link_with_code(
     db_session: AsyncSession, tg_user_id: str, chat_id: str, code: str,
     d1: D1Backend | None = None,
@@ -512,6 +538,10 @@ async def _handle_update(
         return {"status": "ok"}
     elif text.startswith("/start login_"):
         await _start_web_login(chat_id, text.split("login_", 1)[1].strip(), d1)
+        return {"status": "ok"}
+    elif text.startswith("/start char_"):
+        # A shared character link: switch this chat to them and let them say hello.
+        await _start_shared_character(d1, tg_user_id, chat_id, text.split("char_", 1)[1].strip())
         return {"status": "ok"}
     elif text.startswith("/start "):
         code = text.split(" ")[1]

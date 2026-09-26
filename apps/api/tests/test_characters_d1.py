@@ -132,3 +132,119 @@ def test_gallery_is_gojo_and_hello_kitty():
     assert [c["name"] for c in characters_d1.gallery()] == ["Satoru Gojo", "Hello Kitty"]
     kitty = characters_d1.gallery_character("gallery:hello-kitty")
     assert kitty["basedOn"] == "Hello Kitty (Sanrio)" and kitty["imageCredit"] == "AniList"
+
+
+async def test_switches_default_on_and_are_per_character(backend):
+    made = await characters_d1.create(backend, USER, MINE)
+    assert made["textsFirst"] and made["usesTools"]
+    updated = await characters_d1.set_settings(backend, USER, GOJO, {"usesTools": False})
+    assert updated["textsFirst"] and not updated["usesTools"]
+    assert not (await characters_d1.get(backend, USER, GOJO))["usesTools"]
+    assert (await characters_d1.get(backend, USER, made["id"]))["usesTools"]
+    await characters_d1.activate(backend, USER, GOJO)
+    assert not (await characters_d1.active(backend, USER))["usesTools"]  # read in one trip
+    with pytest.raises(characters_d1.CharacterError):
+        await characters_d1.set_settings(backend, USER, "nope", {"textsFirst": False})
+
+
+async def test_based_on_characters_need_no_personality(backend):
+    with pytest.raises(characters_d1.CharacterError, match="how they talk"):
+        await characters_d1.create(backend, USER, {**MINE, "personality": ""})
+    made = await characters_d1.create(
+        backend, USER, {**MINE, "personality": "", "basedOn": "Nami (One Piece)"}
+    )
+    prompt = characters_d1.persona_prompt(made)
+    assert "Play them as they are in Nami (One Piece)" in prompt
+    assert "Personality and voice" not in prompt
+
+
+def test_talk_only_prompt_says_there_are_no_tools():
+    gojo = characters_d1.gallery_character(GOJO)
+    assert "every Yomi tool" in characters_d1.persona_prompt(gojo)
+    talk_only = characters_d1.persona_prompt({**gojo, "usesTools": False})
+    assert "every Yomi tool" not in talk_only and "you have no tools" in talk_only
+
+
+async def test_talk_only_character_gets_no_tools_but_can_go_back(backend, monkeypatch):
+    from yomi.services.agent import loop
+
+    offered: list = []
+
+    class FakeRegistry:
+        def get_openai_tools(self):
+            return [{"type": "function", "function": {"name": n}}
+                    for n in ("web_search", "character_exit")]
+
+        async def execute(self, name, **args):
+            return {"ran": name}
+
+    replies = iter([
+        {"choices": [{"message": {"role": "assistant", "tool_calls": [
+            {"id": "1", "function": {"name": "web_search", "arguments": "{}"}}]}}]},
+        {"choices": [{"message": {"role": "assistant", "content": "just talking"}}]},
+    ])
+
+    async def fake_completion(purpose, messages, tools=None, **kwargs):
+        offered.append([t["function"]["name"] for t in tools or []])
+        return next(replies)
+
+    async def fake_registry(*args):
+        return FakeRegistry()
+
+    async def no_charge(*args):
+        return None
+
+    monkeypatch.setattr(loop, "chat_completion", fake_completion)
+    monkeypatch.setattr(loop, "build_user_registry", fake_registry)
+    monkeypatch.setattr(loop, "_charge_composio_usage", no_charge)
+    await characters_d1.activate(backend, USER, GOJO)
+    await characters_d1.set_settings(backend, USER, GOJO, {"usesTools": False})
+    history = [{"role": "user", "content": "search the web"}]
+    assert await loop.run_agent_loop(history, USER, "explore", d1=backend) == "just talking"
+    assert offered[0] == ["character_exit"]
+
+
+def test_texts_first_off_means_no_opening_text(backend, monkeypatch):
+    from yomi.app.deps import get_current_user
+    from yomi.app.main import app
+    from yomi.services.cloudflare_storage.deps import get_d1_backend
+
+    sent: list = []
+
+    async def fake_send(chat_id, text):
+        sent.append(text)
+
+    monkeypatch.setattr("yomi.gateway.telegram.send_message", fake_send)
+    app.dependency_overrides[get_d1_backend] = lambda: backend
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        id=USER, email="a@example.com", role="user", plan="explore"
+    )
+    try:
+        http = TestClient(app)
+        res = http.post(f"/api/characters/{GOJO}/settings", json={"textsFirst": False})
+        assert res.status_code == 200 and res.json()["character"]["textsFirst"] is False
+        listed = http.get("/api/characters").json()
+        assert next(c for c in listed["gallery"] if c["id"] == GOJO)["textsFirst"] is False
+        assert http.post(f"/api/characters/{GOJO}/activate").json()["textedYou"] is False
+        assert sent == []
+    finally:
+        app.dependency_overrides.clear()
+
+
+async def test_shared_character_link_switches_the_chat(backend, monkeypatch):
+    from yomi.gateway import telegram
+
+    sent: list[tuple[str, str]] = []
+
+    async def fake_send(chat_id, text):
+        sent.append((chat_id, text))
+
+    monkeypatch.setattr(telegram, "send_message", fake_send)
+    await characters_d1.set_settings(backend, USER, GOJO, {"textsFirst": False})
+    await telegram._start_shared_character(backend, "tg", "chat-1", "satoru-gojo")
+    assert (await characters_d1.active(backend, USER))["id"] == GOJO
+    assert "Satoru Gojo" in sent[-1][1]  # says hello even with texts-first off
+    await telegram._start_shared_character(backend, "tg", "chat-1", "nobody")
+    assert "isn't available" in sent[-1][1]
+    await telegram._start_shared_character(backend, "stranger", "chat-9", "satoru-gojo")
+    assert "Link your Yomi account" in sent[-1][1]
