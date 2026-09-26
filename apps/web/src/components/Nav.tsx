@@ -6,16 +6,30 @@ import { usePathname, useRouter } from "next/navigation"
 import { Menu, X } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { BrandMark } from "@/components/BrandMark"
+import { RESOURCES, ResourceRow, ResourcesMenu } from "@/components/ResourcesMenu"
 import { cn } from "@/lib/utils"
 
 const NAV_LINKS = [
   { label: "Skills", href: "/skills" },
   { label: "Characters", href: "/characters" },
   { label: "Pricing", href: "/pricing" },
-  { label: "Docs", href: "/docs" },
-  { label: "FAQ", href: "/faq" },
-  { label: "Support", href: "/support" },
 ]
+
+function NavLink({ link, pathname }: { link: { label: string; href: string }; pathname: string }) {
+  const active = pathname === link.href || pathname.startsWith(`${link.href}/`)
+  return (
+    <Link
+      href={link.href}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "rounded-xl px-3.5 py-2 text-sm font-medium transition-colors",
+        active ? "text-foreground" : "text-foreground/65 hover:text-foreground",
+      )}
+    >
+      {link.label}
+    </Link>
+  )
+}
 
 // Not sticky: the bar scrolls away with the hero, and a lone "start now" button stays
 // pinned to the corner once it has.
@@ -46,20 +60,12 @@ export default function Nav() {
           aria-label="Main"
           className="hidden items-center gap-0.5 rounded-2xl border border-white/80 bg-card/85 p-1.5 shadow-[0_1px_2px_rgba(16,24,40,0.05),0_8px_24px_-10px_rgba(16,24,40,0.2)] backdrop-blur-xl md:flex"
         >
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.label}
-              href={link.href}
-              aria-current={pathname === link.href ? "page" : undefined}
-              className={cn(
-                "rounded-xl px-3.5 py-2 text-sm font-medium transition-colors",
-                pathname === link.href
-                  ? "text-foreground"
-                  : "text-foreground/65 hover:text-foreground",
-              )}
-            >
-              {link.label}
-            </Link>
+          {NAV_LINKS.slice(0, 2).map((link) => (
+            <NavLink key={link.label} link={link} pathname={pathname} />
+          ))}
+          <ResourcesMenu />
+          {NAV_LINKS.slice(2).map((link) => (
+            <NavLink key={link.label} link={link} pathname={pathname} />
           ))}
           {!session && (
             <Link
@@ -100,6 +106,12 @@ export default function Nav() {
                 {link.label}
               </Link>
             ))}
+            <p className="eyebrow mt-2 border-t border-border px-3 pb-1 pt-3">resources</p>
+            <div role="menu" aria-label="Resources">
+              {RESOURCES.map((item) => (
+                <ResourceRow key={item.label} item={item} onPick={() => setMenuOpen(false)} />
+              ))}
+            </div>
             <div className="mt-1 border-t border-border pt-1">
               {session ? (
                 <button
