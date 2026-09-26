@@ -223,9 +223,61 @@ def _message_chunks(text: str, limit: int = 3900) -> list[str]:
     return [text[index : index + limit] for index in range(0, len(text), limit)]
 
 
+_TABLE_SEPARATOR = re.compile(r"^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$")
+
+
+def _table_cells(line: str) -> list[str]:
+    return [cell.strip() for cell in line.strip().strip("|").split("|")]
+
+
+def _tables_to_lists(text: str) -> str:
+    """Telegram has no tables: a Markdown table arrives as ragged pipes. Turn each
+    row into a short numbered entry that reads well on a phone."""
+    lines = text.split("\n")
+    out: list[str] = []
+    i = 0
+    while i < len(lines):
+        is_table = (
+            "|" in lines[i]
+            and i + 1 < len(lines)
+            and _TABLE_SEPARATOR.match(lines[i + 1])
+        )
+        if not is_table:
+            out.append(lines[i])
+            i += 1
+            continue
+        headers = _table_cells(lines[i])
+        i += 2
+        rows: list[list[str]] = []
+        while i < len(lines) and "|" in lines[i] and lines[i].strip():
+            rows.append(_table_cells(lines[i]))
+            i += 1
+        number_col = 0 if headers and headers[0] in ("#", "No", "No.", "") else None
+        title_col = 1 if number_col == 0 and len(headers) > 1 else 0
+        for index, row in enumerate(rows, 1):
+            row = row + [""] * (len(headers) - len(row))
+            number = row[number_col] if number_col is not None and row[number_col] else str(index)
+            entry = [f"{number}. {row[title_col]}".rstrip()]
+            short: list[str] = []
+            for col, header in enumerate(headers):
+                if col in (number_col, title_col) or not row[col]:
+                    continue
+                pair = f"{header}: {row[col]}" if header else row[col]
+                if len(row[col]) > 40:
+                    entry.append(f"   {pair}")
+                else:
+                    short.append(pair)
+            if short:
+                entry.insert(1, "   " + " · ".join(short))
+            out.extend(entry)
+            if index < len(rows):
+                out.append("")
+    return "\n".join(out)
+
+
 def _markdown_to_telegram_html(text: str) -> str:
     """Render safe, common LLM Markdown without exposing arbitrary HTML."""
-    escaped = html.escape(text, quote=False)
+    escaped = html.escape(_tables_to_lists(text), quote=False)
     code_blocks: list[str] = []
 
     def stash_code(match: re.Match[str]) -> str:
