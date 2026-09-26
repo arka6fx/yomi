@@ -7,6 +7,7 @@ import re
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
 
 from yomi.app.deps import get_current_user
 from yomi.db.models_auth import User
@@ -95,6 +96,41 @@ async def lookup_character(q: str = "", user: User = Depends(get_current_user)):
     from yomi.services.character_lookup import lookup
 
     return {"results": await lookup(q)}
+
+
+@characters_router.get("/pictures")
+async def character_pictures(
+    q: str = "", cursor: str = "", user: User = Depends(get_current_user)
+):
+    """Pictures of a known character (AniList, TVMaze, its Fandom wiki page) to pick a face."""
+    from yomi.services.character_pictures import pictures
+
+    return await pictures(q, cursor)
+
+
+@characters_router.post("/photo")
+async def upload_character_photo(
+    request: Request,
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    """Raw image bytes in the body; stored in R2. Returns the URL to save as imageUrl."""
+    from yomi.services import media
+
+    if d1 is None:
+        return JSONResponse({"error": "Uploads need the D1 storage backend"}, 501)
+    data = b""
+    async for chunk in request.stream():
+        data += chunk
+        if len(data) > media.MAX_AVATAR_BYTES:
+            break
+    try:
+        ext, content_type = media.check_avatar(data)
+    except media.MediaError as exc:
+        return JSONResponse({"error": str(exc), "code": "invalid_image"}, 400)
+    key = media.character_key(user.id, ext)
+    await d1.client.media_put(key, data, content_type)
+    return {"imageUrl": media.url_for(key)}
 
 
 @characters_router.post("")

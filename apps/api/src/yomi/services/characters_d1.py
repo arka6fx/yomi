@@ -15,6 +15,7 @@ import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from yomi.services import media
 from yomi.services.character_gallery import GALLERY
 from yomi.services.cloudflare_storage.client import Statement
 from yomi.services.cloudflare_storage.deps import D1Backend
@@ -129,8 +130,10 @@ def validate(fields: dict[str, Any]) -> dict[str, Any]:
         raise CharacterError("describe how they talk")
     tags = [t for t in (fields.get("tags") or []) if t in TAGS][:MAX_TAGS]
     image_url = _clean(fields.get("imageUrl"), LIMITS["image_url"])
-    if image_url and not image_url.startswith("https://"):
-        raise CharacterError("the picture must be an https:// link")
+    if image_url and not (
+        image_url.startswith("https://") or media.is_character_upload(image_url)
+    ):
+        raise CharacterError("the picture must be an https:// link or an uploaded photo")
     check_allowed(
         " ".join(
             str(fields.get(key) or "")
