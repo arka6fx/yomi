@@ -20,7 +20,6 @@ import { StatusManager } from "@/components/dashboard/StatusManager"
 import type { DashboardTab } from "@/components/dashboard/tabs"
 import { DashboardHome, type PlanSummary } from "@/components/dashboard/DashboardHome"
 import { TelegramCard } from "@/components/dashboard/TelegramCard"
-import { CommandCenter } from "@/components/dashboard/CommandCenter"
 import { AppShell } from "@/components/dashboard/shell/AppShell"
 import { HomeView } from "@/components/dashboard/shell/HomeView"
 import { SkillsView } from "@/components/dashboard/shell/SkillsView"
@@ -732,29 +731,6 @@ function DashboardContent() {
                 addError={customMcpError}
               />
             </div>
-          </motion.div>
-        )}
-
-        {activeTab === "command-center" && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="pt-6 pb-6">
-              <PageHeader
-                title="command center"
-                subtitle="hand yomi a whole mission and see what it can reach."
-              />
-            </div>
-            <CommandCenter
-              connections={integrationHealth.map((item) => ({
-                id: item.provider,
-                name: item.displayName || item.provider,
-                healthy: item.healthy,
-              }))}
-              onOpenConnections={() => setActiveTab("integrations")}
-            />
           </motion.div>
         )}
 
