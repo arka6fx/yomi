@@ -78,9 +78,9 @@ Canonical vocabulary for how a new memory relates to what is already stored.
 Full design in
 [ADR-0006](docs/adr/0006-contradiction-resolution-at-extraction.md). These three
 definitions are the ones the extraction prompt uses
-(`apps/api/src/yomi/services/memory/contradiction.py`), so keep them in
-sync; its test suite (`apps/api/tests/test_memory_contradiction.py`) is the
-canary that catches drift.
+(`apps/api/src/yomi/services/memory/contradiction.py`), so keep them in sync;
+its test suite (`apps/api/tests/test_memory_contradiction.py`) is the canary
+that catches drift.
 
 **Contradiction**: A new memory asserting something **incompatible** with an
 existing active memory on the same subject ("uses vim" becomes "switched to VS
@@ -140,15 +140,14 @@ permanently resident in the prompt. _Avoid_: durable, permanent, important.
 
 ## Drive sync sources
 
-Canonical vocabulary for how Google Drive folders become searchable RAG
-content. Full design in
-[ADR-0007](docs/adr/0007-google-drive-auto-sync-rag-r2.md).
+Canonical vocabulary for how Google Drive folders become searchable RAG content.
+Full design in [ADR-0007](docs/adr/0007-google-drive-auto-sync-rag-r2.md).
 
 **Drive sync source**: A `rag_sources` row with `sourceType = "google-drive"`
 that continuously indexes one Google Drive folder. Identity is
-`(userId, folderId)` — the immutable Drive id, never a path — stored in
-`path`. Deleting it deletes the source's documents and chunks.
-_Avoid_: drive source, folder source.
+`(userId, folderId)` — the immutable Drive id, never a path — stored in `path`.
+Deleting it deletes the source's documents and chunks. _Avoid_: drive source,
+folder source.
 
 **Backfill**: The first population pass. Lists the folder statically
 (`GOOGLEDRIVE_LIST_FILES`, paged, 20 files per tick, max 1000 children) until
@@ -161,17 +160,17 @@ is static; sync is a delta on it).
 folder. Refused (`409 backfill_pending`) before backfill completes.
 
 **Sync state**: The versioned JSON blob in `rag_sources.sync_state`
-(`{version: 1, startPageToken, pending, pendingIndex, filesSkipped,
-filesIndexed, lastSync}`) that makes a page-token walk resume across deploys.
-The column is `TEXT`; it is stored JSON-dumped, never a typed column,
-because the storage prepared-statement layer only binds scalars.
-_Avoid_: cursor, checkpoint (checkpoint already means a session summary).
+(`{version: 1, startPageToken, pending, pendingIndex, filesSkipped, filesIndexed, lastSync}`)
+that makes a page-token walk resume across deploys. The column is `TEXT`; it is
+stored JSON-dumped, never a typed column, because the storage prepared-statement
+layer only binds scalars. _Avoid_: cursor, checkpoint (checkpoint already means
+a session summary).
 
 **Ingest staging**: The short-lived R2 object that carries composio
 `GOOGLEDRIVE_PARSE_FILE` output into the container. The Worker fetches the
 tool's presigned S3 URL into R2 (max 8 MB, 24 h TTL), the container reads it
-back and deletes it. The container **never touches Amazon S3**.
-_Avoid_: s3 staging, transient object.
+back and deletes it. The container **never touches Amazon S3**. _Avoid_: s3
+staging, transient object.
 
 **Indexable export**: A file the pipeline can turn into text: Google Docs and
 Slides → `text/plain`, Sheets → `text/csv`, and native

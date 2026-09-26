@@ -28,7 +28,8 @@ scripts/            Asset preparation and post-deploy smoke test
 ```bash
 # From the repository root
 npm install
-BACKEND_URL=http://localhost:8080 npm run dev --workspace @yomi/web
+cp apps/web/.env.example apps/web/.env.local
+npm run dev --workspace @yomi/web
 ```
 
 The app runs on http://localhost:3000 and expects the backend on port 8080.

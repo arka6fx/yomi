@@ -62,7 +62,7 @@ CONTEXT.md         domain glossary
 
 ```bash
 npm install && npm run python:dev          # backend on :8080
-BACKEND_URL=http://localhost:8080 npm run dev --workspace @yomi/web   # dashboard on :3000
+npm run dev --workspace @yomi/web   # dashboard on :3000
 ```
 
 ---

@@ -120,10 +120,11 @@ npm install
 
 # Backend — http://localhost:8080
 cp apps/api/.env.example apps/api/.env   # fill in the Cloudflare values
+cp apps/web/.env.example apps/web/.env.local
 npm run python:dev
 
 # Dashboard — http://localhost:3000 (in a second terminal)
-BACKEND_URL=http://localhost:8080 npm run dev --workspace @yomi/web
+npm run dev --workspace @yomi/web
 ```
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full development workflow.

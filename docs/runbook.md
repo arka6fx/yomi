@@ -79,7 +79,8 @@ columns) so the running code keeps working until the deploy finishes.
 Secrets are Worker Secrets, set from `apps/api` with
 `npx wrangler secret put <NAME>`. The backend Worker forwards them into the
 container (see `envVars` in `apps/api/containers/worker.ts`). They are never
-committed. Keep real values in a gitignored `.env.production`.
+committed. Keep real values in a gitignored `apps/api/.env.production`, starting
+from [`apps/api/.env.production.example`](../apps/api/.env.production.example).
 
 The non-secret values (`ENVIRONMENT`, `APP_URL`, `BACKEND_URL`, `WEB_ORIGIN`,
 `CORS_ORIGIN`, `CLOUDFLARE_ACCOUNT_ID`) are in `wrangler.toml` `[vars]`.

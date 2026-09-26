@@ -17,14 +17,14 @@ cd apps/api
 uv sync --dev                            # Python backend
 cp .env.example .env                     # fill in the Cloudflare values
 cd ../..
+cp apps/web/.env.example apps/web/.env.local
 ```
 
 Run the two apps in separate terminals:
 
 ```bash
 npm run python:dev                       # backend   → http://localhost:8080
-BACKEND_URL=http://localhost:8080 \
-  npm run dev --workspace @yomi/web      # dashboard → http://localhost:3000
+npm run dev --workspace @yomi/web        # dashboard → http://localhost:3000
 ```
 
 ## Where code goes
