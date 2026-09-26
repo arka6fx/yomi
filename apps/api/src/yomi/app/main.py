@@ -85,7 +85,25 @@ async def _lifespan(app: FastAPI):
     await close_shared_client()
 
 
+def _init_sentry() -> None:
+    """Error monitoring (free developer tier). Off until SENTRY_DSN is set; never sends
+    request bodies, cookies or headers, so message content and tokens stay out."""
+    if not settings.sentry_dsn:
+        return
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.environment,
+        release=f"yomi-api@{__version__}",
+        send_default_pii=False,
+        max_request_body_size="never",
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+    )
+
+
 def create_app() -> FastAPI:
+    _init_sentry()
     app = FastAPI(title="Yomi API", version=__version__, lifespan=_lifespan)
 
     app.add_middleware(

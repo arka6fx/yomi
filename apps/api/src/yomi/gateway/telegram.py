@@ -481,6 +481,18 @@ async def _handle_update(
                 await set_reaction(chat_id, message_id, "❌")
             return {"status": "ok"}
 
+    location = message.get("location")
+    if not text and location:
+        # A dropped pin or a venue: name the place so the agent can plan around it.
+        venue = message.get("venue") or {}
+        if venue.get("title"):
+            text = f"[shared location: {venue['title']}, {venue.get('address', '')}".rstrip(", ")
+            text += f" ({location['latitude']:.5f}, {location['longitude']:.5f})]"
+        else:
+            from yomi.services.geocode import describe_location
+
+            text = await describe_location(location["latitude"], location["longitude"])
+
     if not text:
         return {"status": "ignored"}
 

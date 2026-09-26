@@ -111,6 +111,19 @@ class Settings(BaseSettings):
     # telegram webhook secret (optional; set to verify Telegram requests)
     telegram_webhook_secret: str = ""
 
+    # observability and email; each is off until its key is set
+    sentry_dsn: str = ""  # error monitoring
+    sentry_traces_sample_rate: float = 0.0  # performance tracing is opt-in
+    langfuse_public_key: str = ""  # LLM call traces, metadata only
+    langfuse_secret_key: str = ""
+    langfuse_host: str = Field(
+        default="https://cloud.langfuse.com",
+        validation_alias=AliasChoices("LANGFUSE_HOST", "LANGFUSE_BASE_URL"),
+    )
+    resend_api_key: str = ""  # transactional email
+    email_from: str = "Yomi <hello@getyomi.in>"  # must be a Resend-verified domain
+    email_reply_to: str = "contact.arkagarai@gmail.com"  # where user replies land (support)
+
     @field_validator("*", mode="before")
     @classmethod
     def _strip_bom_and_whitespace(cls, value: object) -> object:

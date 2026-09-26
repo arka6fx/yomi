@@ -81,6 +81,14 @@ async def list_characters(
     }
 
 
+@characters_router.get("/lookup")
+async def lookup_character(q: str = "", user: User = Depends(get_current_user)):
+    """Find a character from an existing work (AniList, TVMaze) to prefill the maker."""
+    from yomi.services.character_lookup import lookup
+
+    return {"results": await lookup(q)}
+
+
 @characters_router.post("")
 async def create_character(
     request: Request,

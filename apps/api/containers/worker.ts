@@ -51,6 +51,15 @@ export class YomiContainer extends Container {
     TELEGRAM_BOT_USERNAME: workerEnv.TELEGRAM_BOT_USERNAME ?? "",
     TELEGRAM_DEEP_LINK_ENABLED: workerEnv.TELEGRAM_DEEP_LINK_ENABLED ?? "true",
     TELEGRAM_WEBHOOK_SECRET: workerEnv.TELEGRAM_WEBHOOK_SECRET ?? "",
+    // observability + email; each stays off until its secret is set
+    SENTRY_DSN: workerEnv.SENTRY_DSN ?? "",
+    SENTRY_TRACES_SAMPLE_RATE: workerEnv.SENTRY_TRACES_SAMPLE_RATE ?? "0",
+    LANGFUSE_PUBLIC_KEY: workerEnv.LANGFUSE_PUBLIC_KEY ?? "",
+    LANGFUSE_SECRET_KEY: workerEnv.LANGFUSE_SECRET_KEY ?? "",
+    LANGFUSE_HOST: workerEnv.LANGFUSE_HOST ?? "https://cloud.langfuse.com",
+    RESEND_API_KEY: workerEnv.RESEND_API_KEY ?? "",
+    EMAIL_FROM: workerEnv.EMAIL_FROM ?? "Yomi <hello@getyomi.in>",
+    EMAIL_REPLY_TO: workerEnv.EMAIL_REPLY_TO ?? "contact.arkagarai@gmail.com",
     ENCRYPTION_KEY: workerEnv.ENCRYPTION_KEY ?? "",
     ENCRYPTION_KEY_FALLBACKS: workerEnv.ENCRYPTION_KEY_FALLBACKS ?? "",
     GOOGLE_INTEGRATIONS_CLIENT_ID: workerEnv.GOOGLE_INTEGRATIONS_CLIENT_ID ?? "",
@@ -149,6 +158,14 @@ declare global {
     TELEGRAM_BOT_USERNAME: string;
     TELEGRAM_DEEP_LINK_ENABLED: string;
     TELEGRAM_WEBHOOK_SECRET: string;
+    SENTRY_DSN: string;
+    SENTRY_TRACES_SAMPLE_RATE: string;
+    LANGFUSE_PUBLIC_KEY: string;
+    LANGFUSE_SECRET_KEY: string;
+    LANGFUSE_HOST: string;
+    RESEND_API_KEY: string;
+    EMAIL_FROM: string;
+    EMAIL_REPLY_TO: string;
     ENCRYPTION_KEY: string;
     ENCRYPTION_KEY_FALLBACKS: string;
     GOOGLE_INTEGRATIONS_CLIENT_ID: string;

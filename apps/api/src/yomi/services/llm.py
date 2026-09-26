@@ -100,6 +100,8 @@ async def chat_completion(
             request_id, purpose, selected_model, int((time.perf_counter() - started) * 1000),
             type(exc).__name__,
         )
+        _trace(request_id, endpoint, purpose, selected_model,
+               int((time.perf_counter() - started) * 1000), None, type(exc).__name__, user_id)
         if user_id and (db_session or d1):
             await _record_completion_telemetry(
                 db_session, user_id, request_id, endpoint, purpose, selected_model,
@@ -116,6 +118,7 @@ async def chat_completion(
         request_id, purpose, selected_model, latency_ms,
         usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0),
     )
+    _trace(request_id, endpoint, purpose, selected_model, latency_ms, usage, None, user_id)
     if user_id and (db_session or d1):
         if d1 is not None and db_session is None:
             # A D1 write costs a gateway round trip; never make the reply wait on it.
@@ -131,6 +134,29 @@ async def chat_completion(
                 latency_ms, usage, None, d1,
             )
     return data
+
+
+def _trace(
+    request_id: str,
+    endpoint: str,
+    purpose: Purpose,
+    model: str,
+    latency_ms: int,
+    usage: dict[str, Any] | None,
+    error_code: str | None,
+    user_id: str | None,
+) -> None:
+    """Send call metadata (never content) to Langfuse when it's configured."""
+    from yomi.services import llm_trace
+
+    if not llm_trace.enabled():
+        return
+    from yomi.services.http_pool import fire_and_forget
+
+    fire_and_forget(llm_trace.send_trace(
+        request_id=request_id, endpoint=endpoint, purpose=purpose, model=model,
+        latency_ms=latency_ms, usage=usage, error_code=error_code, user_id=user_id,
+    ))
 
 
 async def _record_completion_telemetry(

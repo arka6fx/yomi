@@ -70,7 +70,12 @@ Secrets needed: `STORAGE_BACKEND`, `STORAGE_GATEWAY_URL`,
 `STORAGE_GATEWAY_SECRET`, `BETTER_AUTH_SECRET`, `INTERNAL_API_KEY`,
 `ENCRYPTION_KEY`, `ENCRYPTION_KEY_FALLBACKS`, `DODO_API_KEY`, `DODO_ENV`,
 `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and any connector
-credentials (Google integrations, Composio) the ported routes touch. Repo
+credentials (Google integrations, Composio) the ported routes touch. Optional, each off
+until set: `SENTRY_DSN` (error monitoring), `LANGFUSE_PUBLIC_KEY` +
+`LANGFUSE_SECRET_KEY` (LLM call metadata, never content), `RESEND_API_KEY` +
+`EMAIL_FROM` (welcome email; the sender domain must be verified in Resend).
+Character lookup (AniList, TVMaze) and location names (OpenStreetMap
+Nominatim) are keyless. Repo
 secrets used by the deploy workflow: `CLOUDFLARE_API_TOKEN`,
 `CLOUDFLARE_ACCOUNT_ID`, and optional `YOMI_SERVER_URL` (enables the post-
 deploy `/health` check). Retired: `DATABASE_URL` (Neon), `OPENAI_*`.

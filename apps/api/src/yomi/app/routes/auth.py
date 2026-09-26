@@ -718,6 +718,11 @@ async def _oauth_callback_d1(
             **account_tokens,
         })
         await _apply_signup_side_effects_d1(backend, user_id, now)
+        from yomi.services import mail
+        from yomi.services.http_pool import fire_and_forget
+
+        if mail.enabled():
+            fire_and_forget(mail.send_welcome(email, user_info.get("name") or ""))
 
     session_row = await auth_d1.create_session(
         backend,
