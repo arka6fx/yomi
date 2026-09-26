@@ -289,10 +289,10 @@ export default function PrivacyPage() {
             <p>
               To exercise these rights, contact us at{" "}
               <a
-                href="mailto:contact.arkagarai@gmail.com"
+                href="mailto:support@getyomi.in"
                 className="text-primary underline underline-offset-2 hover:text-foreground"
               >
-                contact.arkagarai@gmail.com
+                support@getyomi.in
               </a>
               .
             </p>
@@ -316,10 +316,10 @@ export default function PrivacyPage() {
             <p>
               Questions? Email{" "}
               <a
-                href="mailto:contact.arkagarai@gmail.com"
+                href="mailto:support@getyomi.in"
                 className="text-primary underline underline-offset-2 hover:text-foreground"
               >
-                contact.arkagarai@gmail.com
+                support@getyomi.in
               </a>{" "}
               or open an issue on{" "}
               <a

@@ -7,7 +7,7 @@ import { PageIntro, SitePage } from "@/components/SitePage"
 export const metadata: Metadata = pageMetadata({
   title: "Support",
   description:
-    "Get help with Yomi. Report bugs, ask questions about billing, app connectors, or your account. Reach us by email at contact.arkagarai@gmail.com.",
+    "Get help with Yomi. Report bugs, ask questions about billing, app connectors, or your account. Reach us by email at support@getyomi.in.",
   path: "/support",
 })
 
@@ -15,7 +15,7 @@ const channels = [
   {
     title: "Account and billing",
     description: "Questions about sign-in, plan access, invoices, or subscription changes.",
-    href: "mailto:contact.arkagarai@gmail.com",
+    href: "mailto:support@getyomi.in",
     label: "Email support",
     icon: Mail,
   },
@@ -29,7 +29,7 @@ const channels = [
   {
     title: "Security and privacy",
     description: "Report sensitive privacy, OAuth, data-handling, or account safety concerns.",
-    href: "mailto:contact.arkagarai@gmail.com",
+    href: "mailto:support@getyomi.in",
     label: "Email privacy",
     icon: MessageSquareText,
   },

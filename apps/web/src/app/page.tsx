@@ -36,7 +36,7 @@ const jsonLd = {
       },
       contactPoint: {
         "@type": "ContactPoint",
-        email: "contact.arkagarai@gmail.com",
+        email: "support@getyomi.in",
         contactType: "customer support",
       },
       sameAs: [

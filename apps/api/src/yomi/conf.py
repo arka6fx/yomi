@@ -122,7 +122,7 @@ class Settings(BaseSettings):
     )
     resend_api_key: str = ""  # transactional email
     email_from: str = "Yomi <hello@getyomi.in>"  # must be a Resend-verified domain
-    email_reply_to: str = "contact.arkagarai@gmail.com"  # where user replies land (support)
+    email_reply_to: str = "support@getyomi.in"  # where user replies land (support)
 
     @field_validator("*", mode="before")
     @classmethod

@@ -80,8 +80,8 @@ export default function CharacterGuidelinesPage() {
           <Section title="Reporting">
             <p>
               Tap <em>report</em> on any character, or email{" "}
-              <a href="mailto:contact.arkagarai@gmail.com">contact.arkagarai@gmail.com</a> with the
-              character&rsquo;s name and what&rsquo;s wrong. We read every report.
+              <a href="mailto:support@getyomi.in">support@getyomi.in</a> with the character&rsquo;s
+              name and what&rsquo;s wrong. We read every report.
             </p>
           </Section>
         </div>

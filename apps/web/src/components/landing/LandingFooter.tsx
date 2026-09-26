@@ -103,10 +103,10 @@ export default function LandingFooter() {
             {/* one unbreakable token — force-wrap it or it overflows its grid cell */}
             <p className="text-muted-foreground">Support</p>
             <a
-              href="mailto:contact.arkagarai@gmail.com"
+              href="mailto:support@getyomi.in"
               className="break-all text-foreground transition-colors hover:text-brand"
             >
-              contact.arkagarai@gmail.com
+              support@getyomi.in
             </a>
           </div>
           <div>

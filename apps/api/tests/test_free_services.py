@@ -132,7 +132,7 @@ async def test_mail_is_off_without_a_key_and_skips_placeholders(monkeypatch):
     assert await mail.send_welcome("a@example.com", "Ada Lovelace") is True
     sent = client.calls[0][1]["json"]
     assert sent["to"] == ["a@example.com"] and sent["text"].startswith("hi Ada,")
-    assert sent["reply_to"] == "contact.arkagarai@gmail.com"
+    assert sent["reply_to"] == "support@getyomi.in"
 
 
 def test_trace_span_carries_metadata_but_no_content_or_raw_user_id():

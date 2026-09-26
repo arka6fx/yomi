@@ -607,7 +607,7 @@ export function CharactersView({ token }: { token: string }) {
               "fan-made AI character, not affiliated with or endorsed by any rights holder. "}
             {opened.imageCredit && `picture: ${opened.imageCredit}. `}
             <a
-              href={`mailto:contact.arkagarai@gmail.com?subject=report%20character%20${encodeURIComponent(opened.name)}`}
+              href={`mailto:support@getyomi.in?subject=report%20character%20${encodeURIComponent(opened.name)}`}
               className="underline underline-offset-2"
             >
               report

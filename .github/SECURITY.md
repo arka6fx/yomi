@@ -5,7 +5,7 @@
 Do **not** open a public issue or pull request for a security vulnerability.
 
 Please report it privately by emailing
-**[contact.arkagarai@gmail.com](mailto:contact.arkagarai@gmail.com)**. If
+**[support@getyomi.in](mailto:support@getyomi.in)**. If
 possible include:
 
 - The affected component (`apps/api`, `apps/web`, `packages/db`,

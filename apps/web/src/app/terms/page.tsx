@@ -176,10 +176,10 @@ export default function TermsPage() {
             <p>
               Questions about these Terms? Email{" "}
               <a
-                href="mailto:contact.arkagarai@gmail.com"
+                href="mailto:support@getyomi.in"
                 className="text-primary underline underline-offset-2 hover:text-foreground"
               >
-                contact.arkagarai@gmail.com
+                support@getyomi.in
               </a>
               .
             </p>

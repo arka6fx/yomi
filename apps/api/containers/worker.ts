@@ -59,7 +59,7 @@ export class YomiContainer extends Container {
     LANGFUSE_HOST: workerEnv.LANGFUSE_HOST ?? "https://cloud.langfuse.com",
     RESEND_API_KEY: workerEnv.RESEND_API_KEY ?? "",
     EMAIL_FROM: workerEnv.EMAIL_FROM ?? "Yomi <hello@getyomi.in>",
-    EMAIL_REPLY_TO: workerEnv.EMAIL_REPLY_TO ?? "contact.arkagarai@gmail.com",
+    EMAIL_REPLY_TO: workerEnv.EMAIL_REPLY_TO ?? "support@getyomi.in",
     ENCRYPTION_KEY: workerEnv.ENCRYPTION_KEY ?? "",
     ENCRYPTION_KEY_FALLBACKS: workerEnv.ENCRYPTION_KEY_FALLBACKS ?? "",
     GOOGLE_INTEGRATIONS_CLIENT_ID: workerEnv.GOOGLE_INTEGRATIONS_CLIENT_ID ?? "",

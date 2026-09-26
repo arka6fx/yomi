@@ -36,8 +36,8 @@ export default function CopyrightPage() {
             <p>
               If you own, or are authorised to act for the owner of, a character, name, picture or
               other work used on Yomi, email{" "}
-              <a href="mailto:contact.arkagarai@gmail.com?subject=Copyright%20takedown">
-                contact.arkagarai@gmail.com
+              <a href="mailto:support@getyomi.in?subject=Copyright%20takedown">
+                support@getyomi.in
               </a>{" "}
               with the subject &ldquo;Copyright takedown&rdquo; and include:
             </p>
