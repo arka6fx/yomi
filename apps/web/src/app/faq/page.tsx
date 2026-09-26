@@ -124,7 +124,7 @@ export default function FaqPage() {
   return (
     <SitePage>
       <section className="mx-auto max-w-5xl px-4 pb-24 pt-16 sm:px-6 sm:pt-24">
-        <PageIntro title="frequently asked">
+        <PageIntro title="frequently asked" mascot="thinking">
           <p>
             can&apos;t find what you&apos;re looking for?{" "}
             <Link href="/support" className="font-medium text-foreground underline">

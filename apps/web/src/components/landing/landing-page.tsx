@@ -7,6 +7,7 @@ import { ArrowRight, Check, Lock, Shield } from "lucide-react"
 import LandingFooter from "@/components/landing/LandingFooter"
 import { ChatDemo } from "@/components/landing/ChatDemo"
 import { OauthErrorRedirect } from "@/components/landing/OauthErrorRedirect"
+import { Mascot } from "@/components/Mascot"
 import Nav from "@/components/Nav"
 import { LandingSkillTabs } from "@/components/skills/SkillBrowser"
 import { Byline, SkillAskPill, SkillOrb } from "@/components/skills/SkillCard"
@@ -394,6 +395,7 @@ export function LandingPage() {
         {/* ── Connectors ───────────────────────────────────────────────────── */}
         <section id="connectors" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <div className="text-center">
+            <Mascot pose="laptop" className="mx-auto mb-5 w-24 sm:w-28" />
             <p className="eyebrow">integrations</p>
             <h2 className="mt-3 text-4xl font-semibold sm:text-5xl">
               works with the apps you use.
@@ -645,14 +647,7 @@ export function LandingPage() {
             className="absolute left-1/2 top-40 h-[1100px] w-[1600px] -translate-x-1/2 rounded-[50%] bg-gradient-to-b from-[#d4e8f6] via-[#e3eef7]/70 to-transparent"
           />
           <div className="relative mx-auto max-w-4xl px-4 text-center">
-            <img
-              src="/android-chrome-192x192.png"
-              alt=""
-              width={160}
-              height={160}
-              loading="lazy"
-              className="mx-auto size-32 animate-float rounded-full shadow-[0_24px_40px_-16px_rgba(16,24,40,0.5)] ring-8 ring-white sm:size-40"
-            />
+            <Mascot pose="waving" float className="mx-auto w-36 sm:w-44" />
             <h2 className="mt-8 text-5xl font-semibold leading-[1.02] tracking-[-0.04em] sm:text-7xl">
               meet the assistant that keeps your life on track.
             </h2>

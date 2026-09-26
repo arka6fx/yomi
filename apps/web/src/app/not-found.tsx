@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
+import { Mascot } from "@/components/Mascot"
 import { SitePage } from "@/components/SitePage"
 
 // Unknown URLs used to be soft-redirected to "/" by the asset binding; the worker now
@@ -21,13 +22,7 @@ export default function NotFound() {
   return (
     <SitePage>
       <section className="mx-auto max-w-3xl px-4 py-24 text-center sm:py-32">
-        <img
-          src="/android-chrome-192x192.png"
-          alt=""
-          width={112}
-          height={112}
-          className="mx-auto size-28 rounded-full shadow-[0_20px_40px_-16px_rgba(16,24,40,0.5)] ring-8 ring-white"
-        />
+        <Mascot pose="astronaut" float priority className="mx-auto w-36 sm:w-44" />
         <p className="eyebrow mt-8">404</p>
         <h1 className="mt-3 text-5xl font-semibold tracking-[-0.04em] sm:text-6xl">
           this page doesn&apos;t exist.

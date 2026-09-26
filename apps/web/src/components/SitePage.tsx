@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { Mascot, type MascotPose } from "@/components/Mascot"
 import Nav from "@/components/Nav"
 import LandingFooter from "@/components/landing/LandingFooter"
 
@@ -19,13 +20,15 @@ export function PageIntro({
   title,
   children,
   center = false,
+  mascot,
 }: {
   eyebrow?: ReactNode
   title: ReactNode
   children?: ReactNode
   center?: boolean
+  mascot?: MascotPose
 }) {
-  return (
+  const intro = (
     <div className={center ? "mx-auto max-w-3xl text-center" : "max-w-3xl"}>
       {eyebrow && <p className="eyebrow mb-4">{eyebrow}</p>}
       <h1 className="text-5xl font-semibold leading-[1.02] tracking-[-0.04em] sm:text-6xl">
@@ -34,6 +37,13 @@ export function PageIntro({
       {children && (
         <div className="mt-5 text-[17px] leading-relaxed text-muted-foreground">{children}</div>
       )}
+    </div>
+  )
+  if (!mascot) return intro
+  return (
+    <div className="flex items-end justify-between gap-8">
+      {intro}
+      <Mascot pose={mascot} float className="hidden w-32 shrink-0 sm:block lg:w-40" />
     </div>
   )
 }
