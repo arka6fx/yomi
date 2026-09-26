@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next"
+import { DOCS_PAGES } from "@/components/docs/docs-pages"
 import { CHARACTERS, CHARACTER_TAGS } from "@/lib/characters"
 import { SKILL_CATALOG } from "@/lib/skills-catalog"
 
@@ -63,6 +64,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.8,
     },
+    ...DOCS_PAGES.filter((page) => page.slug).map((page) => ({
+      url: `${BASE}/docs/${page.slug}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
     {
       url: `${BASE}/support`,
       lastModified: now,
