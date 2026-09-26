@@ -7,7 +7,8 @@
  * Ports/settings the image relies on:
  *   - defaultPort 8080  -> uvicorn listens here (yomi/run.py)
  *   - pingEndpoint      -> container health probe hits /health before serving
- *   - sleepAfter 5m     -> idle instances hibernate (scale-to-zero)
+ *   - sleepAfter 15m    -> longer than the 10-minute cron, so the container stays
+ *                          warm; a cold Python boot made the first reply slow
  *
  * Secrets are Worker Secrets (wrangler secret put <NAME>) surfaced through
  * `env`, then forwarded into the container via the envVars mapping below.
@@ -22,7 +23,11 @@ const workerEnv = runtimeEnv as unknown as Record<string, string | undefined>;
 
 export class YomiContainer extends Container {
   defaultPort = 8080;
-  sleepAfter = "5m";
+  // The */10 cron (runDispatch) keeps touching the container, so with a 15-minute
+  // idle window it never hibernates. Waking from cold took seconds to tens of
+  // seconds, and users hit that on their first message or dashboard visit. Set
+  // this below 10m again to go back to scale-to-zero.
+  sleepAfter = "15m";
   pingEndpoint = "localhost/health";
 
   envVars = {
@@ -245,9 +250,9 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function runDispatch(env: Env): Promise<void> {
-  // Orphan sweeper: recover agent runs whose executor died mid-run. Runs at
-  // most every 10 minutes (see crons in wrangler.toml) and exits fast when
-  // there is nothing to do, so idle containers still sleep.
+  // Orphan sweeper: recover agent runs whose executor died mid-run. Runs every
+  // 10 minutes (see crons in wrangler.toml) and exits fast when there is nothing
+  // to do. It also keeps the container warm (see sleepAfter).
   const key = (env as unknown as Record<string, string | undefined>).INTERNAL_API_KEY ?? "";
   if (!key) return;
   try {

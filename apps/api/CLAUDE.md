@@ -92,7 +92,9 @@ blocks. The real plan gate is the routine cap in `services/schedule_parser.py`
 (`services/runs_d1.py`). Inline buttons arrive as `callback_query` updates
 routed by prefix in `_handle_callback` (`act:` approvals, `login:` web sign-in).
 Use `send_message()` for replies. It converts Markdown to Telegram HTML and
-chunks long text.
+chunks long text. Agent replies stream through `reply_stream()`
+(`gateway/telegram_stream.py`): one message, edited as the model writes, then
+settled by `finish()`.
 
 ## Tests
 

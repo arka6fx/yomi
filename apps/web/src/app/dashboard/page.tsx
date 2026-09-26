@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import dynamic from "next/dynamic"
 import { motion } from "framer-motion"
 import { Check, Crown, Loader2, Trash2, AlertTriangle, ExternalLink } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
@@ -10,36 +11,96 @@ import { openExternal } from "@/lib/telegram-webapp"
 import { cn } from "@/lib/utils"
 import { formatUsd } from "@/lib/local-price"
 import { FREE_ROUTINES, PLANS } from "@/lib/plans"
-import { PrivacyManager } from "@/components/dashboard/PrivacyManager"
-import { ReferralsManager } from "@/components/dashboard/ReferralsManager"
-import { StreaksManager } from "@/components/dashboard/StreaksManager"
-import { ProfileManager } from "@/components/dashboard/ProfileManager"
-import { ConversationManager } from "@/components/dashboard/ConversationManager"
-import { HistoryManager } from "@/components/dashboard/HistoryManager"
-import { StatusManager } from "@/components/dashboard/StatusManager"
 import { DASHBOARD_TABS, type DashboardTab } from "@/components/dashboard/tabs"
 import { TelegramCard } from "@/components/dashboard/TelegramCard"
 import { AppShell } from "@/components/dashboard/shell/AppShell"
 import { DashboardSkeleton } from "@/components/dashboard/shell/DashboardSkeleton"
 import { HomeView } from "@/components/dashboard/shell/HomeView"
-import { SkillsView } from "@/components/dashboard/shell/SkillsView"
-import { RoutinesView } from "@/components/dashboard/shell/RoutinesView"
-import { CharactersView } from "@/components/dashboard/shell/CharactersView"
-import { ComputerView } from "@/components/dashboard/shell/ComputerView"
-import { MemoryView } from "@/components/dashboard/shell/MemoryView"
 import { PageHeader } from "@/components/dashboard/shell/ui"
-import { AgentActivityManager } from "@/components/dashboard/AgentActivityManager"
-import { ApprovalManager } from "@/components/dashboard/ApprovalManager"
-import { VaultManager } from "@/components/dashboard/VaultManager"
-import { TrustedPeopleManager } from "@/components/dashboard/TrustedPeopleManager"
-import { EmailManager } from "@/components/dashboard/EmailManager"
-import {
-  ConnectorMarketplace,
-  CustomMcpServers,
-  NextStepCard,
-  buildCatalog,
-  type CustomMcpServerInfo,
-} from "@yomi/ui"
+import { ListSkeleton } from "@/components/dashboard/shell/motion"
+// Subpaths, not the package root: the root also pulls every connector component and
+// icon into the first load. Those arrive with the integrations tab instead.
+import { buildCatalog } from "@yomi/ui/catalog"
+import type { CustomMcpServerInfo } from "@yomi/ui"
+
+// Home renders straight away; every other tab downloads its code the first time it's
+// opened, so the dashboard's first load carries only what the home screen needs.
+function TabLoading() {
+  return <ListSkeleton label="loading" />
+}
+const PrivacyManager = dynamic(
+  () => import("@/components/dashboard/PrivacyManager").then((m) => m.PrivacyManager),
+  { loading: TabLoading },
+)
+const ReferralsManager = dynamic(
+  () => import("@/components/dashboard/ReferralsManager").then((m) => m.ReferralsManager),
+  { loading: TabLoading },
+)
+const StreaksManager = dynamic(
+  () => import("@/components/dashboard/StreaksManager").then((m) => m.StreaksManager),
+  { loading: TabLoading },
+)
+const ProfileManager = dynamic(
+  () => import("@/components/dashboard/ProfileManager").then((m) => m.ProfileManager),
+  { loading: TabLoading },
+)
+const ConversationManager = dynamic(
+  () => import("@/components/dashboard/ConversationManager").then((m) => m.ConversationManager),
+  { loading: TabLoading },
+)
+const HistoryManager = dynamic(
+  () => import("@/components/dashboard/HistoryManager").then((m) => m.HistoryManager),
+  { loading: TabLoading },
+)
+const StatusManager = dynamic(
+  () => import("@/components/dashboard/StatusManager").then((m) => m.StatusManager),
+  { loading: TabLoading },
+)
+const SkillsView = dynamic(
+  () => import("@/components/dashboard/shell/SkillsView").then((m) => m.SkillsView),
+  { loading: TabLoading },
+)
+const RoutinesView = dynamic(
+  () => import("@/components/dashboard/shell/RoutinesView").then((m) => m.RoutinesView),
+  { loading: TabLoading },
+)
+const CharactersView = dynamic(
+  () => import("@/components/dashboard/shell/CharactersView").then((m) => m.CharactersView),
+  { loading: TabLoading },
+)
+const ComputerView = dynamic(
+  () => import("@/components/dashboard/shell/ComputerView").then((m) => m.ComputerView),
+  { loading: TabLoading },
+)
+const MemoryView = dynamic(
+  () => import("@/components/dashboard/shell/MemoryView").then((m) => m.MemoryView),
+  { loading: TabLoading },
+)
+const AgentActivityManager = dynamic(
+  () => import("@/components/dashboard/AgentActivityManager").then((m) => m.AgentActivityManager),
+  { loading: TabLoading },
+)
+const ApprovalManager = dynamic(
+  () => import("@/components/dashboard/ApprovalManager").then((m) => m.ApprovalManager),
+  { loading: TabLoading },
+)
+const VaultManager = dynamic(
+  () => import("@/components/dashboard/VaultManager").then((m) => m.VaultManager),
+  { loading: TabLoading },
+)
+const TrustedPeopleManager = dynamic(
+  () => import("@/components/dashboard/TrustedPeopleManager").then((m) => m.TrustedPeopleManager),
+  { loading: TabLoading },
+)
+const EmailManager = dynamic(
+  () => import("@/components/dashboard/EmailManager").then((m) => m.EmailManager),
+  { loading: TabLoading },
+)
+const NextStepCard = dynamic(() => import("@yomi/ui").then((m) => m.NextStepCard))
+const ConnectorMarketplace = dynamic(() => import("@yomi/ui").then((m) => m.ConnectorMarketplace), {
+  loading: TabLoading,
+})
+const CustomMcpServers = dynamic(() => import("@yomi/ui").then((m) => m.CustomMcpServers))
 
 type IntegrationHealth = {
   provider: string

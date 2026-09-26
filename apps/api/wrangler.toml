@@ -32,6 +32,7 @@ tag = "v1"
 new_sqlite_classes = ["YomiContainer"]
 
 # Orphan-run sweeper (see scheduled() in containers/worker.ts): cheap enough
-# to run frequently since it exits fast with nothing to do.
+# to run frequently since it exits fast with nothing to do. Firing more often
+# than YomiContainer.sleepAfter (15m) also keeps the container warm.
 [triggers]
 crons = ["*/10 * * * *"]
