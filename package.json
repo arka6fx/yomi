@@ -1,6 +1,6 @@
 {
   "name": "yomi",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "A personal AI assistant on Telegram. Python FastAPI backend on Cloudflare Containers, Next.js dashboard on Cloudflare Workers.",
   "license": "MIT",
   "author": "Arka Garai <arkagarai292@gmail.com>",
