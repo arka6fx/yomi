@@ -257,7 +257,7 @@ async def finalize(
 
 
 @usage_router.post("")
-@usage_router.post("/")
+@usage_router.post("/", include_in_schema=False)
 async def report_usage(
     body: UsageEventBody,
     user: User = Depends(get_current_user),

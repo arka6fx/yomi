@@ -31,6 +31,8 @@ from yomi.services.schedule_quota import ensure_schedule_capacity
 DEFAULT_TIMEZONE = "Asia/Kolkata"
 
 schedules_router = APIRouter(prefix="/api/schedules")
+# Collection routes answer on both "" and "/": redirecting /api/schedules to the
+# slash form sends the browser to api.getyomi.in, which drops the Bearer token.
 
 
 def _schedule_dict(row: Schedule) -> dict[str, Any]:
@@ -61,7 +63,8 @@ async def _json_body(request: Request) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-@schedules_router.get("/")
+@schedules_router.get("")
+@schedules_router.get("/", include_in_schema=False)
 async def list_schedules(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
@@ -96,7 +99,8 @@ def _timezone(value: Any) -> str:
     return DEFAULT_TIMEZONE
 
 
-@schedules_router.post("/")
+@schedules_router.post("")
+@schedules_router.post("/", include_in_schema=False)
 async def create_schedule(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
