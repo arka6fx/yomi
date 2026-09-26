@@ -108,3 +108,45 @@ async def get_history(
         for r in rows
     ]
     return {"messages": messages}
+
+
+def _require_d1(d1: D1Backend | None) -> D1Backend:
+    if d1 is None:
+        raise HTTPException(status_code=501, detail="History requires the D1 storage backend")
+    return d1
+
+
+@history_router.get("/sessions")
+async def list_history_sessions(
+    request: Request,
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    """Past and current conversations for the dashboard's history view."""
+    from yomi.services.agent import sessions_d1
+
+    backend = _require_d1(d1)
+    try:
+        limit = int(request.query_params.get("limit", "20"))
+    except ValueError:
+        limit = 20
+    query = (request.query_params.get("q") or "").strip()[:200] or None
+    cursor = request.query_params.get("cursor") or None
+    sessions = await sessions_d1.list_sessions(
+        backend, user.id, limit=limit, query=query, before=cursor
+    )
+    return {"sessions": sessions}
+
+
+@history_router.get("/sessions/{session_id}")
+async def get_history_session(
+    session_id: str,
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    from yomi.services.agent import sessions_d1
+
+    detail = await sessions_d1.get_session_detail(_require_d1(d1), user.id, session_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return detail

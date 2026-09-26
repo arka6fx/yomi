@@ -60,7 +60,7 @@ export function ConversationManager({ token }: { token: string }) {
     <section className="space-y-6 pt-6">
       <PageHeader
         title="conversation"
-        subtitle="the thread yomi shares across the web and telegram. recent turns are shown below."
+        subtitle="the chat yomi is in right now on telegram. start fresh any time; the old thread moves to history."
         actions={
           <>
             {history.length > 0 && (
@@ -74,7 +74,7 @@ export function ConversationManager({ token }: { token: string }) {
                 ) : (
                   <RotateCcw size={12} />
                 )}
-                {confirmReset ? "Confirm reset?" : "Reset"}
+                {confirmReset ? "Start fresh?" : "Start fresh"}
               </button>
             )}
           </>
@@ -92,7 +92,7 @@ export function ConversationManager({ token }: { token: string }) {
           <div className="rounded-xl border border-dashed border-border/70 bg-background/40 px-5 py-10 text-center">
             <p className="text-sm font-medium text-foreground">No conversation yet</p>
             <p className="mx-auto mt-1 max-w-xs text-xs text-muted-foreground">
-              Talk to Yomi from the web app or Telegram and the thread shows up here.
+              Talk to Yomi on Telegram and the thread shows up here.
             </p>
           </div>
         ) : (

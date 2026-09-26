@@ -60,18 +60,10 @@ PRIVACY_CONSENT_PURPOSE_DESCRIPTIONS: dict[str, str] = {
     ),
 }
 
-# Granted automatically at signup so the product works out of the box.
-SIGNUP_DEFAULT_CONSENT_PURPOSES = (
-    "conversation_history",
-    "memory",
-    "connector_data",
-    "telegram_processing",
-)
-
-OPT_IN_CONSENT_PURPOSES = tuple(
-    p for p in PRIVACY_CONSENT_PURPOSES if p not in SIGNUP_DEFAULT_CONSENT_PURPOSES
-)
-
+# Every purpose is on by default: granted at signup, and a purpose the user has
+# never decided counts as on. Users switch any of them off on the privacy page,
+# and an explicit revoke always wins.
+SIGNUP_DEFAULT_CONSENT_PURPOSES = PRIVACY_CONSENT_PURPOSES
 
 def is_privacy_consent_purpose(value: str) -> bool:
     return value in PRIVACY_CONSENT_PURPOSES

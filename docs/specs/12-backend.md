@@ -114,7 +114,22 @@ of overlap.
 | `DELETE /api/memory/{id}`     | Forget or hard-delete one memory                           |
 
 Memory and RAG routes require the matching privacy consent (`memory`,
-`cloud_memory`).
+`cloud_memory`). Every consent purpose is on by default: all are granted at
+signup, and a purpose the user never decided counts as granted. Only an explicit
+revoke from the privacy page switches one off.
+
+## Conversation history API
+
+| Route                                 | Purpose                                                    |
+| ------------------------------------- | ---------------------------------------------------------- |
+| `GET /api/history/sessions`           | Conversations newest first (`limit`, `q` search, `cursor`) |
+| `GET /api/history/sessions/{id}`      | One conversation's messages, oldest first                  |
+| `GET /api/conversation/shared`        | Recent turns of the live Telegram thread                   |
+| `POST /api/conversation/shared/reset` | Close the live thread so the next message starts fresh     |
+
+Resetting (from the dashboard or `/reset` in Telegram) closes the session rather
+than deleting it, so it stays readable in history. Deleting data is the privacy
+page's job.
 
 ## Key files
 

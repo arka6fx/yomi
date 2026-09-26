@@ -48,14 +48,14 @@ def invalidate_privacy_read_cache(user_id: str) -> None:
 
 @dataclass
 class PrivacyPreferencesShape:
-    conversation_history_enabled: bool = False
-    memory_enabled: bool = False
-    cloud_memory_enabled: bool = False
-    connectors_enabled: bool = False
-    analytics_enabled: bool = False
-    voice_processing_enabled: bool = False
-    ai_improvement_enabled: bool = False
-    telegram_processing_enabled: bool = False
+    conversation_history_enabled: bool = True
+    memory_enabled: bool = True
+    cloud_memory_enabled: bool = True
+    connectors_enabled: bool = True
+    analytics_enabled: bool = True
+    voice_processing_enabled: bool = True
+    ai_improvement_enabled: bool = True
+    telegram_processing_enabled: bool = True
     retention_overrides: dict[str, Any] | None = None
     updated_at: datetime | None = field(default=None)
 

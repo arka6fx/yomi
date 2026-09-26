@@ -865,12 +865,6 @@ function DashboardContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="pt-6 pb-6">
-              <PageHeader
-                title="privacy"
-                subtitle="your consents, data exports and deletion, all in one place."
-              />
-            </div>
             <PrivacyManager token={session.session.token} />
           </motion.div>
         )}

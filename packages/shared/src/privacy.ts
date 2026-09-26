@@ -50,22 +50,11 @@ export const PRIVACY_CONSENT_PURPOSE_DESCRIPTIONS: Record<PrivacyConsentPurpose,
     "Lets Yomi process the messages you send on Telegram — required for the bot to work at all.",
 }
 
-// Purposes granted automatically at signup so the product works out of the box.
-// Kept to low-risk, service-necessary consents — the rest (analytics,
-// ai_improvement, cloud_memory, voice) stay opt-in per DPDP: pre-ticking
-// consent for sensitive processing isn't valid consent under the Act.
-export const SIGNUP_DEFAULT_CONSENT_PURPOSES: readonly PrivacyConsentPurpose[] = [
-  "conversation_history",
-  "memory",
-  "connector_data",
-  "telegram_processing",
-]
-
-// The remaining purposes a user must explicitly opt into — surfaced together
-// so the dashboard can offer a single "enable all" action without silently
-// pre-granting them.
-export const OPT_IN_CONSENT_PURPOSES: readonly PrivacyConsentPurpose[] =
-  PRIVACY_CONSENT_PURPOSES.filter((p) => !SIGNUP_DEFAULT_CONSENT_PURPOSES.includes(p))
+// Every purpose is on by default: granted at signup, and a purpose the user has
+// never decided counts as on. Users switch any of them off on the privacy page,
+// and an explicit revoke always wins.
+export const SIGNUP_DEFAULT_CONSENT_PURPOSES: readonly PrivacyConsentPurpose[] =
+  PRIVACY_CONSENT_PURPOSES
 
 // Default retention windows (spec 23 §13.1). days: null = keep until user
 // deletes. userOverridable domains may be tightened (never extended) via

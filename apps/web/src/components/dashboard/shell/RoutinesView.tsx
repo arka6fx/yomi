@@ -298,6 +298,12 @@ export function RoutinesView({
                     </p>
                   )}
                   {routine.lastRunStatus === "queued" && (
+                    <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                      <Loader2 size={11} className="animate-spin" /> running now, the result lands
+                      in telegram
+                    </p>
+                  )}
+                  {routine.lastRunStatus === "succeeded" && (
                     <p className="mt-1 flex items-center gap-1 text-xs text-emerald-500">
                       <Check size={11} /> last ran {when(routine.lastRunAt)}
                     </p>

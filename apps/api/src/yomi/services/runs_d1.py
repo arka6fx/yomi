@@ -22,6 +22,15 @@ MAX_OUTPUT_CHARS = 2_000
 MAX_STEPS_PER_RUN = 50
 
 
+# A routine's run carries update_id "schedule:<schedule id>:<due>"; this writes
+# the run's outcome back onto that schedule so the dashboard shows what happened.
+_SCHEDULE_OUTCOME_SQL = (
+    "UPDATE schedules SET last_run_status = ?, last_run_error = ?, updated_at = ? "
+    "WHERE id = (SELECT substr(update_id, 10, instr(substr(update_id, 10), ':') - 1) "
+    "FROM agent_runs WHERE id = ? AND update_id LIKE 'schedule:%')"
+)
+
+
 def _now_plus(seconds: int) -> str:
     from datetime import UTC, datetime, timedelta
 
@@ -166,7 +175,8 @@ async def complete_run(backend: D1Backend, run_id: str, summary: str | None = No
             "lease_owner = NULL, lease_expires_at = NULL, updated_at = ?, "
             "completed_at = ? WHERE id = ?",
             [summary[:2000] if summary else None, now, now, run_id],
-        )
+        ),
+        Statement(_SCHEDULE_OUTCOME_SQL, ["succeeded", None, now, run_id]),
     ])
 
 
@@ -186,7 +196,8 @@ async def fail_run(backend: D1Backend, run_id: str, error: str) -> str:
                 "lease_owner = NULL, lease_expires_at = NULL, updated_at = ?, "
                 "completed_at = ? WHERE id = ?",
                 [error[:2000], now, now, run_id],
-            )
+            ),
+            Statement(_SCHEDULE_OUTCOME_SQL, ["failed", _routine_error(error), now, run_id]),
         ])
         return "failed"
     await backend.store.atomic([
@@ -197,6 +208,13 @@ async def fail_run(backend: D1Backend, run_id: str, error: str) -> str:
         )
     ])
     return "queued"
+
+
+def _routine_error(error: str) -> str:
+    """A short, user-facing reason; raw exception text stays on the run row."""
+    if "timed out" in error:
+        return "The last run timed out"
+    return "The last run hit an error"
 
 
 async def get_run(backend: D1Backend, run_id: str) -> dict | None:
