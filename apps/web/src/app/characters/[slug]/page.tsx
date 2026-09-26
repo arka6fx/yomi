@@ -219,7 +219,20 @@ export default async function CharacterPage({ params }: { params: Promise<{ slug
             Gallery characters are unofficial, fan-made AI personas that speak as fiction. Not
             affiliated with any rights holder.
           </p>
-          {character.imageCredit && <p>picture: {character.imageCredit}</p>}
+          {character.imageCredit && character.imageUrl && (
+            <p>
+              picture:{" "}
+              <a
+                href={character.imageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                referrerPolicy="no-referrer"
+                className="underline underline-offset-2"
+              >
+                {character.imageCredit}
+              </a>
+            </p>
+          )}
           <p className="flex flex-wrap gap-4">
             <Link href="/characters/guidelines" className="underline underline-offset-2">
               guidelines

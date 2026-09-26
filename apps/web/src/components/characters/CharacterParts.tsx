@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { CharacterAvatar } from "@/components/characters/CharacterAvatar"
 import { TelegramIcon } from "@/components/TelegramIcon"
 import { cn } from "@/lib/utils"
 import { characterTelegramLink, seriesOf, type GalleryCharacter } from "@/lib/characters"
@@ -24,45 +25,7 @@ export function toCard(c: GalleryCharacter): CardCharacter {
   }
 }
 
-// Portrait in a rounded square; falls back to the first letter on the character's colour.
-// Fandom and AniList refuse hotlinks that carry another site's referrer.
-export function CharacterAvatar({
-  character,
-  size = 112,
-  className,
-}: {
-  character: Pick<CardCharacter, "name" | "color" | "imageUrl">
-  size?: number
-  className?: string
-}) {
-  const style = { width: size, height: size }
-  if (!character.imageUrl) {
-    return (
-      <span
-        aria-hidden
-        style={{ ...style, background: `${character.color}22`, fontSize: size * 0.36 }}
-        className={cn(
-          "grid shrink-0 place-items-center rounded-2xl font-semibold text-foreground",
-          className,
-        )}
-      >
-        {character.name.slice(0, 1)}
-      </span>
-    )
-  }
-  return (
-    <img
-      src={character.imageUrl}
-      alt=""
-      width={size}
-      height={size}
-      loading="lazy"
-      referrerPolicy="no-referrer"
-      style={{ ...style, background: `${character.color}22` }}
-      className={cn("shrink-0 rounded-2xl object-cover object-top", className)}
-    />
-  )
-}
+export { CharacterAvatar }
 
 export function CharacterCard({
   character,
