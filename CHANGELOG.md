@@ -5,6 +5,15 @@ All notable changes to Yomi are documented here. The format follows
 from conventional commits via
 [release-please](https://github.com/googleapis/release-please).
 
+## [1.3.0](https://github.com/arka6fx/yomi/compare/v1.2.0...v1.3.0) (2026-09-26)
+
+
+### Features
+
+* footer social links and free/pro docs ([9a97c7c](https://github.com/arka6fx/yomi/commit/9a97c7ca8349d547b0de0fc9778bd9f3bad8e7e1))
+* link instagram and telegram from the footer ([f34cea9](https://github.com/arka6fx/yomi/commit/f34cea9a82edb577bbd98d3bdc2ac1de43e02e5e))
+* public character gallery, character pages and tag pages ([#149](https://github.com/arka6fx/yomi/issues/149)) ([e388ad8](https://github.com/arka6fx/yomi/commit/e388ad8e9eaadea601c607a10c19ead9c0941db1))
+
 ## [1.2.0](https://github.com/arka6fx/yomi/compare/v1.1.0...v1.2.0) (2026-09-26)
 
 
