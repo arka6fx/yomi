@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react"
 import { SURFACE } from "@/components/dashboard/shell/ui"
+import { matchesSearch } from "@/lib/search"
 import { TELEGRAM_BOT_URL } from "@/lib/site"
 import { cn } from "@/lib/utils"
 
@@ -299,14 +300,15 @@ export function CharactersView({ token }: { token: string }) {
     }
   }
 
-  const shown = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return (data?.gallery ?? []).filter(
-      (c) =>
-        (tag === "all" || (tag === "featured" ? c.featured : c.tags.includes(tag))) &&
-        (!q || `${c.name} ${c.tagline} ${c.basedOn}`.toLowerCase().includes(q)),
-    )
-  }, [data, query, tag])
+  const shown = useMemo(
+    () =>
+      (data?.gallery ?? []).filter(
+        (c) =>
+          (tag === "all" || (tag === "featured" ? c.featured : c.tags.includes(tag))) &&
+          matchesSearch(query, [c.name, c.tagline, c.basedOn, c.tags.join(" "), c.description]),
+      ),
+    [data, query, tag],
+  )
 
   if (!data) {
     return (
@@ -1355,7 +1357,7 @@ export function CharactersView({ token }: { token: string }) {
                 // a search should look through everyone, not just the featured picks
                 if (e.target.value && tag === "featured") setTag("all")
               }}
-              placeholder="search names and taglines"
+              placeholder="search names, series or tags"
               className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </label>
