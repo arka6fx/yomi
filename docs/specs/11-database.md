@@ -38,7 +38,8 @@ Core tables:
   `character_saves`, `character_chats`, `character_likes`.
 - **Privacy:** `privacy_consents`, `privacy_preferences`,
   `privacy_audit_events`, `privacy_exports`, `privacy_deletion_jobs`.
-- **Growth:** `referral_events`.
+- **Growth:** `referral_events`, `lifecycle_messages` (onboarding and win-back
+  nudges sent, skipped, or opted out of; one row per user per step).
 
 The web app never connects to storage directly. All access goes through the
 backend API.

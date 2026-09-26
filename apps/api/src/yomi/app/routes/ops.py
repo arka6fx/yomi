@@ -56,6 +56,12 @@ async def dispatch_sweep(
         await expire_lapsed_pro(d1)
     except Exception:  # never block the scheduler
         logger.warning("expire_lapsed_pro failed", exc_info=True)
+    from yomi.services import lifecycle_d1
+
+    try:
+        await lifecycle_d1.send_due(d1)
+    except Exception:  # onboarding nudges must never block runs
+        logger.warning("lifecycle nudges failed", exc_info=True)
     owner = f"sweep-{id(request):x}"
     claimed = await runs_d1.claim_due_runs(d1, owner, limit=SWEEP_LIMIT)
     processed = 0

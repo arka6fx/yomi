@@ -153,6 +153,8 @@ def create_app() -> FastAPI:
 
     from yomi.app.routes.ops import ops_router
     app.include_router(ops_router)
+    from yomi.app.routes.lifecycle import lifecycle_router
+    app.include_router(lifecycle_router)
 
     from yomi.app.routes.custom_mcp import custom_mcp_router
     app.include_router(custom_mcp_router)

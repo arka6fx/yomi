@@ -162,6 +162,7 @@ export const DOCS_CONTENT: Record<string, () => React.ReactNode> = {
           ["/reset", "clear the current conversation. your memory stays."],
           ["/yomi or /back", "switch from a character back to plain yomi"],
           ["/help", "a quick reminder of what yomi is"],
+          ["/stoptips", "turn off the occasional getting-started tips"],
         ]}
       />
     </>
