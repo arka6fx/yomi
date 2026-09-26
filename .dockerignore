@@ -23,3 +23,4 @@ scripts
 package-lock.json
 vitest.workspace.ts
 turbo.json
+**/.env.production

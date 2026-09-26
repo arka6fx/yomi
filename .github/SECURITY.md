@@ -22,6 +22,7 @@ release notes (if you want to be named).
 In scope:
 
 - The backend: `apps/api/**` (Python FastAPI container) and `packages/db/**`
+- The computer-use sandbox: `apps/sandbox/**`
 - The dashboard/web app: `apps/web/**`
 - Shared packages: `packages/shared/**`, `packages/ui/**`
 
@@ -29,8 +30,8 @@ Out of scope (not vulnerabilities in this repository):
 
 - Vulnerabilities in third-party dependencies — report them upstream.
 - Public infrastructure (the production Workers at `api.getyomi.in` /
-  `getyomi.in` and Neon/OpenAI/etc. accounts) — these are operated by the
-  maintainers and are not reproducible by outside contributors.
+  `getyomi.in` and the Cloudflare, Dodo, and Composio accounts) — these are
+  operated by the maintainers and are not reproducible by outside contributors.
 
 ## Security practices in this repo
 

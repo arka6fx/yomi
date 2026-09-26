@@ -2,7 +2,7 @@ name: Deploy Landing
 
 # apps/web deploys as a Cloudflare Worker (yomi-landing). NEXT_PUBLIC_* are
 # baked in at build time, so they're set here rather than in wrangler.jsonc's
-# vars (which only apply at runtime). Values match RUNBOOK.md's documented
+# vars (which only apply at runtime). Values match docs/runbook.md's documented
 # manual deploy — public URLs, not secrets.
 on:
   push:

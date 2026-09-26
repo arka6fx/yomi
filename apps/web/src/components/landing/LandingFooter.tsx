@@ -9,6 +9,7 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
     links: [
       { label: "What it does", href: "/#how-it-works" },
       { label: "Skills", href: "/skills" },
+      { label: "Characters", href: "/characters" },
       { label: "Pricing", href: "/pricing" },
       { label: "Dashboard", href: "/dashboard" },
     ],
@@ -20,6 +21,13 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
       { label: "FAQ", href: "/faq" },
       { label: "Support", href: "/support" },
       { label: "GitHub", href: "https://github.com/arka6fx/yomi-feedback", external: true },
+    ],
+  },
+  {
+    title: "Connect",
+    links: [
+      { label: "Telegram", href: "https://t.me/yomi_assistant_bot", external: true },
+      { label: "Instagram", href: "https://www.instagram.com/getyomi.in/", external: true },
     ],
   },
   {
@@ -38,7 +46,7 @@ export default function LandingFooter() {
   return (
     <footer className="relative overflow-hidden bg-gradient-to-b from-transparent to-[#e3eef7]">
       <div className="relative z-10 mx-auto max-w-6xl px-6 pb-8 pt-16 sm:pt-24">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-[1.5fr_1fr_1fr_1fr] lg:grid-cols-[1.4fr_1fr_1fr_1fr_1.3fr]">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_1.3fr]">
           <div className="col-span-2 md:col-span-4 lg:col-span-1">
             <BrandMark size="sm" />
             <p className="mt-4 text-[15px] font-medium text-foreground">

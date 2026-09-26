@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import Link from "next/link"
 import { ArrowRight, Search } from "lucide-react"
 import { SKILL_CATALOG, SKILL_CATEGORIES } from "@/lib/skills-catalog"
+import { TELEGRAM_BOT_URL } from "@/lib/site"
 import { SkillRowCard, SkillTile } from "@/components/skills/SkillCard"
 import { cn } from "@/lib/utils"
 
@@ -132,17 +133,38 @@ export function SkillGallery() {
         ))}
       </div>
 
+      <p className="mt-6 text-sm text-muted-foreground">
+        {results.length} {results.length === 1 ? "skill" : "skills"}
+        {category !== "all" && ` in ${category}`}
+      </p>
       {results.length > 0 ? (
-        <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-3 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {results.map((skill) => (
             <SkillTile key={skill.id} skill={skill} />
           ))}
         </div>
       ) : (
-        <p className="surface mt-8 p-8 text-center text-sm text-muted-foreground">
+        <p className="surface mt-3 p-8 text-center text-sm text-muted-foreground">
           no skills match “{query}”. you can still just ask yomi on telegram.
         </p>
       )}
+
+      <div className="surface mt-10 max-w-2xl p-6 sm:p-7">
+        <p className="font-semibold text-foreground">build your own.</p>
+        <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
+          need something that isn&apos;t here? just tell yomi on telegram, like &ldquo;every friday
+          at 5pm, send me the week&apos;s top 3 github issues&rdquo;, and it becomes a routine. free
+          includes 3 running at once; pro has no limit.
+        </p>
+        <a
+          href={TELEGRAM_BOT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex items-center gap-1 text-sm font-semibold underline underline-offset-4"
+        >
+          open yomi on telegram <ArrowRight size={14} />
+        </a>
+      </div>
     </div>
   )
 }

@@ -34,12 +34,12 @@ function catalogConnectors(): Connector[] {
 
 const connectors = catalogConnectors()
 
-// 1. specs/connectors/00-index.md must list every catalog connector id.
+// 1. docs/specs/connectors/00-index.md must list every catalog connector id.
 {
-  const doc = read("specs/connectors/00-index.md")
+  const doc = read("docs/specs/connectors/00-index.md")
   for (const c of connectors) {
     if (!doc.includes(`\`${c.id}\``)) {
-      errors.push(`specs/connectors/00-index.md is missing registered connector \`${c.id}\``)
+      errors.push(`docs/specs/connectors/00-index.md is missing registered connector \`${c.id}\``)
     }
   }
 }

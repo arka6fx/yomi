@@ -5,6 +5,79 @@ All notable changes to Yomi are documented here. The format follows
 from conventional commits via
 [release-please](https://github.com/googleapis/release-please).
 
+## [1.3.0](https://github.com/arka6fx/yomi/compare/v1.2.0...v1.3.0) (2026-09-26)
+
+
+### Features
+
+* footer social links and free/pro docs ([9a97c7c](https://github.com/arka6fx/yomi/commit/9a97c7ca8349d547b0de0fc9778bd9f3bad8e7e1))
+* link instagram and telegram from the footer ([f34cea9](https://github.com/arka6fx/yomi/commit/f34cea9a82edb577bbd98d3bdc2ac1de43e02e5e))
+* public character gallery, character pages and tag pages ([#149](https://github.com/arka6fx/yomi/issues/149)) ([e388ad8](https://github.com/arka6fx/yomi/commit/e388ad8e9eaadea601c607a10c19ead9c0941db1))
+
+## [1.2.0](https://github.com/arka6fx/yomi/compare/v1.1.0...v1.2.0) (2026-09-26)
+
+
+### Features
+
+* add 16 kuroko's basketball characters ([79c64ac](https://github.com/arka6fx/yomi/commit/79c64ac5b3a7230f6930a780ff865565439cdc57))
+* add 172 more fan-made characters with pictures ([a90e252](https://github.com/arka6fx/yomi/commit/a90e252161bb896d5c8cec0d1d51b74720d25677))
+* add 22 demon slayer characters ([0f766d0](https://github.com/arka6fx/yomi/commit/0f766d0f974787f882ee192755d05d1a0643f5cb))
+* add 33 fan-made characters to the gallery ([e65313b](https://github.com/arka6fx/yomi/commit/e65313b76653f8745ec974b8f67cf55aaaf522dc))
+* add a featured tab and feature each series' top character ([efc73ac](https://github.com/arka6fx/yomi/commit/efc73ac30bd4608ea5bb259b561f4f3308a5ab52))
+* add a production computer gateway and trim screenshots in context ([bc6cdd9](https://github.com/arka6fx/yomi/commit/bc6cdd9384aeaf80bfd1055cf470b3a908df1ed9))
+* add character lookup, place names, monitoring and welcome mail ([de43161](https://github.com/arka6fx/yomi/commit/de43161e7e08ce99157f3a76c9b42f993931be36))
+* add character switches, sharing and known-character editing ([87d5917](https://github.com/arka6fx/yomi/commit/87d59175751a6c5cdc4fbf82e6283d81ada4e734))
+* add characters with gallery, maker and telegram persona ([f654708](https://github.com/arka6fx/yomi/commit/f6547088aec58238fee26ec2efca46229ee6e55f))
+* add hello kitty and trim the gallery to two characters ([4f4bc18](https://github.com/arka6fx/yomi/commit/4f4bc18631adf966e3e39a00e24c66dd350e471b))
+* add one piece, naruto and bleach casts; feature beyond anime ([6d0ebd3](https://github.com/arka6fx/yomi/commit/6d0ebd34636ebd097c6353874cb97fa7654eb021))
+* add profile photo uploads on r2 and a profile bio ([b17d912](https://github.com/arka6fx/yomi/commit/b17d9127801a33b54113bbdbcec8d140d8cd7dd6))
+* add the skills gallery ([28a45bd](https://github.com/arka6fx/yomi/commit/28a45bdf1cf7dd803ff48882ab1a97272d570953))
+* add trusted people for agent-to-agent messaging ([c42f101](https://github.com/arka6fx/yomi/commit/c42f10110bed5229f187f9195428993751859400))
+* add vault, spend ledger and executed approvals ([f8a9207](https://github.com/arka6fx/yomi/commit/f8a920770fad6b1e0cd39162b98045f0f9e5797d))
+* animate the characters page as it loads ([7e3a055](https://github.com/arka6fx/yomi/commit/7e3a05521874440ccbb32d72458901b71081ec58))
+* animate the dashboard home as it loads ([f132f07](https://github.com/arka6fx/yomi/commit/f132f078e67ec340b644ee5fc2b0b3456a400d2b))
+* animate the memory page as it loads ([e19b749](https://github.com/arka6fx/yomi/commit/e19b749f80c3b8ce5e892cd5631d635fef43939f))
+* animate the routines and skills pages as they load ([ceb2718](https://github.com/arka6fx/yomi/commit/ceb2718b25e6228bd04ae2d9694588cb2c6833f1))
+* find characters by name and add private dashboard analytics ([3ad6e82](https://github.com/arka6fx/yomi/commit/3ad6e827f91aef19a555d4e7bb62c3c16c157617))
+* give each user a yomi email address ([bc1b675](https://github.com/arka6fx/yomi/commit/bc1b675b7b5cc5f4f80aa95e8385af9a3161b923))
+* give every gallery character a picture and add a genshin tag ([097f6a0](https://github.com/arka6fx/yomi/commit/097f6a04dbadb022db34134f4d8acc6f6a8f1df9))
+* keep computer logins between sleeps and add a take-over live view ([6ea59ad](https://github.com/arka6fx/yomi/commit/6ea59ad95127d2b3f4d6205d71a84ac6aca7286f))
+* let yomi use websites by reading pages and acting on elements ([04c93b1](https://github.com/arka6fx/yomi/commit/04c93b130ecc3ffadcca382c0133a8434188177c))
+* make character search forgiving ([e3e874c](https://github.com/arka6fx/yomi/commit/e3e874cb67edf098b1499fe3b556288b5c18d69d))
+* merge telegram-only accounts when telegram is linked ([8305114](https://github.com/arka6fx/yomi/commit/83051142fe6e2a3cf9305af6370cdea231122557))
+* new dashboard home, clearer profile photo and genshin characters ([aac735d](https://github.com/arka6fx/yomi/commit/aac735dbc383da2271fb498e277c1b574a4cfae5))
+* new dashboard shell and home ([b84bf36](https://github.com/arka6fx/yomi/commit/b84bf36025d8ac2f0d6d65c5f036e91c1b594534))
+* redesign memory with list and graph views ([9cf23ec](https://github.com/arka6fx/yomi/commit/9cf23ec6c28b163c07a4b613ff6bc86b2ef2aab6))
+* redesign routines ([85069ff](https://github.com/arka6fx/yomi/commit/85069ff570bb70f69cad74842caddf50a7b708ac))
+* redesign the site with a new light theme ([831db7a](https://github.com/arka6fx/yomi/commit/831db7a87e8a1d28267eb7bec2956d50d539b833))
+* replace credits with a free forever plan and pro ([e7cb8f0](https://github.com/arka6fx/yomi/commit/e7cb8f025f06e1b45c6dca0f3035fa610206e1f0))
+* run scheduled tasks and let the agent create them ([a7de015](https://github.com/arka6fx/yomi/commit/a7de0153b2e1236d99994de24184c3717a3d4b4e))
+* show a dashboard-shaped loading screen instead of a blank page ([e1159ca](https://github.com/arka6fx/yomi/commit/e1159ca1c7bed39c880fa8367f660613c4377e64))
+* show chat counts and likes on gallery characters ([93f0c90](https://github.com/arka6fx/yomi/commit/93f0c908452cd5a25a295180c94ba73d1414b58d))
+* sign in on the web with telegram ([3a9887e](https://github.com/arka6fx/yomi/commit/3a9887e80bb0df68c11d45444a2c43425a954066))
+* switch workers ai to glm-5.3-flash and whisper turbo ([7f7d5c8](https://github.com/arka6fx/yomi/commit/7f7d5c80c570c41cfcc6b92722ba5920939b25ee))
+* turn the landing hero into an interactive chat demo ([64c022e](https://github.com/arka6fx/yomi/commit/64c022e47b8816727df8a67a6a762becf035a63a))
+
+
+### Bug Fixes
+
+* have the active character text first once telegram is linked ([fae2443](https://github.com/arka6fx/yomi/commit/fae244366d1723abf4ec5a528860fe8736cf0b16))
+* let people bring the setup card back after hiding it ([83984ac](https://github.com/arka6fx/yomi/commit/83984ac1d4f77ef4f66851213bc85aa6ec3ef9eb))
+* log inbound email failures and enable worker logs ([92839a1](https://github.com/arka6fx/yomi/commit/92839a10e51ac3628ee36f7059b653621b242275))
+* make the telegram webhook receive button taps ([351826b](https://github.com/arka6fx/yomi/commit/351826be9ebfa74d1830853c30307d2e9bfd2f4c))
+* quit chrome cleanly before saving so fresh logins reach the snapshot ([27a7b33](https://github.com/arka6fx/yomi/commit/27a7b3332a44af318b3bb8d6933ae801c94e84fc))
+* read pages like a person, visible elements first and no duplicate links ([f81d953](https://github.com/arka6fx/yomi/commit/f81d953bc11b6a8e7255827732cea9332798fd39))
+* save and restore cookies over devtools so fresh logins persist ([0847e9e](https://github.com/arka6fx/yomi/commit/0847e9ecf4b5a28a60ec584dc4b0a7ac48d4e1b6))
+* show tables as tidy lists in telegram ([9d4d870](https://github.com/arka6fx/yomi/commit/9d4d870e0fd1dfaee7e56348aa45d6436b8b7e19))
+* start websockify as a module so the live view can connect ([243e003](https://github.com/arka6fx/yomi/commit/243e0032b54a18bfc2af4ee337b365d3cdd39613))
+* stop routines failing with 401 from the dashboard ([ea09679](https://github.com/arka6fx/yomi/commit/ea096794cb05ae3698119a7987698da342e6b8dd))
+
+
+### Performance Improvements
+
+* cut reply latency by caching app tools and trimming the prompt ([b7cfc77](https://github.com/arka6fx/yomi/commit/b7cfc7787904ae4a8430c3aac533d0459ced61dc))
+* open the computer faster by waking it early and not waiting on chrome ([5dbdd69](https://github.com/arka6fx/yomi/commit/5dbdd69c607fe2f4cdab4d74a356c10d5d867eb3))
+
 ## [1.1.0](https://github.com/arka6fx/yomi/compare/v1.0.0...v1.1.0) (2026-09-23)
 
 

@@ -39,7 +39,11 @@ const jsonLd = {
         email: "contact.arkagarai@gmail.com",
         contactType: "customer support",
       },
-      sameAs: ["https://github.com/arka6fx/yomi-feedback"],
+      sameAs: [
+        "https://github.com/arka6fx/yomi-feedback",
+        "https://www.instagram.com/getyomi.in/",
+        "https://t.me/yomi_assistant_bot",
+      ],
     },
     {
       "@type": "SoftwareApplication",

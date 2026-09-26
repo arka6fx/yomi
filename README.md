@@ -1,163 +1,156 @@
-# Yomi
+<p align="center">
+  <img src="./assets/yomi-mark.png" alt="Yomi" width="120" height="120" />
+</p>
 
-> A personal AI assistant that lives in Telegram.
+<h1 align="center">Yomi</h1>
 
-[Website](https://getyomi.in) · [Dashboard](https://getyomi.in/dashboard) ·
-[Telegram bot](https://t.me/yomi_assistant_bot) · [Docs](https://getyomi.in/docs) ·
-[MIT license](./LICENSE)
+<p align="center">
+  <strong>The AI assistant that lives in your Telegram.</strong>
+</p>
 
-Send Yomi a text, voice note, or photo. It can work across Gmail, Google
-Calendar, Drive, GitHub, Slack, Notion, Linear, and other connected services.
-Yomi asks before sending, booking, deleting, or taking another irreversible
-action.
+<p align="center">
+  <a href="https://t.me/yomi_assistant_bot">Try it on Telegram</a> ·
+  <a href="https://getyomi.in">Website</a> ·
+  <a href="https://getyomi.in/docs">Docs</a> ·
+  <a href="https://getyomi.in/dashboard">Dashboard</a> ·
+  <a href="./docs/README.md">Developer docs</a>
+</p>
 
-The web app is the management dashboard. Use Telegram to chat with Yomi; use
-the dashboard to connect services, manage memory, create schedules, and review
-credits.
+<p align="center">
+  <a href="https://github.com/arka6fx/yomi/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/arka6fx/yomi/ci.yml?branch=main&style=flat-square&label=ci" alt="CI" /></a>
+  <a href="https://github.com/arka6fx/yomi/releases"><img src="https://img.shields.io/github/v/release/arka6fx/yomi?style=flat-square&color=blue" alt="Release" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT license" /></a>
+  <a href="https://t.me/yomi_assistant_bot"><img src="https://img.shields.io/badge/telegram-@yomi__assistant__bot-26A5E4?style=flat-square&logo=telegram&logoColor=white" alt="Telegram" /></a>
+</p>
 
-## What it does
+---
 
-| Capability | Description |
-| --- | --- |
-| Telegram | Text, voice-note transcription, and image analysis. Replies are text. |
-| Connectors | First-class Gmail, Calendar, Drive, GitHub, Slack, Notion, and Linear tools, plus Composio connectors. |
-| Memory | User-owned memory stored in Postgres and available to the agent across sessions. |
-| RAG | Index text, URLs, documents, and connected Drive content for retrieval. |
-| Schedules | Run recurring briefings, reports, and checks on a credit budget. |
-| Approvals | Preview sensitive actions before they happen. |
-| Dashboard | Manage account linking, billing, credits, schedules, memory, and privacy. |
+Text it, send a voice note, or snap a photo. Yomi reads your inbox, plans your
+day, searches the web, and gets things done across the apps you already use, and
+it always asks before it sends, books, pays, or deletes anything.
 
-## Architecture
+|                      |                                                                                |
+| -------------------- | ------------------------------------------------------------------------------ |
+| 💬 **Chat**          | Text, voice notes, and photos on Telegram. No new app to learn.                |
+| 🔌 **Connectors**    | Gmail · Calendar · Drive · GitHub · Slack · Notion · Linear, plus dozens more. |
+| ✅ **Approvals**     | Anything irreversible becomes a preview with Approve and Reject buttons.       |
+| 🧠 **Memory**        | Remembers what matters to you. Yours to view, export, or delete.               |
+| ⏰ **Routines**      | Morning briefs, inbox follow-ups, and weekly resets delivered on schedule.     |
+| 🖥️ **Computer**      | A private cloud browser Yomi can drive while you watch.                        |
+| 🔐 **Vault**         | Logins, cards, and addresses Yomi can use without ever seeing the raw secret.  |
+| ✉️ **Email address** | Your own Yomi inbox for sign-ups, bookings, and receipts.                      |
 
-```text
-Telegram ────────┐
-                 ▼
-          Cloudflare Worker
-                 ▼
-       FastAPI Python container
-          │       │       │
-          │       │       └── Workers AI: chat, search, embeddings, speech
-          │       └────────── Connectors and Composio
-          └────────────────── Neon Postgres + pgvector
+---
 
-Next.js dashboard ──────────── FastAPI API
-```
+<table>
+<tr>
+<td width="50%" valign="top">
 
-The Python backend is canonical. It owns authentication, billing, metering,
-the Telegram gateway, the agent loop, connector access, memory, and RAG. The
-dashboard never accesses Postgres directly.
+<h3>🙋 I want to use Yomi</h3>
 
-## Stack
+Open [@yomi_assistant_bot](https://t.me/yomi_assistant_bot) and say hi. Connect
+your apps and manage everything else from the
+[dashboard](https://getyomi.in/dashboard).
 
-| Layer | Technology |
-| --- | --- |
-| Backend | FastAPI, SQLAlchemy 2 async, Alembic |
-| Runtime | Cloudflare Containers and Workers |
-| Database | Neon PostgreSQL with pgvector |
-| Models | Cloudflare Workers AI (`glm-5.3-flash`, `whisper-large-v3-turbo`, `bge-base-en-v1.5`) |
-| Dashboard | Next.js and React |
-| Billing | Dodo Payments |
-| Storage | Cloudflare R2 |
+Free forever, with unlimited chat. **[→ See plans](https://getyomi.in/pricing)**
 
-## Plans and credits
+</td>
+<td width="50%" valign="top">
 
-Credits are the single usage balance for all plans and connectors.
+<h3>🛠️ I want to build on Yomi</h3>
 
-| Plan | Price | Credits |
-| --- | --- | ---: |
-| Explore | Free | 100/month |
-| Pro | $5/month | 300/month |
-| Max | $40/month | 750/month |
+A FastAPI agent backend and a Next.js dashboard, running entirely on Cloudflare:
+Containers, Workers AI, D1, Vectorize, and R2.
 
-Credit packs are also available. See the [plans documentation](https://getyomi.in/docs#plans--credits)
-for current details.
+**[→ Run it locally](#quickstart)**
+
+</td>
+</tr>
+</table>
+
+---
 
 ## Quickstart
 
-Prerequisites: Node.js 22+, [`uv`](https://docs.astral.sh/uv/), and the
-environment values documented in [`apps/api/.env.example`](./apps/api/.env.example).
+You need Node.js 22+ and [`uv`](https://docs.astral.sh/uv/).
 
 ```bash
-git clone https://github.com/arka6fx/yomi.git
-cd yomi
-
-# Install JavaScript dependencies
+git clone https://github.com/arka6fx/yomi.git && cd yomi
 npm install
 
-# Configure and run the Python backend
-cp apps/api/.env.example apps/api/.env
-npm run python:dev                 # http://localhost:8080
+cp apps/api/.env.example apps/api/.env          # add your Cloudflare values
+cp apps/web/.env.example apps/web/.env.local
 
-# In another terminal, run the dashboard
-npm run dev --workspace @yomi/web  # http://localhost:3000
+npm run python:dev                              # API       → localhost:8080
+npm run dev --workspace @yomi/web               # dashboard → localhost:3000
 ```
 
-The backend uses a real Postgres connection. For Python-only development:
+Run the checks before opening a pull request:
 
 ```bash
-cd apps/api
-uv sync --dev
-uv run pytest -q
-uv run ruff check .
+npm run python:lint && npm run python:test
+npm run lint && npm run typecheck && npm run test
 ```
 
-## Repository layout
+## How it works
 
 ```text
-apps/api/       FastAPI backend, agent loop, connectors, migrations, tests
-apps/web/       Next.js marketing site and dashboard
-packages/db/    Shared Python SQLAlchemy schema (`yomi-db`)
-packages/shared TypeScript contracts shared across apps
-packages/ui/    Connector catalog and dashboard UI components
-docs/           Architecture decisions and agent workflows
-specs/          Product and connector specifications
+Telegram ──► Cloudflare Worker ──► FastAPI container ──► Workers AI
+                                       │    │
+            D1 · Vectorize · R2  ◄─────┘    └────► Composio · Google · Computer sandbox
+
+Dashboard (Next.js) ──► /api/* ──► FastAPI container
 ```
 
-## Checks
+One Python backend owns everything: the Telegram gateway, the agent loop,
+connectors, memory, billing, and auth. The dashboard never touches storage
+directly. Read the full [architecture](./docs/architecture.md).
 
-```bash
-npm run format:check
-npm run lint
-npm run typecheck
-npm run test
+<details>
+<summary><strong>Repository layout</strong></summary>
 
-cd apps/api
-uv run ruff check .
-uv run pytest -q
+```text
+apps/api        FastAPI backend, Cloudflare Workers, D1 migrations
+apps/web        Next.js marketing site and dashboard
+apps/sandbox    Computer-use desktop (Chrome in a Cloudflare Sandbox)
+packages/       Shared TypeScript contracts, UI, and configs
+docs/           Architecture, runbook, specs, and ADRs
 ```
 
-## Deployment
+</details>
 
-Pushes to `main` deploy through GitHub Actions when the relevant application
-changes:
+<details>
+<summary><strong>Tech stack</strong></summary>
 
-- `apps/web/**` → dashboard and marketing site on Cloudflare Workers
-- `apps/api/**` or `packages/db/**` → FastAPI backend on Cloudflare Containers
+|          |                                                                           |
+| -------- | ------------------------------------------------------------------------- |
+| Backend  | Python 3.11 · FastAPI · httpx                                             |
+| Runtime  | Cloudflare Containers and Workers                                         |
+| Storage  | Cloudflare D1 · Vectorize · R2                                            |
+| Models   | Workers AI: `glm-5.3-flash`, `whisper-large-v3-turbo`, `bge-base-en-v1.5` |
+| Web      | Next.js · React · Tailwind CSS                                            |
+| Payments | Dodo Payments                                                             |
 
-Database migrations are separate from deploys. Run them with Alembic after
-reviewing the migration:
+</details>
 
-```bash
-cd apps/api
-uv run alembic upgrade head
-```
+<details>
+<summary><strong>Deployment</strong></summary>
 
-See [`RUNBOOK.md`](./RUNBOOK.md) for production operations and
-[`apps/api/README.md`](./apps/api/README.md) for backend deployment details.
+Pushes to `main` deploy automatically: `apps/api` to `api.getyomi.in`,
+`apps/web` to `getyomi.in`, and `apps/sandbox` to the computer gateway. D1
+migrations and secrets are managed by hand. See the
+[runbook](./docs/runbook.md).
 
-## Documentation
-
-- [`AGENTS.md`](./AGENTS.md) — repository instructions and architecture summary
-- [`CONTEXT.md`](./CONTEXT.md) — domain vocabulary
-- [`specs/00-overview.md`](./specs/00-overview.md) — system overview
-- [`specs/connectors/00-index.md`](./specs/connectors/00-index.md) — connector catalog
-- [`docs/adr/`](./docs/adr/) — architecture decisions
-- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contribution workflow
-- [`SECURITY.md`](./SECURITY.md) — vulnerability reporting
+</details>
 
 ## Contributing
 
-Use a focused branch and a conventional commit such as `feat: add calendar
-digest` or `fix: handle expired connector token`. Run the checks above before
-opening a pull request. Issues and feature requests belong in
-[GitHub Issues](https://github.com/arka6fx/yomi/issues).
+Issues and ideas are welcome in
+[GitHub Issues](https://github.com/arka6fx/yomi/issues). Read the
+[contributing guide](./.github/CONTRIBUTING.md) before opening a pull request,
+and report security issues privately as described in the
+[security policy](./.github/SECURITY.md).
+
+<p align="center">
+  <sub>MIT licensed · Made by <a href="https://github.com/arka6fx">Arka Garai</a> and contributors</sub>
+</p>

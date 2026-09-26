@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next"
+import { CHARACTERS, CHARACTER_TAGS } from "@/lib/characters"
 import { SKILL_CATALOG } from "@/lib/skills-catalog"
 
 const BASE = "https://getyomi.in"
@@ -22,6 +23,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     ...SKILL_CATALOG.map((skill) => ({
       url: `${BASE}/skills/${skill.id}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
+    })),
+    {
+      url: `${BASE}/characters`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    ...CHARACTER_TAGS.map((tag) => ({
+      url: `${BASE}/characters/tags/${tag.slug}`,
+      lastModified: now,
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+    })),
+    ...CHARACTERS.map((character) => ({
+      url: `${BASE}/characters/${character.slug}`,
       lastModified: now,
       changeFrequency: "monthly" as const,
       priority: 0.5,
