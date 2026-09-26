@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -115,9 +116,11 @@ async def _take_turn(
     user: User,
     text: str,
     on_event: Callable[[dict[str, Any]], Awaitable[None]] | None = None,
+    images: list[str] | None = None,
 ) -> str:
     """One dashboard message: it joins the same thread as Telegram, so either place
-    picks up where the other left off."""
+    picks up where the other left off. ``images`` (data URLs) go to the model with
+    this message only; the saved thread notes that photos were sent."""
     from yomi.gateway.telegram import get_lock
     from yomi.services import billing_d1, connectors_d1
     from yomi.services.agent import sessions_d1
@@ -136,8 +139,17 @@ async def _take_turn(
         if not charged.ok:
             raise HTTPException(status_code=402, detail=charged.message)
         history = await sessions_d1.load_history(d1, user_id, platform, chat_id)
-        await sessions_d1.append_turn(d1, user_id, platform, chat_id, "user", text)
-        history.append({"role": "user", "content": text})
+        saved = text
+        if images:
+            note = "(sent a photo)" if len(images) == 1 else f"(sent {len(images)} photos)"
+            saved = f"{text}\n{note}".strip()
+        await sessions_d1.append_turn(d1, user_id, platform, chat_id, "user", saved)
+        if images:
+            content: list[dict[str, Any]] = [{"type": "text", "text": text or "(a photo)"}]
+            content += [{"type": "image_url", "image_url": {"url": url}} for url in images]
+            history.append({"role": "user", "content": content})
+        else:
+            history.append({"role": "user", "content": text})
         pending = connectors_d1.create_pending_action(
             d1, user_id=user_id, source_platform=platform, source_chat_id=chat_id
         )
@@ -217,6 +229,101 @@ async def stream_to_shared_conversation(
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
     )
+
+
+@conversation_router.post("/shared/chat")
+async def chat_in_shared_conversation(
+    request: Request,
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    """Text Yomi from the dashboard with the Vercel AI SDK's ``useChat``.
+
+    The body is ``{"message": UIMessage}`` (text and image parts); the reply streams
+    back as the SDK's UI message stream (see ``services/ui_stream.py``). Like
+    ``/shared/stream``, the turn runs on its own task, so closing the page mid-reply
+    still saves the answer.
+    """
+    from yomi.services import ui_stream
+
+    if d1 is None:
+        raise HTTPException(status_code=501, detail="Requires the D1 storage backend")
+    try:
+        text, images = ui_stream.parse_message(await request.json())
+    except (ui_stream.MessageError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc) or "bad message") from exc
+    events: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
+
+    async def turn() -> None:
+        try:
+            reply = await _take_turn(d1, user, text, on_event=events.put, images=images)
+            await events.put({"type": "done", "reply": reply})
+        except HTTPException as exc:
+            await events.put({"type": "error", "message": str(exc.detail)})
+        except Exception:
+            logger.exception("dashboard chat turn failed for %s", user.id)
+            await events.put({"type": "error", "message": "Yomi hit an error; try again"})
+        finally:
+            await events.put(None)
+
+    task = asyncio.create_task(turn())
+    parts = ui_stream.ReplyParts()
+
+    async def body() -> AsyncIterator[bytes]:
+        for part in parts.start():
+            yield ui_stream.sse(part)
+        while (event := await events.get()) is not None:
+            if event["type"] == "done":
+                chunk = parts.finish(event["reply"])
+            elif event["type"] == "error":
+                chunk = parts.error(event["message"])
+            else:
+                chunk = parts.on_event(event)
+            for part in chunk:
+                yield ui_stream.sse(part)
+        yield ui_stream.DONE
+        await task
+
+    return StreamingResponse(body(), media_type="text/event-stream", headers=ui_stream.HEADERS)
+
+
+MAX_VOICE_BYTES = 10 * 1024 * 1024
+
+
+@conversation_router.post("/transcribe")
+async def transcribe_voice(
+    request: Request,
+    seconds: int = 0,
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    """A voice note recorded in the dashboard (raw audio body) to text, for the composer."""
+    from yomi.services import billing_d1
+    from yomi.services.metering import ChargeInput
+    from yomi.services.transcription import transcribe_audio
+
+    data = b""
+    async for chunk in request.stream():
+        data += chunk
+        if len(data) > MAX_VOICE_BYTES:
+            raise HTTPException(status_code=413, detail="that recording is too long")
+    if len(data) < 1000:
+        raise HTTPException(status_code=422, detail="that recording was empty")
+    try:
+        text = await transcribe_audio(data, mime_type=request.headers.get("content-type"))
+    except Exception as exc:
+        logger.info("dashboard transcription failed: %s", type(exc).__name__)
+        raise HTTPException(status_code=502, detail="couldn't hear that; try again") from exc
+    if d1 is not None:
+        metering = {"id": str(user.id), "plan": getattr(user, "plan", None) or "explore"}
+        charge = ChargeInput(
+            user={**metering, "subscription_status": "active"},  # type: ignore[arg-type]
+            kind="voice",
+            duration_seconds=max(1, min(seconds, 600)),
+        )
+        with contextlib.suppress(Exception):  # usage logging never blocks a transcript
+            await billing_d1.charge_usage(d1, charge)
+    return {"text": text}
 
 
 @conversation_router.get("/{conversation_id}")
