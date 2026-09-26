@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Check, Clock, Loader2, MessageCircle, Plus, Search, X } from "lucide-react"
 import type { DashboardTab } from "@/components/dashboard/tabs"
 import { TELEGRAM_BOT_URL } from "@/lib/site"
+import { Skeleton } from "@/components/dashboard/shell/motion"
 import { cn } from "@/lib/utils"
 
 type Skill = {
@@ -140,7 +141,7 @@ export function SkillsView({
     ) : null
 
   return (
-    <div className="space-y-8 pt-6">
+    <div className="page-fade space-y-8 pt-6">
       <div>
         <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">skills</h1>
         <p className="mt-3 max-w-xl text-sm text-muted-foreground">
@@ -229,17 +230,27 @@ export function SkillsView({
         </div>
 
         {loading ? (
-          <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
-            <Loader2 size={15} className="animate-spin" /> loading skills…
+          <div
+            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+            aria-busy="true"
+            aria-label="loading skills"
+          >
+            {[0, 1, 2, 3, 4, 5].map((n) => (
+              <Skeleton key={n} className="min-h-[190px] rounded-[1.75rem]" />
+            ))}
           </div>
         ) : shown.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">no skills match that</p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {shown.map((skill) => {
+            {shown.map((skill, i) => {
               const missing = skill.worksWith.filter((id) => !connectedProviders.includes(id))
               return (
-                <article key={skill.id} className={cn(card, "flex flex-col p-5")}>
+                <article
+                  key={skill.id}
+                  style={{ "--i": Math.min(i, 11) } as React.CSSProperties}
+                  className={cn(card, "rise flex flex-col p-5")}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <span
                       className="grid size-12 place-items-center rounded-2xl bg-muted text-2xl"

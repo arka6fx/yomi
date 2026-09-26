@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import type { DashboardTab } from "@/components/dashboard/tabs"
 import { TELEGRAM_BOT_URL } from "@/lib/site"
+import { Skeleton } from "@/components/dashboard/shell/motion"
 import { cn } from "@/lib/utils"
 
 type Routine = {
@@ -179,7 +180,7 @@ export function RoutinesView({
     "rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)]"
 
   return (
-    <div className="space-y-8 pt-6">
+    <div className="page-fade space-y-8 pt-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">routines</h1>
@@ -216,8 +217,10 @@ export function RoutinesView({
       )}
 
       {loading ? (
-        <div className="flex items-center gap-2 py-16 text-sm text-muted-foreground">
-          <Loader2 size={15} className="animate-spin" /> loading routines…
+        <div className="space-y-2" aria-busy="true" aria-label="loading routines">
+          {[0, 1, 2].map((n) => (
+            <Skeleton key={n} className="h-[76px] rounded-[1.5rem]" />
+          ))}
         </div>
       ) : routines.length === 0 ? (
         <div className="flex flex-col items-center py-16 text-center">
@@ -254,13 +257,14 @@ export function RoutinesView({
         </div>
       ) : (
         <ul className="space-y-2">
-          {routines.map((routine) => {
+          {routines.map((routine, i) => {
             const skill = routine.skillId ? skills[routine.skillId] : undefined
             const failed = routine.lastRunStatus === "skipped" || routine.lastRunStatus === "failed"
             return (
               <li
                 key={routine.id}
-                className={cn(card, "flex flex-wrap items-center gap-4 p-4 sm:flex-nowrap")}
+                style={{ "--i": Math.min(i, 11) } as React.CSSProperties}
+                className={cn(card, "rise flex flex-wrap items-center gap-4 p-4 sm:flex-nowrap")}
               >
                 <span
                   className={cn(
