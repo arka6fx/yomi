@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { TopLoader } from "@/components/dashboard/TopLoader"
 import { TITLE_TEMPLATE } from "@/lib/site"
 
 // a plain-string title here would consume the root template, leaving nested
@@ -9,5 +10,10 @@ export const metadata: Metadata = {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+  return (
+    <>
+      <TopLoader />
+      {children}
+    </>
+  )
 }
