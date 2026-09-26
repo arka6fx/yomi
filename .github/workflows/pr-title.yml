@@ -1,0 +1,24 @@
+name: PR title
+
+# Squash merges use the pull request title as the commit subject on main, so the
+# title has to meet the same rules as a commit (scripts/commit-msg.mjs).
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  title:
+    name: conventional, short title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check the title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          node --test scripts/commit-msg.test.mjs
+          node scripts/commit-msg.mjs --title "$TITLE"

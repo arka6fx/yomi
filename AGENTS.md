@@ -162,9 +162,13 @@ the container through `envVars` in `worker.ts`. All of this is in
 - **Python:** ruff (`E, F, I, UP, B, SIM`), 100-character lines, Python 3.11+,
   async/await throughout.
 - **TypeScript:** ESLint + Prettier. No `as any`, no unused imports.
-- **Commits:** Conventional Commits (`feat:`, `fix:`, `refactor:`, `perf:`,
-  `style:`, `test:`, `chore:`, `docs:`). Lowercase, no trailing period, at most
-  72 characters.
+- **Commits:** `type(scope): summary`, like
+  `fix(api): stop routines failing with 401`. Types: `feat`, `fix`, `docs`,
+  `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`. Scope
+  optional (`api`, `web`, `docs`, …). Lowercase, no trailing period, **60
+  characters at most**. Put detail in the body, not the subject.
+  `.githooks/commit-msg` (installed by `npm install`) and the PR title check
+  enforce it; PRs squash-merge under their title.
 
 Before pushing:
 
