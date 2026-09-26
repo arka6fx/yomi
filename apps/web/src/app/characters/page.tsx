@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { Mascot } from "@/components/Mascot"
 import { SitePage } from "@/components/SitePage"
 import { CharacterBrowser } from "@/components/characters/CharacterBrowser"
 import { toCard } from "@/components/characters/CharacterParts"
@@ -18,20 +19,23 @@ export default function CharactersPage() {
   return (
     <SitePage>
       <section className="mx-auto max-w-7xl px-4 pb-24 pt-12 sm:px-6 sm:pt-16">
-        <div className="mb-10 lg:ml-[280px]">
-          <h1 className="text-4xl font-semibold leading-[1.05] tracking-[-0.04em] sm:text-5xl">
-            AI characters you can text on Telegram
-          </h1>
-          <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-muted-foreground">
-            Pick one and Yomi texts you as them, with its memory and tools underneath. Switch any
-            time.
-          </p>
-          <Link
-            href="/dashboard?tab=characters"
-            className="mt-3 inline-block text-[15px] font-semibold underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground"
-          >
-            already on yomi? open your characters
-          </Link>
+        <div className="mb-10 flex items-end justify-between gap-8 lg:ml-[280px]">
+          <div>
+            <h1 className="text-4xl font-semibold leading-[1.05] tracking-[-0.04em] sm:text-5xl">
+              AI characters you can text on Telegram
+            </h1>
+            <p className="mt-4 max-w-2xl text-[17px] leading-relaxed text-muted-foreground">
+              Pick one and Yomi texts you as them, with its memory and tools underneath. Switch any
+              time.
+            </p>
+            <Link
+              href="/dashboard?tab=characters"
+              className="mt-3 inline-block text-[15px] font-semibold underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground"
+            >
+              already on yomi? open your characters
+            </Link>
+          </div>
+          <Mascot pose="cool" float className="hidden w-28 shrink-0 sm:block lg:w-32" />
         </div>
         <CharacterBrowser characters={CHARACTERS.map(toCard)} tags={CHARACTER_TAGS} />
       </section>

@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowRight, Check } from "lucide-react"
 import { PlanButton } from "@/components/landing/PlanButton"
+import { Mascot } from "@/components/Mascot"
 import { SitePage } from "@/components/SitePage"
 import { formatUsd } from "@/lib/local-price"
 import { FREE_ROUTINES, PLANS } from "@/lib/plans"
@@ -45,6 +46,11 @@ export default function PricingPage() {
           <Corner className="-bottom-2 -left-2" />
           <Corner className="-bottom-2 -right-2" />
 
+          <Mascot
+            pose="celebrate"
+            priority
+            className="mx-auto -mt-28 mb-6 w-28 sm:-mt-32 sm:w-32"
+          />
           <h1 className="text-center text-5xl font-semibold tracking-[-0.045em] sm:text-7xl">
             pick your plan
           </h1>

@@ -17,7 +17,7 @@ export default function SkillsPage() {
     <SitePage>
       <section className="mx-auto max-w-5xl px-4 pb-24 pt-16 sm:px-6 sm:pt-20">
         <span className="chip mb-6">skills</span>
-        <PageIntro title="give yomi a skill.">
+        <PageIntro title="give yomi a skill." mascot="reading">
           <p className="max-w-xl">
             skills are ready-made jobs for yomi. routines run on a schedule, like your morning brief
             or a sunday reset, and report back on telegram. the rest are things you just ask for.
