@@ -131,7 +131,7 @@ async def test_linking_telegram_later_gets_the_first_text(backend, monkeypatch):
 def test_gallery_is_complete_and_safe():
     gallery = characters_d1.gallery()
     names = [c["name"] for c in gallery]
-    assert names[:3] == ["Satoru Gojo", "Hello Kitty", "Ghost"] and len(names) == 300
+    assert names[:3] == ["Satoru Gojo", "Hello Kitty", "Ghost"] and len(names) == 322
     assert len({c["id"] for c in gallery}) == len(gallery)  # unique slugs
     assert sum("genshin" in c["tags"] for c in gallery) == 9
     for c in gallery:
@@ -314,7 +314,7 @@ def test_like_route_and_listing(backend):
 def test_featured_characters_come_first():
     gallery = characters_d1.gallery()
     featured = [c["name"] for c in gallery if c["featured"]]
-    assert len(featured) == 32
+    assert len(featured) == 33
     assert all(c["featured"] for c in gallery[: len(featured)])  # all at the top
     for pick in ("Makima", "Asta", "Jinx", "Mikey", "Katsuki Bakugo", "Satoru Gojo",
                  "Naruto Uzumaki", "Ichigo Kurosaki", "Monkey D. Luffy", "Tony Stark",
