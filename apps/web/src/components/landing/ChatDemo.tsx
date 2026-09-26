@@ -2,7 +2,20 @@
 
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
-import { ArrowRight, Mic, Plus } from "lucide-react"
+import {
+  AppWindow,
+  ArrowLeft,
+  ArrowUpRight,
+  BatteryFull,
+  Check,
+  CheckCheck,
+  EllipsisVertical,
+  Mic,
+  Paperclip,
+  SignalHigh,
+  Smile,
+  Wifi,
+} from "lucide-react"
 
 type Topic = { id: string; label: string; reply: string }
 
@@ -69,6 +82,25 @@ const INTRO = [
 ]
 
 type Bubble = { from: "yomi" | "you"; text: string }
+
+// Telegram's dark theme, with the purple outgoing bubbles from a real yomi chat.
+const TG = {
+  bg: "#0e1621",
+  bar: "#17212b",
+  incoming: "#182533",
+  outgoing: "linear-gradient(135deg, #8a4fe8 0%, #7440d8 100%)",
+  accent: "#5eb5f7",
+  muted: "#7f91a4",
+}
+
+// Faint doodles tiled behind the chat, like Telegram's default wallpaper.
+const WALLPAPER = `url("data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' fill='none' stroke='#fff' stroke-opacity='0.05' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M14 20l4-8 4 8-8-5h8z'/><circle cx='70' cy='18' r='7'/><path d='M100 40c6 0 6 8 0 8s-6 8 0 8'/><rect x='12' y='64' width='16' height='12' rx='3'/><path d='M16 64v-3h8v3'/><path d='M58 70l8 8m0-8l-8 8'/><path d='M92 88a8 8 0 1 0 12 0l-6-10z'/><path d='M30 100h14M37 93v14'/><path d='M66 104c4-6 10-6 14 0'/></svg>`,
+)}")`
+
+function Tick({ read }: { read: boolean }) {
+  return read ? <CheckCheck size={14} aria-hidden /> : <Check size={14} aria-hidden />
+}
 
 function useReducedMotion() {
   const [reduced, setReduced] = useState(false)
@@ -145,68 +177,94 @@ export function ChatDemo() {
     )
   }
 
+  const time = "9:41 AM"
+  const pickHint = picked.length ? `${picked.length} picked` : "pick as many as you like"
+
   return (
     <div className="relative mx-auto h-[min(700px,calc(100dvh-10.5rem))] w-[min(360px,calc(100vw-2rem))] rounded-[3rem] bg-[#16181d] p-2.5 shadow-[0_40px_80px_rgba(10,20,40,0.45)]">
-      <div className="flex h-full flex-col overflow-hidden rounded-[2.4rem] bg-[#f7f8fa]">
-        <div className="flex items-center justify-between px-7 pt-3 text-[13px] font-semibold text-[#16181d]">
+      <div
+        className="relative flex h-full flex-col overflow-hidden rounded-[2.4rem] text-white"
+        style={{ backgroundColor: TG.bg, backgroundImage: WALLPAPER }}
+      >
+        {/* status bar */}
+        <div
+          className="flex items-center justify-between px-7 pb-1 pt-3 text-[13px] font-semibold"
+          style={{ background: TG.bar }}
+        >
           <span>9:41</span>
-          <span className="h-6 w-24 rounded-full bg-[#16181d]" aria-hidden />
-          <span aria-hidden>●●●</span>
+          <span className="h-6 w-24 rounded-full bg-black" aria-hidden />
+          <span className="flex items-center gap-1" aria-hidden>
+            <SignalHigh size={14} />
+            <Wifi size={14} />
+            <BatteryFull size={16} />
+          </span>
         </div>
 
-        <div className="flex flex-col items-center gap-1 border-b border-black/5 pb-3 pt-2">
+        {/* chat header */}
+        <div
+          className="flex items-center gap-3 px-3 pb-2.5 pt-1.5 shadow-[0_1px_0_rgba(0,0,0,0.35)]"
+          style={{ background: TG.bar }}
+        >
+          <ArrowLeft size={20} className="shrink-0 text-white/90" aria-hidden />
           <img
             src="/brand-mark-128.png"
             alt=""
-            width={44}
-            height={44}
-            className="size-11 rounded-full"
+            width={40}
+            height={40}
+            className="size-10 shrink-0 rounded-full"
           />
-          <span className="rounded-full bg-white px-3 py-0.5 text-sm font-semibold text-[#16181d] shadow-sm">
-            Yomi
-          </span>
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="text-[15px] font-semibold">yomi</p>
+            <p className="text-[13px]" style={{ color: typing ? TG.accent : TG.muted }}>
+              {typing ? "typing…" : "bot"}
+            </p>
+          </div>
+          <EllipsisVertical size={20} className="shrink-0 text-white/80" aria-hidden />
         </div>
 
         <div
           ref={scroller}
-          className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4"
+          className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-2.5 py-3 [scrollbar-width:none]"
           aria-live="polite"
           aria-label="Conversation with Yomi"
         >
-          <p className="pb-1 text-center text-[11px] text-[#8a909c]">Today</p>
-          {bubbles.map((bubble, index) => (
-            <div key={index} className={bubble.from === "you" ? "flex justify-end" : "flex"}>
-              <p
-                className={
-                  bubble.from === "you"
-                    ? "max-w-[85%] rounded-[1.25rem] rounded-br-md bg-[#2b8fff] px-3.5 py-2 text-[15px] text-white"
-                    : "max-w-[85%] rounded-[1.25rem] rounded-bl-md bg-[#e7e9ee] px-3.5 py-2 text-[15px] text-[#16181d]"
-                }
-              >
-                {bubble.text}
-              </p>
-            </div>
-          ))}
-
-          {typing && (
-            <div className="flex" aria-label="Yomi is typing">
-              <span className="flex gap-1 rounded-[1.25rem] rounded-bl-md bg-[#e7e9ee] px-4 py-3">
-                {[0, 1, 2].map((i) => (
+          <p className="flex justify-center pb-1.5">
+            <span className="rounded-full bg-black/30 px-2.5 py-0.5 text-[12px] font-medium text-white/85">
+              Today
+            </span>
+          </p>
+          {bubbles.map((bubble, index) => {
+            const mine = bubble.from === "you"
+            const last = bubbles[index + 1]?.from !== bubble.from
+            return (
+              <div key={index} className={mine ? "flex justify-end" : "flex"}>
+                <p
+                  className={`relative max-w-[82%] rounded-2xl px-3 pb-1.5 pt-1.5 text-[14.5px] leading-snug shadow-[0_1px_1px_rgba(0,0,0,0.25)] ${
+                    last ? (mine ? "rounded-br-[4px]" : "rounded-bl-[4px]") : ""
+                  }`}
+                  style={{ background: mine ? TG.outgoing : TG.incoming }}
+                >
+                  {bubble.text}
                   <span
-                    key={i}
-                    className="size-1.5 animate-bounce rounded-full bg-[#8a909c]"
-                    style={{ animationDelay: `${i * 0.12}s` }}
-                  />
-                ))}
-              </span>
-            </div>
-          )}
+                    className={`float-right ml-2 mt-1.5 inline-flex translate-y-0.5 items-center gap-0.5 text-[11px] ${
+                      mine ? "text-white/75" : ""
+                    }`}
+                    style={mine ? undefined : { color: TG.muted }}
+                  >
+                    {time}
+                    {mine && <Tick read={index < bubbles.length - 1 || typing} />}
+                  </span>
+                </p>
+              </div>
+            )
+          })}
 
+          {/* the topic picker is a Telegram inline keyboard under yomi's last message */}
           {stage === "pick" && (
             <div
               role="group"
               aria-label="What should Yomi help with?"
-              className="flex flex-wrap justify-end gap-1.5 pt-1"
+              className="grid max-w-[92%] grid-cols-2 gap-1 pt-0.5"
             >
               {TOPICS.map((topic) => {
                 const on = picked.includes(topic.id)
@@ -216,12 +274,11 @@ export function ChatDemo() {
                     role="checkbox"
                     aria-checked={on}
                     onClick={() => toggle(topic.id)}
-                    className={`rounded-full border px-3 py-1.5 text-[13px] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.06)] transition ${
-                      on
-                        ? "border-[#2b8fff] bg-[#2b8fff] text-white"
-                        : "border-black/10 bg-white text-[#16181d] hover:bg-[#f1f3f6]"
+                    className={`truncate rounded-lg px-2 py-2 text-[13px] font-medium backdrop-blur-sm transition-colors ${
+                      on ? "bg-[#7440d8]/80" : "bg-white/[0.09] hover:bg-white/[0.14]"
                     }`}
                   >
+                    {on ? "✓ " : ""}
                     {topic.label}
                   </button>
                 )
@@ -229,33 +286,50 @@ export function ChatDemo() {
               {picked.length > 0 && (
                 <button
                   onClick={submit}
-                  className="inline-flex items-center gap-1 rounded-full bg-[#16181d] px-3.5 py-1.5 text-[13px] font-semibold text-white"
+                  className="col-span-2 rounded-lg py-2 text-[13px] font-semibold text-white"
+                  style={{ background: TG.accent }}
                 >
-                  that’s it <ArrowRight size={13} />
+                  that’s it →
                 </button>
               )}
             </div>
           )}
 
           {stage === "done" && (
-            <div className="flex justify-center pt-2">
-              <Link href="/signup" className="btn-telegram px-5 py-3 text-sm">
-                Continue with Telegram <ArrowRight size={15} />
+            <div className="max-w-[92%] pt-0.5">
+              <Link
+                href="/signup"
+                className="flex items-center justify-center gap-1 rounded-lg bg-white/[0.09] py-2 text-[13px] font-semibold hover:bg-white/[0.14]"
+              >
+                open yomi on telegram <ArrowUpRight size={14} />
               </Link>
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-2 px-3 pb-5 pt-2">
+        {/* composer: the bot's menu button, then the message field */}
+        <div className="flex items-center gap-1.5 px-2 pb-5 pt-2" style={{ background: TG.bar }}>
           <span
-            className="grid size-8 place-items-center rounded-full bg-[#e7e9ee] text-[#5b6270]"
+            className="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-[13px] font-semibold"
+            style={{ background: "#3390ec" }}
             aria-hidden
           >
-            <Plus size={16} />
+            <AppWindow size={14} /> Dashboard
           </span>
-          <span className="flex flex-1 items-center justify-between rounded-full border border-black/10 bg-white px-4 py-2 text-sm text-[#8a909c]">
-            {stage === "pick" ? "pick as many as you like" : "Message"}
-            <Mic size={15} aria-hidden />
+          <span
+            className="flex min-w-0 flex-1 items-center gap-2 px-1.5 text-[14px]"
+            style={{ color: TG.muted }}
+          >
+            <Smile size={18} className="shrink-0" aria-hidden />
+            <span className="truncate">{stage === "pick" ? pickHint : "Message"}</span>
+          </span>
+          <Paperclip size={18} className="shrink-0" style={{ color: TG.muted }} aria-hidden />
+          <span
+            className="grid size-9 shrink-0 place-items-center rounded-full"
+            style={{ background: "#3390ec" }}
+            aria-hidden
+          >
+            <Mic size={17} />
           </span>
         </div>
       </div>

@@ -6,11 +6,13 @@ import { ArrowRight, Check, Lock, Shield } from "lucide-react"
 
 import LandingFooter from "@/components/landing/LandingFooter"
 import { ChatDemo } from "@/components/landing/ChatDemo"
+import { CharacterAvatar } from "@/components/characters/CharacterAvatar"
 import { OauthErrorRedirect } from "@/components/landing/OauthErrorRedirect"
 import { Mascot } from "@/components/Mascot"
 import Nav from "@/components/Nav"
 import { LandingSkillTabs } from "@/components/skills/SkillBrowser"
 import { Byline, SkillAskPill, SkillOrb } from "@/components/skills/SkillCard"
+import { getCharacter } from "@/lib/characters"
 import { SKILL_CATALOG, getCatalogSkill } from "@/lib/skills-catalog"
 // Deliberately the /icons subpath, not the package root. The root barrel also re-exports
 // three "use client" components, so importing anything from it makes those client entry
@@ -65,11 +67,19 @@ const STICKERS: { emoji: string; className: string; tilt: string; delay: string 
   { emoji: "💬", className: "right-[10%] top-[14%] text-7xl", tilt: "8deg", delay: "1.2s" },
   { emoji: "😊", className: "-left-4 top-[40%] text-8xl", tilt: "-6deg", delay: "0.6s" },
   { emoji: "📅", className: "right-[6%] top-[40%] text-7xl", tilt: "10deg", delay: "2s" },
-  { emoji: "🧾", className: "left-[20%] top-[52%] text-6xl", tilt: "14deg", delay: "1.6s" },
   { emoji: "✈️", className: "right-[20%] top-[58%] text-6xl", tilt: "-8deg", delay: "0.9s" },
   { emoji: "🔒", className: "right-[9%] top-[80%] text-7xl", tilt: "12deg", delay: "2.4s" },
   { emoji: "🎯", className: "left-[6%] top-[84%] text-7xl", tilt: "-10deg", delay: "1.4s" },
 ]
+
+// Real characters floating beside the phone, like friends you could text next.
+const HERO_CHARACTERS = [
+  { slug: "katsuki-bakugo", label: "text Bakugo", className: "left-[13%] top-0", delay: "0s" },
+  { slug: "satoru-gojo", label: "text Gojo", className: "right-[12%] top-[340px]", delay: "1.8s" },
+].flatMap((spot) => {
+  const character = getCharacter(spot.slug)
+  return character ? [{ ...spot, character }] : []
+})
 
 const TRY_THESE = SKILL_CATALOG.slice(0, 8)
 const FEATURED = ["morning-brief", "meal-log", "deadline-watch"].map((id) => getCatalogSkill(id)!)
@@ -110,14 +120,12 @@ export function LandingPage() {
           </div>
 
           <div className="relative z-10 mx-auto max-w-4xl px-4 pt-14 text-center sm:pt-20">
-            <h1 className="text-[2.75rem] font-semibold leading-[1.02] tracking-[-0.04em] text-white drop-shadow-[0_2px_12px_rgba(10,60,120,0.25)] sm:text-7xl">
+            <h1 className="text-balance text-[2.75rem] font-semibold leading-[1.02] tracking-[-0.04em] text-white drop-shadow-[0_2px_12px_rgba(10,60,120,0.25)] sm:text-7xl">
               the <span className="text-white/60">assistant</span>{" "}
-              <img
-                src="/brand-mark-128.png"
-                alt=""
-                width={72}
-                height={72}
-                className="mx-1 inline-block size-14 -translate-y-1 rounded-full align-middle ring-4 ring-white/80 sm:size-[72px]"
+              <Mascot
+                pose="waving"
+                priority
+                className="mx-0.5 inline-block w-12 -translate-y-1.5 align-middle sm:w-[76px]"
               />{" "}
               that actually gets your stuff done.
             </h1>
@@ -139,7 +147,7 @@ export function LandingPage() {
             {/* decorative texts either side of the phone */}
             <div
               aria-hidden
-              className="absolute left-4 top-24 hidden w-64 flex-col gap-3 lg:flex xl:left-0"
+              className="absolute left-4 top-60 hidden w-64 flex-col gap-3 lg:flex xl:left-0"
             >
               <p className="bubble-in -rotate-2 px-4 py-2.5 text-[15px]">
                 u said you’d reply to sarah today 👀
@@ -153,7 +161,7 @@ export function LandingPage() {
             </div>
             <div
               aria-hidden
-              className="absolute right-4 top-40 hidden w-60 flex-col gap-3 lg:flex xl:right-0"
+              className="absolute right-4 top-16 hidden w-60 flex-col gap-3 lg:flex xl:right-0"
             >
               <p className="bubble-out ml-auto w-fit -rotate-1 px-4 py-2 text-[15px] font-medium">
                 what’s due this week?
@@ -162,6 +170,24 @@ export function LandingPage() {
                 psych essay friday, 2 PRs to review. want a plan?
               </p>
             </div>
+
+            {HERO_CHARACTERS.map(({ slug, label, className, delay, character }) => (
+              <Link
+                key={slug}
+                href={`/characters/${slug}`}
+                className={`absolute hidden animate-float flex-col items-center motion-reduce:animate-none lg:flex ${className}`}
+                style={{ animationDelay: delay }}
+              >
+                <CharacterAvatar
+                  character={character}
+                  size={104}
+                  className="rounded-full shadow-[0_18px_36px_-12px_rgba(16,40,80,0.45)] ring-4 ring-white"
+                />
+                <span className="-mt-3 rounded-full bg-white px-3 py-1 text-[13px] font-semibold text-foreground shadow-[0_4px_12px_-4px_rgba(16,24,40,0.3)]">
+                  {label}
+                </span>
+              </Link>
+            ))}
 
             <ChatDemo />
           </div>
