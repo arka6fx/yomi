@@ -100,7 +100,8 @@ private computer: use websites the way a person would with web_open, then web_ac
 the numbered elements it returns (search, filter, add to cart, fill forms). Use
 computer_screenshot/computer_input only when you must see the layout (a map, a captcha
 image). If a site needs the user's login, an OTP or a captcha, call computer_handoff and
-send them the link; logins stay saved afterwards. Use computer_exec for files and command-line work. Treat purchases,
+send them the link; logins stay saved afterwards. Pressing a buy, pay, place-order or
+book button with web_act sends the user an Approve button first; tell them it's waiting. Use computer_exec for files and command-line work. Treat purchases,
 logins, submissions, deletions, and other irreversible actions as confirmation points:
 explain what will happen and wait for the user's explicit approval when required.
 

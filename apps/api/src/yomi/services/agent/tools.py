@@ -1,4 +1,5 @@
 import inspect
+import re
 from collections.abc import Callable
 from typing import Any
 
@@ -129,7 +130,24 @@ def format_page(page: dict) -> str:
     return "\n".join(lines)
 
 
-def register_computer_tools(tool_registry: ToolRegistry, user_id: str) -> None:
+# Buttons that spend money or commit the user to something. Clicking one always
+# waits for the user's Approve on Telegram, whatever the model decides.
+_COMMIT_BUTTON = re.compile(
+    r"\b(place (your )?order|order now|buy now|pay\b|pay now|make payment|proceed to pay"
+    r"|complete (purchase|payment|order|booking)|confirm (order|payment|purchase|booking|ride|and pay)"
+    r"|book (now|ride|cab|auto|tickets?)|request (ride|cab|auto|uber|bike)|submit order"
+    r"|swipe to pay|subscribe now|start (subscription|membership)|donate)",
+    re.IGNORECASE,
+)
+
+
+def is_commit_button(name: str) -> bool:
+    return bool(name) and bool(_COMMIT_BUTTON.search(name))
+
+
+def register_computer_tools(
+    tool_registry: ToolRegistry, user_id: str, create_pending_action: Any = None
+) -> None:
     """Personal-computer tools for the user's isolated desktop.
 
     Registered only when the computer gateway is configured. Screenshot
@@ -171,18 +189,65 @@ def register_computer_tools(tool_registry: ToolRegistry, user_id: str) -> None:
             await http.aclose()
         return _json.dumps(result)
 
+    # The last page the agent read: element number -> label, and its URL. Used to
+    # recognise a purchase button behind a bare element number.
+    last_page: dict[str, Any] = {"url": "", "names": {}}
+
+    def _seen(page: dict) -> str:
+        last_page["url"] = page.get("url") or ""
+        last_page["names"] = {
+            str(el.get("ref")): str(el.get("name") or "") for el in page.get("elements") or []
+        }
+        return format_page(page)
+
     async def web_open(url: str) -> str:
         client, _ = _client()
-        return format_page(await client.browser_navigate(url))
+        return _seen(await client.browser_navigate(url))
 
     async def web_page() -> str:
         client, _ = _client()
-        return format_page(await client.browser_snapshot())
+        return _seen(await client.browser_snapshot())
 
-    async def web_act(**kwargs) -> str:
+    async def web_act(**kwargs) -> Any:
         client, _ = _client()
+        expect_name = kwargs.pop("expect_name", None)
+        expect_url = kwargs.pop("expect_url", None)
         action = {k: v for k, v in kwargs.items() if v is not None}
-        return format_page(await client.browser_act(action))
+        kind = action.get("action")
+        ref = str(action.get("ref") or "")
+
+        if expect_name:
+            # Replaying an approved click: numbers may have changed since, so find the
+            # same button again by its label, and refuse if the page moved on.
+            page = await client.browser_snapshot()
+            if expect_url and page.get("url") != expect_url:
+                return (
+                    "The page changed since you approved (it's now "
+                    f"{page.get('url')}). Nothing was clicked; ask Yomi to try again."
+                )
+            match = next(
+                (el for el in page.get("elements") or [] if el.get("name") == expect_name), None
+            )
+            if match is None:
+                return f"Couldn't find “{expect_name}” on the page any more; nothing was clicked."
+            action["ref"] = str(match.get("ref"))
+            return _seen(await client.browser_act(action))
+
+        name = last_page["names"].get(ref, "")
+        if kind in ("click", "check") and is_commit_button(name) and create_pending_action:
+            from urllib.parse import urlsplit
+
+            host = urlsplit(last_page["url"]).hostname or "the site"
+            return await create_pending_action({
+                "connector": "computer",
+                "action": "web_act",
+                "risk": "payment",
+                "title": f"Click “{name}” on {host}",
+                "preview": f"Yomi wants to press “{name}” on {last_page['url'][:300]}",
+                "confirm_text": "Yes, press it",
+                "payload": {**action, "expect_name": name, "expect_url": last_page["url"]},
+            })
+        return _seen(await client.browser_act(action))
 
     async def computer_windows() -> str:
         import json as _json
@@ -408,7 +473,7 @@ async def build_user_registry(
         register_app_tools(tool_registry)
     tool_registry.composio_calls = composio_counter
     if computer_configured():
-        register_computer_tools(tool_registry, user_id)
+        register_computer_tools(tool_registry, user_id, create_pending_action)
     if d1 is not None:
         from yomi.services.agent.vault_tools import register_vault_tools
 
