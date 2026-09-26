@@ -1,6 +1,6 @@
 # Yomi personal-agent capability map
 
-Updated: 2026-09-25
+Updated: 2026-09-27
 
 This is the product decision log for evolving Yomi into a personal operator. It is
 grounded in the current repository and in public product material; it is not a claim
@@ -33,16 +33,16 @@ after browser work. [OpenInstinct repository](https://github.com/Merit-Systems/O
 | Agent loop | Implemented; tool loop, compaction, saved soul, Composio metering | Add structured plans, step events, cancellation and resumable runs |
 | Memory | Implemented; memory CRUD, search, embeddings and privacy export/delete | Add provenance, confidence, correction and relationship/project entities |
 | Connectors | Implemented; native Google/GitHub/Slack/etc. plus Composio and custom MCP | Add capability/risk display and per-tool permission settings |
-| Approval | Implemented; approving replays the gated tool once (D1), Telegram shows inline Approve/Reject | Extend the same gate to computer clicks and terminal writes |
+| Approval | Implemented; approving replays the gated tool once (D1), Telegram shows inline Approve/Reject; buy/pay/place-order/book clicks on the computer are gated too | Extend the same gate to terminal writes and coordinate clicks on checkout pages |
 | Browser | Implemented as HTTP scrape/search/extract; computer sandbox exists separately | Add browser session state, screenshot evidence and verification loop |
-| Computer | Implemented per-user sandbox with screenshot/input/open/windows/exec | Add semantic DOM/accessibility actions and explicit action risk classification |
+| Computer | Implemented per-user sandbox: pages read as text plus numbered elements (web_open/web_page/web_act), screenshots and input as fallback; logins saved to R2 between sleeps; live take-over view in the dashboard | Terminal coding agents; faster cold starts |
 | Scheduling | Implemented: the 10-minute Worker cron fires due schedules (timezone-aware, default Asia/Kolkata) into the durable run ledger and delivers results on Telegram; the agent creates schedules from chat | Per-schedule run history in the dashboard; finer than 10-minute timing |
-| Billing/credits | Implemented; Dodo, ledger and usage summary | Keep one ledger path across Telegram, web, Composio, browser and computer |
+| Plans | Free (unlimited chat, 3 active routines) and Pro ($5: smarter engine, unlimited routines) via Dodo; no credits; usage still logged for cost tracking | Usage alerts before Workers AI costs grow |
 | Vault | Implemented (D1): logins, cards, addresses, phones, agent items; secrets typed into the sandbox, never shown to the model | Add TOTP/2FA handoff and per-site login autofill |
 | Money | Card payments need approval, then a 15-minute typing window; per-card monthly limits and a spend ledger | Add receipts from Gmail and budgets per category |
 | Trusted people | Implemented (D1): email-based requests, mutual trust, silent blocks, pause; agent-to-agent messages delivered on Telegram after approval | Let a trusted person's Yomi answer availability questions from Calendar without a human hop |
 | Observability | D1 `agent_runs` and privacy audit exist | Expose a redacted run timeline to the user |
-| Dashboard | Implemented; integrations, memory, schedules, billing and Command Center | Add Vault, Agents and Activity navigation using the same visual language |
+| Dashboard | Implemented: home, skills, characters, routines, vault, computer, conversation (streaming), memory, activity, apps, billing | Keep every page on the same visual language |
 
 ## Capability frontier and priority
 

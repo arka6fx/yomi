@@ -96,7 +96,7 @@ The non-secret values (`ENVIRONMENT`, `APP_URL`, `BACKEND_URL`, `WEB_ORIGIN`,
 | Cloudflare   | `CLOUDFLARE_API_TOKEN` (Workers AI, Browser Run)                                                                                                                                                        |
 | Connectors   | `GOOGLE_INTEGRATIONS_CLIENT_ID`, `GOOGLE_INTEGRATIONS_CLIENT_SECRET`, `COMPOSIO_API_KEY`, `COMPOSIO_CONNECTORS`, `COMPOSIO_WEBHOOK_SECRET`, `COMPOSIO_WEBHOOK_URL`, `COMPOSIO_<TOOLKIT>_AUTH_CONFIG_ID` |
 | Computer     | `COMPUTER_GATEWAY_URL`, `COMPUTER_GATEWAY_SECRET` (same value on the sandbox Worker)                                                                                                                    |
-| Payments     | `DODO_ENV`, `DODO_{LIVE,TEST}_API_KEY`, `DODO_{LIVE,TEST}_WEBHOOK_SECRET`, `DODO_{LIVE,TEST}_PRODUCT_{PRO,MAX,CREDITS_85,CREDITS_250,CREDITS_750}`                                                      |
+| Payments     | `DODO_ENV`, `DODO_{LIVE,TEST}_API_KEY`, `DODO_{LIVE,TEST}_WEBHOOK_SECRET`, `DODO_{LIVE,TEST}_PRODUCT_PRO` (the retired `PRODUCT_MAX` and `PRODUCT_CREDITS_*` can be removed)                                                      |
 | Agent tuning | `AGENT_MAX_STEPS`, `AGENT_MAX_OUTPUT_TOKENS`                                                                                                                                                            |
 | Optional     | `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO`                                                               |
 

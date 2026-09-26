@@ -36,7 +36,8 @@ it always asks before it sends, books, pays, or deletes anything.
 | ✅ **Approvals**     | Anything irreversible becomes a preview with Approve and Reject buttons.       |
 | 🧠 **Memory**        | Remembers what matters to you. Yours to view, export, or delete.               |
 | ⏰ **Routines**      | Morning briefs, inbox follow-ups, and weekly resets delivered on schedule.     |
-| 🖥️ **Computer**      | A private cloud browser Yomi can drive while you watch.                        |
+| 🎭 **Characters**    | Text Gojo, Pikachu, Kratos and hundreds more, or make your own.                |
+| 🖥️ **Computer**      | A private cloud browser Yomi drives; take over for logins, OTPs, and captchas. |
 | 🔐 **Vault**         | Logins, cards, and addresses Yomi can use without ever seeing the raw secret.  |
 | ✉️ **Email address** | Your own Yomi inbox for sign-ups, bookings, and receipts.                      |
 
@@ -48,9 +49,9 @@ it always asks before it sends, books, pays, or deletes anything.
 
 <h3>🙋 I want to use Yomi</h3>
 
-Open [@yomi_assistant_bot](https://t.me/yomi_assistant_bot) and say hi. Connect
-your apps and manage everything else from the
-[dashboard](https://getyomi.in/dashboard).
+Open [@yomi_assistant_bot](https://t.me/yomi_assistant_bot) and say hi. There's no
+sign-up: your first message creates your account. Connect your apps and manage
+everything else from the [dashboard](https://getyomi.in/dashboard).
 
 Free forever, with unlimited chat. **[→ See plans](https://getyomi.in/pricing)**
 

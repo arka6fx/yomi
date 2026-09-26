@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import hmac
 import html
 import logging
 import re
@@ -369,10 +370,16 @@ async def set_reaction(chat_id: str | int, message_id: int, emoji: str) -> None:
         )
 
 
-def _telegram_request_authentic(request: Request) -> bool:
-    """Optional hardening: when a webhook secret is configured, Telegram must send it."""
+def _telegram_request_authentic(request: Request, token_in_url: bool = False) -> bool:
+    """Every update must prove it came from Telegram, or anyone could post fake
+    messages as any user. The proof is the webhook secret header; the older URL with
+    the bot token in its path is accepted only while no secret is configured.
+    Fails closed: with neither, the request is rejected."""
     secret = settings.telegram_webhook_secret
-    return not secret or request.headers.get("X-Telegram-Bot-Api-Secret-Token") == secret
+    if secret:
+        sent = request.headers.get("X-Telegram-Bot-Api-Secret-Token") or ""
+        return hmac.compare_digest(sent.encode(), secret.encode())
+    return token_in_url
 
 
 async def _resolve_yomi_user(
@@ -934,8 +941,9 @@ async def telegram_webhook_with_token(
     db_session: AsyncSession = Depends(get_db_session),
     d1: D1Backend | None = Depends(get_d1_backend),
 ):
-    if token != settings.telegram_bot_token:
+    bot_token = settings.telegram_bot_token
+    if not bot_token or not hmac.compare_digest(token.encode(), bot_token.encode()):
         raise HTTPException(status_code=404, detail="not found")
-    if not _telegram_request_authentic(request):
+    if not _telegram_request_authentic(request, token_in_url=True):
         raise HTTPException(status_code=403, detail="invalid secret token")
     return await _handle_update(await request.json(), db_session, d1)

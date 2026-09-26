@@ -112,8 +112,8 @@ export const DOCS_CONTENT: Record<string, () => React.ReactNode> = {
       <H2 id="start-here">start here</H2>
       <Steps
         items={[
-          ["Sign up", <>with Telegram, Google or GitHub. it&apos;s free.</>],
-          ["Open yomi", <>on Telegram and say hi.</>],
+          ["Say hi", <>to yomi on Telegram. that&apos;s it: your account is made for you, free.</>],
+          ["Open the dashboard", <>any time by signing in with Telegram.</>],
           ["Connect your apps", <>from the dashboard when you want yomi to use them.</>],
         ]}
       />
@@ -133,17 +133,18 @@ export const DOCS_CONTENT: Record<string, () => React.ReactNode> = {
 
   "getting-started": () => (
     <>
-      <H2 id="sign-up">sign up</H2>
+      <H2 id="sign-up">start on telegram</H2>
       <p>
-        go to <A href="/signup">getyomi.in/signup</A> and pick <B>Telegram</B>, <B>Google</B> or{" "}
-        <B>GitHub</B>. with Telegram, the page shows a 4-digit code and yomi messages you; tap
-        approve only if the code matches.
+        open <A href={TELEGRAM_BOT_URL}>@yomi_assistant_bot</A> and say hi. there&apos;s no form and
+        no code: your first message creates your free account.
       </p>
 
-      <H2 id="open-telegram">open yomi on telegram</H2>
+      <H2 id="open-telegram">the dashboard</H2>
       <p>
-        yomi is <A href={TELEGRAM_BOT_URL}>@yomi_assistant_bot</A>. if you signed up with Google or
-        GitHub, link Telegram from the dashboard: it gives you a link that connects the two.
+        sign in at <A href="/signup">getyomi.in</A> with <B>Telegram</B> to reach the same account:
+        the page shows a 4-digit code and yomi messages you; tap approve only if the code matches.
+        prefer Google or GitHub? sign in with that, then link Telegram from the dashboard and your
+        chats move over.
       </p>
 
       <H2 id="first-messages">your first messages</H2>
@@ -270,6 +271,11 @@ export const DOCS_CONTENT: Record<string, () => React.ReactNode> = {
         yomi has its own private cloud computer with Chrome. you can watch it live from the{" "}
         <A href="/dashboard?tab=computer">computer</A> tab. logins you make there stay saved for
         next time, and anything that submits or pays still asks you first.
+      </p>
+      <p>
+        when a site needs you (a password, an OTP, a captcha), yomi sends you a link: tap{" "}
+        <B>open my computer</B>, do that step yourself, and yomi carries on. buttons like{" "}
+        <B>place order</B>, <B>pay</B> or <B>book</B> never get pressed without your approve.
       </p>
     </>
   ),

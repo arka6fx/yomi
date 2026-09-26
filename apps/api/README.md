@@ -71,7 +71,7 @@ secrets are managed by hand. Everything is in the
 | ------------------------------------------- | -------------------------------------------------------- |
 | Telegram gateway, agent loop, approvals     | Production                                               |
 | Auth (Telegram sign-in, Google, GitHub)     | Production                                               |
-| Billing and credits (Dodo Payments)         | Production                                               |
+| Plans: Free and Pro (Dodo Payments)         | Production                                               |
 | Memory, RAG, routines, vault, email         | Production                                               |
 | Computer use (Browser Run, sandbox desktop) | Production                                               |
 | First-class connectors                      | Gmail, Calendar, Drive native; the rest through Composio |
