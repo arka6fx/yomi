@@ -20,6 +20,7 @@ import { StatusManager } from "@/components/dashboard/StatusManager"
 import { DASHBOARD_TABS, type DashboardTab } from "@/components/dashboard/tabs"
 import { TelegramCard } from "@/components/dashboard/TelegramCard"
 import { AppShell } from "@/components/dashboard/shell/AppShell"
+import { DashboardSkeleton } from "@/components/dashboard/shell/DashboardSkeleton"
 import { HomeView } from "@/components/dashboard/shell/HomeView"
 import { SkillsView } from "@/components/dashboard/shell/SkillsView"
 import { RoutinesView } from "@/components/dashboard/shell/RoutinesView"
@@ -576,7 +577,8 @@ function DashboardContent() {
     router.push("/")
   }
 
-  if (isPending || !session) return null
+  // Placeholders shaped like the dashboard, not a blank page, while the session loads.
+  if (isPending || !session) return <DashboardSkeleton />
 
   const currentPlanKey = sub?.plan ?? "explore"
   const currentPlanIdx = PLANS.findIndex((p) => p.key === currentPlanKey)

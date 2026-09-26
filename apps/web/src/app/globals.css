@@ -390,12 +390,17 @@
   .page-fade {
     animation: pageFade 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
+  /* a whole placeholder layout pulsing together */
+  .skel-group {
+    animation: skelPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
   @media (prefers-reduced-motion: reduce) {
     .skel,
     .skel::after,
     .shimmer,
     .rise,
-    .page-fade {
+    .page-fade,
+    .skel-group {
       animation: none;
     }
   }
