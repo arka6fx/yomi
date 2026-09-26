@@ -73,6 +73,33 @@ async def get_conversations(
     return {"conversations": conversations}
 
 
+@conversation_router.get("/shared")
+async def get_shared_conversation(
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    """The live thread Yomi is replying in (Telegram), recent turns oldest-first."""
+    from yomi.services.agent import sessions_d1
+
+    if d1 is None:
+        raise HTTPException(status_code=501, detail="Requires the D1 storage backend")
+    return {"history": await sessions_d1.load_shared_thread(d1, user.id)}
+
+
+@conversation_router.post("/shared/reset")
+async def reset_shared_conversation(
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    """Start fresh: the current thread moves to history and Yomi forgets its context."""
+    from yomi.services.agent import sessions_d1
+
+    if d1 is None:
+        raise HTTPException(status_code=501, detail="Requires the D1 storage backend")
+    await sessions_d1.close_sessions(d1, user.id)
+    return {"ok": True}
+
+
 @conversation_router.get("/{conversation_id}")
 async def get_conversation(
     conversation_id: str,

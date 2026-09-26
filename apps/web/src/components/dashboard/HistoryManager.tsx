@@ -14,6 +14,7 @@ type SessionCard = {
   platform: string | null
   lastMessageAt: string | null
   closedAt: string | null
+  active?: boolean
   lastMessage: { role: string; content: string } | null
 }
 
@@ -203,7 +204,7 @@ export function HistoryManager({ token }: { token: string }) {
             <p className="mx-auto mt-1 max-w-xs text-xs text-muted-foreground">
               {query
                 ? "Try a different search term."
-                : "Talk to Yomi on Telegram and past conversations show up here once they wrap up."}
+                : "Talk to Yomi on Telegram and your conversations show up here."}
             </p>
           </div>
         ) : (
@@ -222,8 +223,15 @@ export function HistoryManager({ token }: { token: string }) {
                       className="flex w-full items-start justify-between gap-3 bg-background/40 px-4 py-3.5 text-left transition-colors hover:bg-background/70"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-foreground">
-                          {session.title ?? "Untitled conversation"}
+                        <p className="flex items-center gap-2 truncate text-sm font-medium text-foreground">
+                          <span className="truncate">
+                            {session.title ?? "Untitled conversation"}
+                          </span>
+                          {session.active && (
+                            <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600">
+                              ongoing
+                            </span>
+                          )}
                         </p>
                         {session.lastMessage && (
                           <p className="mt-0.5 truncate text-xs text-muted-foreground">

@@ -576,13 +576,16 @@ async def _handle_update(
                 d1, "telegram", tg_user_id, chat_id
             )
             if user_id is not None:
-                await sessions_d1.clear_history(d1, user_id, "telegram", chat_id)
+                # Close rather than delete: the thread moves to the dashboard's history.
+                await sessions_d1.close_sessions(d1, user_id, "telegram", chat_id)
         else:
             from yomi.services.agent.sessions import _sessions
 
             if chat_id in _sessions:
                 del _sessions[chat_id]
-        await send_message(chat_id, "History cleared.")
+        await send_message(
+            chat_id, "Fresh start. The old chat is saved under history in your dashboard."
+        )
         return {"status": "ok"}
 
     row = await _resolve_yomi_user(db_session, tg_user_id, chat_id, d1)
