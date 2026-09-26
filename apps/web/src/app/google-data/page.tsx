@@ -18,11 +18,13 @@ export default function GoogleDataPage() {
   return (
     <SitePage>
       <div className="pt-10">
-        <Mascot pose="laptop" float className="mx-auto w-24 sm:w-28" />
+        <Mascot pose="laptop" float className="hero-in mx-auto w-24 sm:w-28" />
         {/* ── What is Yomi? ────────────────────────────────────────────────── */}
         <section id="about" className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-          <p className="eyebrow">about</p>
-          <h2 className="mt-3 text-4xl font-semibold sm:text-5xl">what is yomi?</h2>
+          <div data-reveal>
+            <p className="eyebrow">about</p>
+            <h2 className="mt-3 text-4xl font-semibold sm:text-5xl">what is yomi?</h2>
+          </div>
           <div className="mt-6 space-y-4 text-[15px] leading-relaxed text-muted-foreground">
             <p>
               Yomi is an AI productivity assistant that connects to the apps you already use so you
@@ -39,7 +41,7 @@ export default function GoogleDataPage() {
 
         {/* ── How Yomi Uses Google Data ─────────────────────────────────────── */}
         <section id="google-data" className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
-          <div className="mx-auto max-w-3xl">
+          <div data-reveal className="mx-auto max-w-3xl">
             <p className="eyebrow">Google Sign-In &amp; Data Policy</p>
             <h2 className="mt-3 text-4xl font-semibold sm:text-5xl">
               why yomi needs google sign-in
@@ -52,7 +54,10 @@ export default function GoogleDataPage() {
           </div>
 
           <div className="mx-auto mt-10 max-w-3xl space-y-5">
-            <div className="surface p-7 text-[15px] leading-relaxed text-muted-foreground">
+            <div
+              data-reveal
+              className="surface p-7 text-[15px] leading-relaxed text-muted-foreground"
+            >
               <p className="eyebrow mb-4">app purpose</p>
               <p>
                 Yomi is a personal AI assistant. It accesses your Google Drive, with your explicit
@@ -74,7 +79,10 @@ export default function GoogleDataPage() {
               </p>
             </div>
 
-            <div className="surface p-7 text-[15px] leading-relaxed text-muted-foreground">
+            <div
+              data-reveal
+              className="surface p-7 text-[15px] leading-relaxed text-muted-foreground"
+            >
               <p className="eyebrow mb-5">why google sign-in is required</p>
               <div className="space-y-5">
                 <p>
@@ -119,7 +127,10 @@ export default function GoogleDataPage() {
               </div>
             </div>
 
-            <div className="surface p-7 text-[15px] leading-relaxed text-muted-foreground">
+            <div
+              data-reveal
+              className="surface p-7 text-[15px] leading-relaxed text-muted-foreground"
+            >
               <p>
                 Yomi only accesses Google data after you explicitly authorize access through
                 Google&apos;s OAuth consent flow. You may revoke access at any time.
@@ -150,7 +161,7 @@ export default function GoogleDataPage() {
 
         {/* ── Data & Integrations transparency ─────────────────────────────── */}
         <section id="data-use" className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
-          <div className="mx-auto max-w-3xl">
+          <div data-reveal className="mx-auto max-w-3xl">
             <p className="eyebrow">Transparency</p>
             <h2 className="mt-3 text-4xl font-semibold sm:text-5xl">what yomi accesses, and why</h2>
             <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">
@@ -159,7 +170,7 @@ export default function GoogleDataPage() {
             </p>
           </div>
 
-          <div className="surface mx-auto mt-10 max-w-3xl overflow-hidden !p-0">
+          <div data-reveal className="surface mx-auto mt-10 max-w-3xl overflow-hidden !p-0">
             {[
               {
                 provider: "Google Drive",

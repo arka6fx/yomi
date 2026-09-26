@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { type CSSProperties, useCallback, useEffect, useRef, useState } from "react"
 import { Loader2, RefreshCw } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { BrandMark } from "@/components/BrandMark"
@@ -127,7 +127,7 @@ export function TelegramSignIn({ mode }: { mode: "signin" | "signup" }) {
           </div>
         ) : (
           // decorative preview of a chat with yomi
-          <div aria-hidden className="mt-10 flex flex-1 flex-col items-center">
+          <div aria-hidden className="hero-in mt-10 flex flex-1 flex-col items-center">
             <Mascot pose="waving" float className="w-20" />
             <p className="mt-1.5 text-xs font-semibold text-muted-foreground">yomi</p>
             <div className="mt-4 flex w-full justify-center">
@@ -136,7 +136,10 @@ export function TelegramSignIn({ mode }: { mode: "signin" | "signup" }) {
           </div>
         )}
 
-        <div className="mt-10 text-center">
+        <div
+          className="hero-in mt-10 text-center"
+          style={{ "--hero-delay": "0.15s" } as CSSProperties}
+        >
           <h1
             aria-live="polite"
             className="text-3xl font-semibold leading-tight tracking-[-0.03em]"

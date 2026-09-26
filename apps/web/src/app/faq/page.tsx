@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import type { CSSProperties } from "react"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 import { PageIntro, SitePage } from "@/components/SitePage"
@@ -136,10 +137,17 @@ export default function FaqPage() {
 
         {SECTIONS.map((section) => (
           <div key={section.title} className="mt-16">
-            <h2 className="text-3xl font-semibold sm:text-4xl">{section.title}</h2>
+            <h2 data-reveal className="text-3xl font-semibold sm:text-4xl">
+              {section.title}
+            </h2>
             <div className="mt-6 divide-y divide-foreground/10 border-y border-foreground/10">
-              {section.items.map((item) => (
-                <details key={item.q} className="group">
+              {section.items.map((item, index) => (
+                <details
+                  key={item.q}
+                  data-reveal
+                  style={{ "--reveal-delay": `${index * 60}ms` } as CSSProperties}
+                  className="group"
+                >
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-6 text-[17px] font-medium [&::-webkit-details-marker]:hidden">
                     {item.q}
                     <Plus

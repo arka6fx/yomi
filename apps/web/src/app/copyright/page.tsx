@@ -16,11 +16,13 @@ export default function CopyrightPage() {
     <SitePage>
       <div className="mx-auto max-w-3xl px-6 pb-24 pt-16">
         <Mascot pose="thinking" float className="float-right -mt-2 ml-4 w-20 sm:w-28" />
-        <p className="eyebrow mb-4">Legal</p>
-        <h1 className="mb-3 text-5xl font-semibold tracking-[-0.04em] text-foreground sm:text-6xl">
+        <p className="hero-in eyebrow mb-4">Legal</p>
+        <h1 className="hero-in mb-3 text-5xl font-semibold tracking-[-0.04em] text-foreground sm:text-6xl">
           Copyright and takedowns
         </h1>
-        <p className="mb-16 text-sm text-muted-foreground/90">Last updated: September 2026</p>
+        <p className="hero-in mb-16 text-sm text-muted-foreground/90">
+          Last updated: September 2026
+        </p>
 
         <div className="space-y-10 text-sm leading-7 text-muted-foreground">
           <Section title="Our approach">
@@ -81,7 +83,7 @@ export default function CopyrightPage() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-3">
+    <div data-reveal className="space-y-3">
       <h2 className="text-2xl font-semibold text-foreground">{title}</h2>
       <div className="space-y-3 [&_a]:text-primary [&_a]:transition-colors [&_a]:hover:text-foreground [&_li]:relative [&_li]:pl-4 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-xs [&_li]:before:text-primary [&_li]:before:content-['›'] [&_ul]:list-none [&_ul]:space-y-1.5">
         {children}
