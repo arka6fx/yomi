@@ -477,6 +477,12 @@ export function ConversationManager({ token }: { token: string }) {
   }
 
   const last = messages[messages.length - 1]
+  // The chat library adds the reply's message before any words arrive (and a reply can
+  // end up empty). Never draw a bubble with nothing in it: the "thinking" row covers
+  // that wait, and neighbours skip it when working out runs and timestamps.
+  const visible = messages.filter(
+    (m) => m.role === "user" || textOf(m).length > 0 || photosOf(m).length > 0,
+  )
   const liveText = status === "streaming" && last?.role === "assistant" ? textOf(last) : ""
   const shown = useSmoothText(liveText)
 
@@ -610,27 +616,33 @@ export function ConversationManager({ token }: { token: string }) {
       : { opacity: 0, y: 14, scale: 0.96, filter: "blur(6px)" as const }
 
   return (
-    <section className="space-y-6 pt-6">
-      <PageHeader
-        title="conversation"
-        subtitle="one chat with yomi, here and on telegram. send photos or voice notes too."
-        actions={
-          messages.length > 0 && (
-            <button
-              onClick={handleReset}
-              disabled={resetting || busy}
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition-colors hover:text-destructive disabled:opacity-50"
-            >
-              {resetting ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
-              {confirmReset ? "Start fresh?" : "Start fresh"}
-            </button>
-          )
-        }
-      />
+    <section className="space-y-6 pt-1 sm:pt-6">
+      <div className="hidden sm:block">
+        <PageHeader
+          title="conversation"
+          subtitle="one chat with yomi, here and on telegram. send photos or voice notes too."
+          actions={
+            messages.length > 0 && (
+              <button
+                onClick={handleReset}
+                disabled={resetting || busy}
+                className="flex shrink-0 items-center gap-1.5 rounded-full bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition-colors hover:text-destructive disabled:opacity-50"
+              >
+                {resetting ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <RotateCcw size={12} />
+                )}
+                {confirmReset ? "Start fresh?" : "Start fresh"}
+              </button>
+            )
+          }
+        />
+      </div>
       <div
         className={cn(
           SURFACE,
-          "relative flex h-[calc(100svh-16.5rem)] min-h-[460px] flex-col overflow-hidden",
+          "relative flex h-[calc(100svh-9.5rem)] min-h-[420px] flex-col overflow-hidden rounded-[1.5rem] sm:h-[calc(100svh-16.5rem)] sm:min-h-[460px] sm:rounded-[1.75rem]",
         )}
         onDragOver={(e) => {
           if ([...e.dataTransfer.types].includes("Files")) {
@@ -647,7 +659,7 @@ export function ConversationManager({ token }: { token: string }) {
           if (e.dataTransfer.files.length) void addPhotos(e.dataTransfer.files)
         }}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3 sm:px-6">
+        <div className="flex items-center justify-between gap-3 border-b border-border/60 px-3.5 py-2.5 sm:px-6 sm:py-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="relative">
               <Avatar persona={persona} size={40} />
@@ -678,14 +690,38 @@ export function ConversationManager({ token }: { token: string }) {
               </AnimatePresence>
             </div>
           </div>
-          <a
-            href={TELEGRAM_BOT_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden shrink-0 items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted/70 sm:inline-flex"
-          >
-            <Send size={12} /> open in telegram
-          </a>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <a
+              href={TELEGRAM_BOT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="open in telegram"
+              className="grid size-9 place-items-center rounded-full bg-muted text-foreground transition-colors hover:bg-muted/70 sm:flex sm:size-auto sm:items-center sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-xs sm:font-semibold"
+            >
+              <Send size={14} className="sm:size-3" />
+              <span className="hidden sm:inline">open in telegram</span>
+            </a>
+            {messages.length > 0 && (
+              <button
+                type="button"
+                onClick={handleReset}
+                disabled={resetting || busy}
+                aria-label={confirmReset ? "tap again to start fresh" : "start fresh"}
+                className={cn(
+                  "grid h-9 place-items-center rounded-full bg-muted text-foreground transition-all disabled:opacity-50 sm:hidden",
+                  confirmReset ? "px-3 text-xs font-semibold text-destructive" : "w-9",
+                )}
+              >
+                {resetting ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : confirmReset ? (
+                  "start fresh?"
+                ) : (
+                  <RotateCcw size={14} />
+                )}
+              </button>
+            )}
+          </div>
         </div>
 
         <AnimatePresence>
@@ -762,11 +798,11 @@ export function ConversationManager({ token }: { token: string }) {
             </div>
           ) : (
             <ul>
-              {messages.map((message, i) => {
+              {visible.map((message, i) => {
                 const stamp = stampOf(message)
                 const day = dayLabel(stamp)
-                const prev = messages[i - 1]
-                const next = messages[i + 1]
+                const prev = visible[i - 1]
+                const next = visible[i + 1]
                 const showDay = day && day !== dayLabel(prev ? stampOf(prev) : undefined)
                 const mine = message.role === "user"
                 // Consecutive messages from one side read as one run: tight spacing,
@@ -776,11 +812,10 @@ export function ConversationManager({ token }: { token: string }) {
                   !next ||
                   next.role !== message.role ||
                   (dayLabel(stampOf(next)) || day) !== day ||
-                  (i === messages.length - 2 && status === "streaming")
-                const streamingThis = !mine && i === messages.length - 1 && status === "streaming"
+                  (next === last && status === "streaming")
+                const streamingThis = !mine && message === last && status === "streaming"
                 const text = textOf(message)
                 const photos = photosOf(message)
-                if (!mine && !text && streamingThis) return null
                 return (
                   <Fragment key={message.id}>
                     {showDay && (
@@ -804,13 +839,13 @@ export function ConversationManager({ token }: { token: string }) {
                       )}
                     >
                       {!mine && (
-                        <div className="w-8 shrink-0 self-end pb-6">
+                        <div className="hidden w-8 shrink-0 self-end pb-6 sm:block">
                           {endsRun && <Avatar persona={persona} size={32} />}
                         </div>
                       )}
                       <div
                         className={cn(
-                          "flex min-w-0 max-w-[85%] flex-col sm:max-w-[72%]",
+                          "flex min-w-0 max-w-[88%] flex-col sm:max-w-[72%]",
                           mine ? "items-end" : "items-start",
                         )}
                       >
@@ -889,7 +924,9 @@ export function ConversationManager({ token }: { token: string }) {
                     style={{ transformOrigin: "bottom left" }}
                     className="mt-4 flex items-end gap-2.5"
                   >
-                    <Avatar persona={persona} size={32} />
+                    <span className="hidden sm:block">
+                      <Avatar persona={persona} size={32} />
+                    </span>
                     <div className={cn("px-4 py-3 text-sm", ASSISTANT_BUBBLE)}>
                       <Status label={toolStatus} />
                     </div>
@@ -910,7 +947,7 @@ export function ConversationManager({ token }: { token: string }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.8 }}
               transition={POP}
-              className="absolute bottom-28 left-1/2 z-10 grid size-9 -translate-x-1/2 place-items-center rounded-full bg-card text-foreground shadow-[0_6px_20px_rgba(20,40,80,0.18)] ring-1 ring-border"
+              className="absolute bottom-24 left-1/2 z-10 sm:bottom-28 grid size-9 -translate-x-1/2 place-items-center rounded-full bg-card text-foreground shadow-[0_6px_20px_rgba(20,40,80,0.18)] ring-1 ring-border"
             >
               <ArrowDown size={16} />
             </motion.button>
@@ -923,7 +960,7 @@ export function ConversationManager({ token }: { token: string }) {
             if (recording) void toggleMic()
             else send(draft)
           }}
-          className="p-3 pt-2 sm:p-4 sm:pt-2"
+          className="p-2.5 pt-2 sm:p-4 sm:pt-2"
         >
           <AnimatePresence>
             {errorText && (
@@ -1090,7 +1127,7 @@ export function ConversationManager({ token }: { token: string }) {
                           : `message ${persona.name.toLowerCase()}`
                     }
                     aria-label={`message ${persona.name}`}
-                    className="max-h-40 min-h-9 flex-1 resize-none bg-transparent px-1 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                    className="max-h-40 min-h-9 flex-1 resize-none bg-transparent px-1 py-1.5 text-base text-foreground outline-none placeholder:text-muted-foreground sm:text-sm"
                   />
                 )}
               </AnimatePresence>
