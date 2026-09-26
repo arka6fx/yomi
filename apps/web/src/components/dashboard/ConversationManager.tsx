@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { Loader2, RotateCcw } from "lucide-react"
 import { PageHeader, SURFACE } from "@/components/dashboard/shell/ui"
 import { cn } from "@/lib/utils"
+import { ListSkeleton } from "@/components/dashboard/shell/motion"
 
 type Turn = { role: "user" | "assistant" | "system"; content: string }
 
@@ -84,10 +85,7 @@ export function ConversationManager({ token }: { token: string }) {
         {error && <p className="mb-3 text-xs text-destructive">{error}</p>}
 
         {loading ? (
-          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-            <Loader2 size={14} className="animate-spin" />
-            Loading your conversation…
-          </div>
+          <ListSkeleton label="loading your conversation" />
         ) : history.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/70 bg-background/40 px-5 py-10 text-center">
             <p className="text-sm font-medium text-foreground">No conversation yet</p>

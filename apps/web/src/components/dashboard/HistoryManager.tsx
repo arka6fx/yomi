@@ -1,10 +1,11 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { ArrowLeft, Loader2, Search } from "lucide-react"
+import { ArrowLeft, Search } from "lucide-react"
 import { PageHeader, SURFACE } from "@/components/dashboard/shell/ui"
 import { cn } from "@/lib/utils"
 import { relativePast, truncate } from "@/lib/format"
+import { ListSkeleton } from "@/components/dashboard/shell/motion"
 
 type SessionCard = {
   id: string
@@ -128,10 +129,7 @@ export function HistoryManager({ token }: { token: string }) {
         </button>
 
         {detailLoading ? (
-          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-            <Loader2 size={14} className="animate-spin" />
-            Loading conversation…
-          </div>
+          <ListSkeleton label="loading conversation" />
         ) : detailError ? (
           <p className="text-xs text-destructive">{detailError}</p>
         ) : detail ? (
@@ -192,10 +190,7 @@ export function HistoryManager({ token }: { token: string }) {
         {error && <p className="mb-3 text-xs text-destructive">{error}</p>}
 
         {loading ? (
-          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-            <Loader2 size={14} className="animate-spin" />
-            Loading your history…
-          </div>
+          <ListSkeleton label="loading your history" />
         ) : sessions.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/70 bg-background/40 px-5 py-10 text-center">
             <p className="text-sm font-medium text-foreground">

@@ -1,9 +1,10 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Check, Copy, Loader2 } from "lucide-react"
+import { Check, Copy } from "lucide-react"
 import { PageHeader, SURFACE } from "@/components/dashboard/shell/ui"
 import { cn } from "@/lib/utils"
+import { CardSkeleton } from "@/components/dashboard/shell/motion"
 
 type ReferralEvent = {
   id: string
@@ -63,11 +64,7 @@ export function ReferralsManager({ token }: { token: string }) {
   }
 
   if (loading) {
-    return (
-      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 flex justify-center">
-        <Loader2 size={20} className="animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <CardSkeleton label="loading referrals" />
   }
 
   if (error || !stats) {

@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { PageHeader, SURFACE } from "@/components/dashboard/shell/ui"
 import { cn } from "@/lib/utils"
+import { ListSkeleton } from "@/components/dashboard/shell/motion"
 
 type CheckLevel = "ok" | "warn" | "down"
 type Check = { id: string; label: string; level: CheckLevel; detail: string }
@@ -118,10 +119,7 @@ export function StatusManager({ token }: { token: string }) {
         {error && <p className="mb-4 text-xs text-destructive">{error}</p>}
 
         {loading && !data ? (
-          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-            <Loader2 size={14} className="animate-spin" />
-            Loading status…
-          </div>
+          <ListSkeleton label="loading status" />
         ) : data ? (
           <div className="space-y-5">
             {/* Quick stat tiles */}

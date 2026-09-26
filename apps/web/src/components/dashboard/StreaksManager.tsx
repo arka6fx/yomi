@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Crown, Cuboid, Loader2, Trophy, User } from "lucide-react"
 import type { DashboardTab } from "./tabs"
+import { CardSkeleton } from "@/components/dashboard/shell/motion"
 
 type StreakStats = {
   currentStreak: number
@@ -181,11 +182,7 @@ export function StreaksManager({
   }
 
   if (loading) {
-    return (
-      <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-5 sm:p-6 flex justify-center">
-        <Loader2 size={20} className="animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <CardSkeleton label="loading streaks" />
   }
 
   if (error || !stats || !leaderboard) {

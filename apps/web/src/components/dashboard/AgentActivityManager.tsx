@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { CheckCircle2, ChevronDown, Clock3, Loader2, RefreshCw, XCircle } from "lucide-react"
 import { PageHeader, SURFACE } from "@/components/dashboard/shell/ui"
 import { cn } from "@/lib/utils"
+import { ListSkeleton } from "@/components/dashboard/shell/motion"
 
 type Run = {
   id: string
@@ -84,9 +85,7 @@ export function AgentActivityManager({ token }: { token: string }) {
       />
       <div className={cn(SURFACE, "p-5 sm:p-6")}>
         {loading ? (
-          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-            <Loader2 size={15} className="animate-spin" /> Loading activity…
-          </div>
+          <ListSkeleton label="loading activity" />
         ) : runs.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
             No agent runs yet. Your first Telegram task will appear here.

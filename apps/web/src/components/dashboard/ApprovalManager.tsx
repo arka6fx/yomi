@@ -1,9 +1,10 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { AlertTriangle, Check, Loader2, RefreshCw, X } from "lucide-react"
+import { AlertTriangle, Check, RefreshCw, X } from "lucide-react"
 import { PageHeader, SURFACE } from "@/components/dashboard/shell/ui"
 import { cn } from "@/lib/utils"
+import { ListSkeleton } from "@/components/dashboard/shell/motion"
 
 type Action = {
   id: string
@@ -83,9 +84,7 @@ export function ApprovalManager({ token }: { token: string }) {
       <div className={cn(SURFACE, "p-5 sm:p-6")}>
         {error && <p className="mb-3 text-xs text-destructive">{error}</p>}
         {loading ? (
-          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-            <Loader2 size={15} className="animate-spin" /> Loading approvals…
-          </div>
+          <ListSkeleton label="loading approvals" />
         ) : actions.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center">
             <Check size={18} className="mx-auto text-emerald-400" />

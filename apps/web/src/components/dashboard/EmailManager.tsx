@@ -1,9 +1,10 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Check, Copy, Loader2, Mail, Receipt } from "lucide-react"
+import { Check, Copy, Mail, Receipt } from "lucide-react"
 import { PageHeader, SURFACE } from "@/components/dashboard/shell/ui"
 import { cn } from "@/lib/utils"
+import { ListSkeleton } from "@/components/dashboard/shell/motion"
 
 type InboxEmail = {
   id: string
@@ -72,9 +73,7 @@ export function EmailManager({ token }: { token: string }) {
         {error && <p className="mt-3 text-xs text-destructive">{error}</p>}
 
         {loading ? (
-          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-            <Loader2 size={15} className="animate-spin" /> Loading…
-          </div>
+          <ListSkeleton label="loading your inbox" />
         ) : (
           <>
             <div className="mt-5 flex items-center gap-3 rounded-xl border border-border p-4">

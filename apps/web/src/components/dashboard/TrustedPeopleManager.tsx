@@ -1,9 +1,10 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Loader2, UserPlus } from "lucide-react"
+import { UserPlus } from "lucide-react"
 import { PageHeader, SURFACE } from "@/components/dashboard/shell/ui"
 import { cn } from "@/lib/utils"
+import { ListSkeleton } from "@/components/dashboard/shell/motion"
 
 type Person = {
   id: string
@@ -142,9 +143,7 @@ export function TrustedPeopleManager({ token }: { token: string }) {
         {notice && <p className="mt-3 text-xs text-emerald-400">{notice}</p>}
 
         {loading ? (
-          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-            <Loader2 size={15} className="animate-spin" /> Loading…
-          </div>
+          <ListSkeleton label="loading trusted people" />
         ) : data.paused ? (
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4">
             <div>
