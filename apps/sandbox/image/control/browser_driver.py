@@ -30,11 +30,13 @@ _SNAPSHOT_JS = r"""
     '[role=checkbox], [role=radio], [role=tab], [role=menuitem], [role=option], [role=combobox],' +
     '[role=switch], [contenteditable=""], [contenteditable=true], [onclick], [tabindex]:not([tabindex="-1"])';
   const seen = new Set();
+  const dupes = new Set();
   const out = [];
   const visible = (el) => {
     const r = el.getBoundingClientRect();
     if (r.width < 2 || r.height < 2) return false;
-    if (r.bottom < 0 || r.top > innerHeight * 3) return false;
+    // What a person sees: this screen plus a little below. Scroll for more.
+    if (r.bottom < -20 || r.top > innerHeight * 1.6) return false;
     const s = getComputedStyle(el);
     return s.visibility !== 'hidden' && s.display !== 'none' && Number(s.opacity) > 0.05;
   };
@@ -55,18 +57,27 @@ _SNAPSHOT_JS = r"""
     if (seen.has(el) || !visible(el)) continue;
     if (el.closest('[data-yomi-ref]') && el.tagName !== 'INPUT') continue;
     seen.add(el);
+    // An image link and a title link to the same product are one thing to a person.
+    const href = el.tagName === 'A' ? el.getAttribute('href') : null;
+    const name0 = label(el);
+    if (href) {
+      if (dupes.has(href)) continue;
+      dupes.add(href);
+    }
     const ref = String(out.length + 1);
     el.setAttribute('data-yomi-ref', ref);
     const tag = el.tagName.toLowerCase();
     const role = el.getAttribute('role') || (tag === 'a' ? 'link' : tag === 'input' ? (el.type || 'text') : tag);
-    const item = { ref, role, name: label(el) };
+    const item = { ref, role, name: name0 };
     if (tag === 'input' || tag === 'textarea') item.value = String(el.value || '').slice(0, 60);
     if (el.type === 'checkbox' || el.type === 'radio') item.checked = el.checked;
     if (el.disabled) item.disabled = true;
     if (tag === 'select') item.options = [...el.options].slice(0, 12).map(o => o.text.trim());
     out.push(item);
   }
-  const text = (document.body ? document.body.innerText : '').replace(/\n{3,}/g, '\n\n');
+  // Main content first: menus and footers are noise for reading a page.
+  const main = document.querySelector('main, [role=main], #search, #content, #main') || document.body;
+  const text = (main ? main.innerText : '').replace(/\n{3,}/g, '\n\n');
   return { elements: out, text };
 }
 """
