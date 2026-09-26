@@ -178,7 +178,9 @@ async def list_sessions(
         "(SELECT m.content FROM agent_messages m WHERE m.session_id = s.id "
         " AND m.role = 'user' ORDER BY m.rowid LIMIT 1) AS first_user "
         f"FROM agent_sessions s WHERE {' AND '.join(where)} "
-        "ORDER BY s.last_message_at DESC LIMIT ?",
+        # rowid breaks ties: two threads touched in the same instant (a coarse clock,
+        # or a reset followed straight away by a new message) still list newest first.
+        "ORDER BY s.last_message_at DESC, s.rowid DESC LIMIT ?",
         params,
     )
     return [
