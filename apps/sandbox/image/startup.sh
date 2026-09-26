@@ -16,7 +16,7 @@ openbox >/tmp/openbox.log 2>&1 &
 x11vnc -display :99 -forever -shared -nopw -listen localhost -xkb -rfbport 5900 \
   >/tmp/x11vnc.log 2>&1 &
 # Live view / take-over: the gateway bridges the dashboard's websocket to here.
-websockify 6080 localhost:5900 >/tmp/websockify.log 2>&1 &
+python3 -m websockify 6080 localhost:5900 >/tmp/websockify.log 2>&1 &
 
 mkdir -p /home/yomi
 
