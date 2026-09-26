@@ -1,8 +1,23 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Activity, BadgeCheck, Brain, Check, Flame, Mail, Wallet, Zap } from "lucide-react"
+import {
+  AlertTriangle,
+  ArrowRight,
+  BadgeCheck,
+  Brain,
+  Check,
+  Compass,
+  Flame,
+  Gift,
+  Mail,
+  MessageCircle,
+  Plus,
+  Wallet,
+  Zap,
+} from "lucide-react"
 import type { DashboardTab } from "@/components/dashboard/tabs"
+import { TELEGRAM_BOT_URL } from "@/lib/site"
 import { cn } from "@/lib/utils"
 
 type Geo = { city: string | null; weather: { tempC: number; code: number } | null }
@@ -12,6 +27,23 @@ type Payments = {
   monthTotals: Record<string, number>
   receipts?: { amount: number; currency: string; date: string }[]
 }
+type HomeCharacter = {
+  id: string
+  name: string
+  emoji: string
+  color: string
+  tagline: string
+  imageUrl: string
+}
+type Characters = { mine: HomeCharacter[]; saved: HomeCharacter[]; active: HomeCharacter | null }
+type HomeSkill = {
+  id: string
+  name: string
+  emoji: string
+  description: string
+  added: boolean
+}
+type Referral = { code: string; count: number; proDaysPerInvite: number }
 
 type HomeData = {
   geo: Geo | null
@@ -22,6 +54,9 @@ type HomeData = {
   emails: InboxEmail[] | null
   vaultItems: number | null
   payments: Payments | null
+  characters: Characters | null
+  skills: HomeSkill[] | null
+  referral: Referral | null
 }
 
 const EMPTY: HomeData = {
@@ -33,9 +68,16 @@ const EMPTY: HomeData = {
   emails: null,
   vaultItems: null,
   payments: null,
+  characters: null,
+  skills: null,
+  referral: null,
 }
 
 const HIDE_SETUP_KEY = "yomi.home.hideSetup"
+const CARD =
+  "rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)]"
+const DASHED =
+  "grid place-items-center rounded-[1.5rem] border-2 border-dashed border-foreground/15 text-sm font-semibold text-foreground/70 transition hover:border-[#2b8fff]/50 hover:text-foreground"
 
 function greeting(hour: number) {
   if (hour < 5) return "still up?"
@@ -95,17 +137,20 @@ export function HomeView({
   userName,
   connectedCount,
   telegramLinked,
+  unhealthyCount = 0,
   onNavigate,
 }: {
   token: string
   userName?: string | null
   connectedCount: number
   telegramLinked: boolean
+  unhealthyCount?: number
   onNavigate: (tab: DashboardTab) => void
 }) {
   const [data, setData] = useState<HomeData>(EMPTY)
   const [now, setNow] = useState<Date | null>(null)
   const [hideSetup, setHideSetup] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     setNow(new Date())
@@ -135,6 +180,11 @@ export function HomeView({
       patch({ vaultItems: r?.items?.length ?? null }),
     )
     void getJson<Payments>("/api/vault/payments", token).then((payments) => patch({ payments }))
+    void getJson<Characters>("/api/characters", token).then((characters) => patch({ characters }))
+    void getJson<{ skills?: HomeSkill[] }>("/api/skills", token).then((r) =>
+      patch({ skills: r?.skills ?? null }),
+    )
+    void getJson<Referral>("/api/referrals/me", token).then((referral) => patch({ referral }))
   }, [token])
 
   function hide() {
@@ -143,6 +193,19 @@ export function HomeView({
       localStorage.setItem(HIDE_SETUP_KEY, "1")
     } catch {
       // fine: it just reappears next visit
+    }
+  }
+
+  async function copyInvite() {
+    if (!data.referral) return
+    const link = `${window.location.origin}/r/${data.referral.code}`
+    try {
+      if (navigator.share) await navigator.share({ title: "yomi", url: link })
+      else await navigator.clipboard.writeText(link)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // the share sheet was dismissed
     }
   }
 
@@ -181,17 +244,20 @@ export function HomeView({
     else spent.push([receipt.currency, receipt.amount])
   }
 
-  const card =
-    "rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)]"
+  const characters = [...(data.characters?.mine ?? []), ...(data.characters?.saved ?? [])]
+  const active = data.characters?.active ?? null
+  const mySkills = (data.skills ?? []).filter((s) => s.added)
+  // Nothing added yet: suggest a couple instead of an empty row.
+  const shownSkills = mySkills.length ? mySkills.slice(0, 3) : (data.skills ?? []).slice(0, 2)
 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-3 pt-6">
         <div>
-          <h1 className="text-5xl font-bold tracking-tight text-foreground sm:text-6xl">
+          <h1 className="text-5xl font-bold tracking-tight text-white drop-shadow-[0_2px_12px_rgba(14,116,184,0.35)] sm:text-6xl">
             {now ? greeting(now.getHours()) : "hello."}
           </h1>
-          <p className="mt-2 text-sm font-medium text-foreground/60">
+          <p className="mt-2 text-sm font-semibold text-white/85 drop-shadow-[0_1px_6px_rgba(14,116,184,0.35)]">
             {now
               ?.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })
               .toLowerCase()}
@@ -215,8 +281,19 @@ export function HomeView({
         )}
       </div>
 
+      {unhealthyCount > 0 && (
+        <button
+          onClick={() => onNavigate("integrations")}
+          className={cn(CARD, "flex w-full items-center gap-2 p-4 text-left text-sm font-medium")}
+        >
+          <AlertTriangle size={15} className="shrink-0 text-amber-500" />
+          {unhealthyCount} connected app{unhealthyCount === 1 ? " needs" : "s need"} reconnecting
+          <ArrowRight size={14} className="ml-auto text-muted-foreground" />
+        </button>
+      )}
+
       {!hideSetup && doneCount < steps.length && (
-        <section className={cn(card, "p-6")} aria-labelledby="setup-heading">
+        <section className={cn(CARD, "p-6")} aria-labelledby="setup-heading">
           <div className="flex items-center justify-between">
             <h2 id="setup-heading" className="text-sm font-semibold">
               set up yomi
@@ -231,6 +308,7 @@ export function HomeView({
           <div
             className="mt-4 h-1.5 overflow-hidden rounded-full bg-muted"
             role="progressbar"
+            aria-label="setup progress"
             aria-valuenow={doneCount}
             aria-valuemin={0}
             aria-valuemax={steps.length}
@@ -244,7 +322,13 @@ export function HomeView({
             {steps.map((step) => (
               <li key={step.label}>
                 <button
-                  onClick={() => onNavigate(step.tab)}
+                  onClick={() =>
+                    step.tab === "home"
+                      ? document
+                          .getElementById("link-telegram")
+                          ?.scrollIntoView({ behavior: "smooth" })
+                      : onNavigate(step.tab)
+                  }
                   className="flex items-start gap-2.5 text-left"
                 >
                   <span
@@ -279,11 +363,118 @@ export function HomeView({
         </section>
       )}
 
-      <section aria-labelledby="today-heading">
-        <h2 id="today-heading" className="mb-3 text-xl font-bold tracking-tight">
-          today
-        </h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+      <section
+        aria-label="who yomi is right now"
+        className={cn(CARD, "flex items-center gap-4 p-5")}
+      >
+        {active ? (
+          <Portrait character={active} className="size-14 rounded-2xl" />
+        ) : (
+          <img src="/brand-mark-128.png" alt="" className="size-14 rounded-2xl" />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold text-muted-foreground">who yomi is right now</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-xl font-bold">{active ? active.name : "yomi"}</h2>
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
+                telegramLinked ? "bg-sky-500/10 text-sky-600" : "bg-muted text-muted-foreground",
+              )}
+            >
+              <span
+                className={cn(
+                  "size-1.5 rounded-full",
+                  telegramLinked ? "bg-sky-500" : "bg-muted-foreground",
+                )}
+              />
+              {telegramLinked ? "on telegram" : "telegram not linked"}
+            </span>
+          </div>
+          <p className="truncate text-sm text-muted-foreground">
+            {active
+              ? "they answer your texts. say “back to yomi” any time."
+              : "the usual yomi. tap a character below to switch who answers your texts."}
+          </p>
+        </div>
+      </section>
+
+      <Row
+        title="your characters"
+        action={{ label: "discover", icon: Compass, onClick: () => onNavigate("characters") }}
+      >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {characters.slice(0, 4).map((c) => (
+            <button
+              key={c.id}
+              onClick={() => onNavigate("characters")}
+              className={cn(CARD, "overflow-hidden text-left transition hover:-translate-y-0.5")}
+            >
+              <Portrait character={c} className="aspect-[4/5] w-full" />
+              <div className="p-3">
+                <p className="truncate text-sm font-bold">{c.name}</p>
+                <p className="line-clamp-2 text-xs text-muted-foreground">{c.tagline}</p>
+              </div>
+            </button>
+          ))}
+          <button onClick={() => onNavigate("characters")} className={cn(DASHED, "min-h-[220px]")}>
+            <span className="flex flex-col items-center gap-2">
+              <span className="grid size-10 place-items-center rounded-full bg-card shadow-sm">
+                <Plus size={16} />
+              </span>
+              {characters.length ? "make one" : "pick a character"}
+            </span>
+          </button>
+        </div>
+      </Row>
+
+      <Row
+        title={mySkills.length ? "your skills" : "try a skill"}
+        action={{ label: "browse all", icon: ArrowRight, onClick: () => onNavigate("skills") }}
+      >
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {shownSkills.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => onNavigate("skills")}
+              className={cn(CARD, "flex items-start gap-3 p-4 text-left")}
+            >
+              <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-muted text-xl">
+                {s.emoji}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-bold">{s.name}</span>
+                <span className="line-clamp-2 text-xs text-muted-foreground">{s.description}</span>
+                <span
+                  className={cn(
+                    "mt-1 inline-flex items-center gap-1 text-xs font-semibold",
+                    s.added ? "text-[#2b8fff]" : "text-muted-foreground",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "size-1.5 rounded-full",
+                      s.added ? "bg-[#2b8fff]" : "bg-muted-foreground",
+                    )}
+                  />
+                  {s.added ? "on" : "not added"}
+                </span>
+              </span>
+            </button>
+          ))}
+          <button onClick={() => onNavigate("skills")} className={cn(DASHED, "min-h-[92px]")}>
+            <span className="flex items-center gap-2">
+              <span className="grid size-8 place-items-center rounded-full bg-card shadow-sm">
+                <Plus size={14} />
+              </span>
+              add a skill
+            </span>
+          </button>
+        </div>
+      </Row>
+
+      <Row title="today">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Tile icon={Zap} title="routines" onClick={() => onNavigate("schedules")}>
             {nextRoutine?.nextRunAt ? (
               <>
@@ -297,28 +488,120 @@ export function HomeView({
               </>
             )}
           </Tile>
-          <Tile icon={BadgeCheck} title="approvals" onClick={() => onNavigate("approvals")}>
-            <Big>{data.approvals ?? "–"}</Big>
-            <Small>{data.approvals ? "waiting for your ok" : "nothing waiting"}</Small>
-          </Tile>
           <Tile icon={Brain} title="memory" onClick={() => onNavigate("memory")}>
             <Big>{data.memories ?? "–"}</Big>
             <Small>{data.memories === 1 ? "thing yomi knows" : "things yomi knows"}</Small>
           </Tile>
-          <Tile icon={Mail} title="inbox" onClick={() => onNavigate("email")}>
-            <Big>{unread}</Big>
-            <Small>{unread === 1 ? "unread email" : "unread emails"}</Small>
+          <Tile icon={Gift} title="invite a friend" onClick={() => void copyInvite()}>
+            <span className="block text-sm font-bold leading-snug">
+              {data.referral
+                ? `${data.referral.proDaysPerInvite} days of pro for you both`
+                : "share yomi with a friend"}
+            </span>
+            <Small>
+              {copied
+                ? "link copied"
+                : data.referral?.count
+                  ? `${data.referral.count} joined so far`
+                  : "nobody yet, be the first"}
+            </Small>
           </Tile>
-          <Tile icon={Wallet} title="spent this month" onClick={() => onNavigate("vault")}>
-            <Big>{spent.length ? spent.map(([c, a]) => money(a, c)).join(" · ") : "–"}</Big>
-            <Small>cards and receipts</Small>
-          </Tile>
-          <Tile icon={Activity} title="activity" onClick={() => onNavigate("activity")}>
-            <Small>see what yomi did for you</Small>
-          </Tile>
+          <div className="flex min-h-[140px] flex-col rounded-[1.5rem] bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)]">
+            <span className="flex items-center gap-2 text-sm font-medium">
+              <span className="grid size-7 place-items-center rounded-lg bg-muted">
+                <MessageCircle size={14} />
+              </span>
+              say hi
+            </span>
+            <span className="mt-2 text-xs text-muted-foreground">
+              {active
+                ? `${active.name} is waiting on telegram.`
+                : "text yomi anything on telegram."}
+            </span>
+            <a
+              href={TELEGRAM_BOT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-auto inline-flex w-fit items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_6px_18px_rgba(34,158,217,0.3)]"
+              style={{ background: "linear-gradient(180deg, #37aee2 0%, #1e96c8 100%)" }}
+            >
+              <MessageCircle size={12} /> text yomi
+            </a>
+          </div>
+          {(data.approvals ?? 0) > 0 && (
+            <Tile icon={BadgeCheck} title="approvals" onClick={() => onNavigate("approvals")}>
+              <Big>{data.approvals}</Big>
+              <Small>waiting for your ok</Small>
+            </Tile>
+          )}
+          {unread > 0 && (
+            <Tile icon={Mail} title="inbox" onClick={() => onNavigate("email")}>
+              <Big>{unread}</Big>
+              <Small>{unread === 1 ? "unread email" : "unread emails"}</Small>
+            </Tile>
+          )}
+          {spent.length > 0 && (
+            <Tile icon={Wallet} title="spent this month" onClick={() => onNavigate("vault")}>
+              <Big>{spent.map(([c, a]) => money(a, c)).join(" · ")}</Big>
+              <Small>cards and receipts</Small>
+            </Tile>
+          )}
         </div>
-      </section>
+      </Row>
     </div>
+  )
+}
+
+function Portrait({ character, className }: { character: HomeCharacter; className?: string }) {
+  const [broken, setBroken] = useState(false)
+  if (character.imageUrl && !broken) {
+    return (
+      <img
+        src={character.imageUrl}
+        alt=""
+        referrerPolicy="no-referrer"
+        onError={() => setBroken(true)}
+        className={cn("shrink-0 bg-muted object-cover object-top", className)}
+      />
+    )
+  }
+  return (
+    <span
+      style={{ background: `${character.color}22` }}
+      className={cn("grid shrink-0 place-items-center text-4xl", className)}
+      aria-hidden
+    >
+      {character.emoji || character.name.slice(0, 1).toUpperCase()}
+    </span>
+  )
+}
+
+function Row({
+  title,
+  action,
+  children,
+}: {
+  title: string
+  action?: { label: string; icon: typeof Zap; onClick: () => void }
+  children: React.ReactNode
+}) {
+  return (
+    <section>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-xl font-bold tracking-tight">{title}</h2>
+        {action && (
+          <button
+            onClick={action.onClick}
+            className="inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"
+          >
+            {action.icon === ArrowRight ? null : <action.icon size={13} />}
+            {action.label}
+            <ArrowRight size={13} />
+          </button>
+        )}
+      </div>
+      {children}
+    </section>
   )
 }
 

@@ -18,7 +18,6 @@ import { ConversationManager } from "@/components/dashboard/ConversationManager"
 import { HistoryManager } from "@/components/dashboard/HistoryManager"
 import { StatusManager } from "@/components/dashboard/StatusManager"
 import { DASHBOARD_TABS, type DashboardTab } from "@/components/dashboard/tabs"
-import { DashboardHome, type PlanSummary } from "@/components/dashboard/DashboardHome"
 import { TelegramCard } from "@/components/dashboard/TelegramCard"
 import { AppShell } from "@/components/dashboard/shell/AppShell"
 import { HomeView } from "@/components/dashboard/shell/HomeView"
@@ -581,25 +580,6 @@ function DashboardContent() {
 
   const currentPlanKey = sub?.plan ?? "explore"
   const currentPlanIdx = PLANS.findIndex((p) => p.key === currentPlanKey)
-  const planStatusTone: PlanSummary["statusTone"] =
-    sub?.status === "active" ? "active" : sub?.status === "past_due" ? "past_due" : "trial"
-  const planStatusLabel =
-    sub?.status === "past_due"
-      ? "past due"
-      : sub?.plan === "explore"
-        ? "free"
-        : (sub?.status ?? "trial")
-  const planSummary: PlanSummary = {
-    loading: subPending,
-    available: !!sub,
-    planName: sub ? (PLANS.find((p) => p.key === currentPlanKey)?.name ?? currentPlanKey) : "",
-    statusLabel: planStatusLabel,
-    statusTone: planStatusTone,
-    perks: planPerks(currentPlanKey),
-    renewsAt: sub?.currentPeriodEnd ?? null,
-    renewsLabel: sub?.status === "referral" ? "Pro from invites until" : "Renews",
-    billingWarning: sub?.billingWarning ?? null,
-  }
 
   return (
     <AppShell
@@ -621,24 +601,21 @@ function DashboardContent() {
               userName={session.user.name}
               connectedCount={connectedProviders.length}
               telegramLinked={platformLinks.some((link) => link.platform === "telegram")}
-              onNavigate={setActiveTab}
-            />
-            <DashboardHome
-              token={session.session.token}
-              plan={planSummary}
-              connectedProviders={connectedProviders}
               unhealthyCount={integrationHealth.filter((item) => !item.healthy).length}
-              currentPlanKey={currentPlanKey}
-              billingLoading={billingLoading}
-              billingError={billingError}
-              formatPlanPrice={formatUsd}
-              onUpgrade={handleUpgrade}
               onNavigate={setActiveTab}
-              platformLinks={platformLinks}
-              platformsLoading={platformsLoading}
-              unlinkingPlatform={unlinking}
-              onUnlinkPlatform={handleUnlink}
             />
+            {/* Plans, referrals and connected apps live on their own tabs; home only
+                keeps the Telegram card until it's linked. */}
+            {!platformsLoading && !platformLinks.some((link) => link.platform === "telegram") && (
+              <div id="link-telegram" className="scroll-mt-24">
+                <TelegramCard
+                  platformLinks={platformLinks}
+                  platformsLoading={platformsLoading}
+                  unlinking={unlinking}
+                  onUnlink={handleUnlink}
+                />
+              </div>
+            )}
           </motion.div>
         )}
 

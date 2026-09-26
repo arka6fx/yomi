@@ -10,10 +10,10 @@ The streaks leaderboard shipped 2026-08-14 as opt-in and anonymous
 deliberate privacy-first call given Yomi's positioning as a private
 assistant tied to Gmail/Calendar. In practice it's too empty to be fun —
 almost nobody opts in, so the leaderboard rarely has anyone on it. The user
-wants it Folk-style instead: everyone shows up automatically, usernames are
+wants it visible-by-default instead: everyone shows up automatically, usernames are
 manageable from a real profile page (with an uploadable avatar), and each
-row shows the user's plan tier, matching the reference screenshot from
-Folk's public leaderboard.
+row shows the user's plan tier, matching the reference screenshot the user
+shared.
 
 This walks back part of the prior privacy-first decision — confirmed with
 the user (see clarifying Q&A): a hide/unhide escape hatch stays, but the
@@ -24,7 +24,7 @@ opt out."
 
 1. Leaderboard shows every user by default (no opt-in step), each row
    showing rank, avatar, handle, plan badge (Pro/Max), and message count —
-   visually closer to Folk's screenshot (crown/trophy for #1, progress
+   visually closer to the reference screenshot (crown/trophy for #1, progress
    bars).
 2. Users can hide themselves from the leaderboard (inverted version of
    today's opt-in toggle).
@@ -175,7 +175,7 @@ Presentation-only change to the leaderboard block in
   badges already used in the Billing tab, just condensed).
 - A horizontal progress bar scaled to `entry.totalMessagesSent /
   topEntry.totalMessagesSent`, sitting behind or beside the message count,
-  purely decorative (Folk's screenshot uses this to convey relative
+  purely decorative (the reference screenshot uses this to convey relative
   standing at a glance).
 - "Active today" / "resting" style relative-activity caption is **not**
   included — there's no `lastActiveDate` exposed via the leaderboard

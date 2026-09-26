@@ -115,7 +115,7 @@ export function AppShell({
     <div className="relative min-h-dvh bg-background text-foreground">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-gradient-to-b from-sky-300/70 via-sky-200/40 to-transparent dark:from-sky-900/40 dark:via-sky-950/20"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-gradient-to-b from-[#3aa6e8] via-sky-300/50 to-transparent dark:from-sky-900/40 dark:via-sky-950/20"
       />
 
       <header className="sticky top-0 z-40 px-3 pt-3 sm:px-5">

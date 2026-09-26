@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Flip the streaks leaderboard from opt-in/anonymous to visible-by-default with a hide toggle, add plan badges per row and a Folk-style visual pass, and give users a real Profile page (avatar upload, editable name, username, current plan) that replaces the inline username editor on the Streaks tab.
+**Goal:** Flip the streaks leaderboard from opt-in/anonymous to visible-by-default with a hide toggle, add plan badges per row and a visual polish pass, and give users a real Profile page (avatar upload, editable name, username, current plan) that replaces the inline username editor on the Streaks tab.
 
 **Architecture:** Reuse the existing `user`-table-extension pattern (one new column, one default flip on an existing column), reuse the existing S3 client in `asset-storage.ts` for avatar uploads under a new `avatars/` prefix, move identity-editing endpoints from `streaksRouter` to `profileRouter`, and add one small unauthenticated image-serving route (mirroring the existing `/api/assets/:encodedKey` pattern) since `<img>` tags can't send Authorization headers.
 

@@ -6,14 +6,13 @@ Date: 2026-08-13
 ## Problem
 
 Yomi has no referral system today (zero matches for "referral"/"invite"
-repo-wide). Folk's referral card (`$25 cash for every friend, cash lands when
-a friend subscribes`) is a growth mechanic worth porting, but Folk's specific
-implementation doesn't transfer directly:
+repo-wide). A cash-per-friend referral card is a common growth mechanic
+worth adapting, but the usual implementation doesn't transfer directly:
 
-- Folk pays cash + a free week of Pro; Yomi is pure-credits (`AGENTS.md`
+- The usual model pays cash + a free week of Pro; Yomi is pure-credits (`AGENTS.md`
   "Plans & Credits") with no cash-payout rail and no per-feature free-trial
   concept — a credit grant is the only reward primitive that exists.
-- Folk identifies users by phone number and refers people straight into an
+- Phone-first assistants identify users by phone number and refers people straight into an
   iMessage/WhatsApp/Telegram chat. Yomi has no phone-number identity, and
   critically: **Yomi has no Telegram-only signup path at all.** A `user` row
   is only ever created by Better Auth's Google/GitHub OAuth flow (owns
@@ -37,7 +36,7 @@ credits.
 ## Non-goals
 
 - No reward to the referred friend (referrer-only, confirmed design
-  decision — Folk's "free week for them" has no clean Yomi analogue since
+  decision — a "free week for them" reward has no clean Yomi analogue since
   there's no per-feature trial concept, and keeping this one-sided is
   simpler).
 - No cash payout, no gift-card integration — credits only, using the

@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Camera, Check, Loader2, Trash2, User } from "lucide-react"
+import { Camera, Check, Loader2, Trash2, Upload, User } from "lucide-react"
 import { PLANS } from "@/lib/plans"
 
 type ProfileData = {
@@ -17,7 +17,11 @@ const BIO_MAX = 280
 // Square-crop and shrink to 512px before upload: small files, and re-encoding
 // through a canvas drops EXIF data such as GPS location.
 async function prepareAvatar(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file)
+  if (!file.type.startsWith("image/")) throw new Error("That isn’t an image. Try a jpg or png.")
+  const bitmap = await createImageBitmap(file).catch(() => {
+    // e.g. iPhone HEIC photos, which most browsers can't open
+    throw new Error("Couldn’t open that picture. Try a jpg or png (or take a screenshot of it).")
+  })
   const side = Math.min(bitmap.width, bitmap.height)
   const size = Math.min(512, side)
   const canvas = document.createElement("canvas")
@@ -95,6 +99,7 @@ export function ProfileManager({ token, onChanged }: { token: string; onChanged?
   const fileInput = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [photoError, setPhotoError] = useState("")
+  const [dragging, setDragging] = useState(false)
 
   const [bioInput, setBioInput] = useState("")
   const [savingBio, setSavingBio] = useState(false)
@@ -288,27 +293,52 @@ export function ProfileManager({ token, onChanged }: { token: string; onChanged?
   return (
     <div className="space-y-4">
       <div className="rounded-[1.75rem] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_rgba(20,40,80,0.06)] p-5 sm:p-6">
-        <div className="flex items-center gap-4">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground">{profile.name}</p>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            {profile.email?.endsWith("@users.getyomi.in")
+              ? "signed in with telegram"
+              : profile.email}
+          </p>
+        </div>
+
+        {/* Profile picture: tap the picture, the button, or drop an image on the box. */}
+        <div
+          onDragOver={(e) => {
+            e.preventDefault()
+            setDragging(true)
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDragging(false)
+            const file = e.dataTransfer.files?.[0]
+            if (file) void uploadPhoto(file)
+          }}
+          className={`mt-4 flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed p-4 text-center transition-colors sm:flex-row sm:text-left ${
+            dragging ? "border-primary bg-primary/5" : "border-border"
+          }`}
+        >
           <button
             type="button"
             onClick={() => fileInput.current?.click()}
             disabled={uploading}
-            aria-label="Change profile picture"
-            className="group relative shrink-0 rounded-full disabled:opacity-60"
+            aria-label={profile.image ? "Change profile picture" : "Add a profile picture"}
+            className="relative shrink-0 rounded-full disabled:opacity-60"
           >
             <Avatar
               key={profile.image ?? "none"}
               url={profile.image ?? streakFields.avatarUrl}
-              size={64}
+              size={88}
             />
-            <span className="absolute inset-0 grid place-items-center rounded-full bg-black/45 text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-              {uploading ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
+            <span className="absolute -bottom-1 -right-1 grid size-8 place-items-center rounded-full border-2 border-card bg-primary text-primary-foreground shadow">
+              {uploading ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />}
             </span>
           </button>
           <input
             ref={fileInput}
             type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif"
+            accept="image/*"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0]
@@ -316,32 +346,37 @@ export function ProfileManager({ token, onChanged }: { token: string; onChanged?
             }}
           />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-foreground">{profile.name}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {profile.email?.endsWith("@users.getyomi.in")
-                ? "signed in with telegram"
-                : profile.email}
+            <p className="text-sm font-semibold text-foreground">profile picture</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {uploading
+                ? "uploading your picture…"
+                : profile.image
+                  ? "this is the picture yomi and your trusted people see."
+                  : "add a photo of you so your profile feels like yours. tap the picture, use the button, or drop an image here. we crop it to a square for you."}
             </p>
-            <div className="mt-1.5 flex items-center gap-3 text-xs">
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               <button
                 type="button"
                 onClick={() => fileInput.current?.click()}
                 disabled={uploading}
-                className="font-medium text-primary hover:underline disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm hover:opacity-90 disabled:opacity-50"
               >
-                {profile.image ? "Change photo" : "Upload photo"}
+                <Upload size={13} /> {profile.image ? "change photo" : "upload a photo"}
               </button>
               {profile.image && (
                 <button
                   type="button"
                   onClick={() => void removePhoto()}
                   disabled={uploading}
-                  className="inline-flex items-center gap-1 text-muted-foreground hover:text-destructive disabled:opacity-50"
+                  className="inline-flex items-center gap-1 rounded-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-destructive disabled:opacity-50"
                 >
-                  <Trash2 size={11} /> Remove
+                  <Trash2 size={12} /> remove
                 </button>
               )}
             </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              jpg, png, webp or gif. any size works.
+            </p>
             {photoError && <p className="mt-1 text-xs text-destructive">{photoError}</p>}
           </div>
         </div>

@@ -12,7 +12,7 @@ reach Yomi's existing web dashboard (`apps/landing/src/app/dashboard/page.tsx` â
 account linking, schedules, memory, billing) from inside Telegram at all; a user
 has to know the `getyomi.in` URL and log in separately.
 
-Reference UX (Folk, a comparable Telegram-based assistant): no visible slash
+Reference UX (a comparable Telegram-based assistant): no visible slash
 commands, and a persistent pill button next to the message box that opens the
 app's own dashboard as an embedded webview.
 

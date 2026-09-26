@@ -21,11 +21,12 @@ const REDIRECTS: Record<string, string> = {
 // narrows the attack surface: no third-party script host, no framing, no plugins.
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com https://telegram.org",
+  // us-assets/us.i.posthog.com: product analytics (only loads when a PostHog key is set)
+  "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com https://telegram.org https://us-assets.i.posthog.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self'",
-  "connect-src 'self' https://api.getyomi.in https://static.cloudflareinsights.com https://cloudflareinsights.com",
+  "connect-src 'self' https://api.getyomi.in https://static.cloudflareinsights.com https://cloudflareinsights.com https://us.i.posthog.com https://us-assets.i.posthog.com",
   "frame-ancestors https://web.telegram.org",
   "base-uri 'self'",
   "form-action 'self'",

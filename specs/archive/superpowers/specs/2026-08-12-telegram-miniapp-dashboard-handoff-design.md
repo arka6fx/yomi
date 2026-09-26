@@ -26,7 +26,7 @@ Two independent things break this in production:
 2. **This spec's problem:** even without any OAuth click, a cookie set inside
    Telegram's internal webview never reaches a real external browser. They are
    separate processes with separate cookie jars — confirmed by comparison with
-   Folk (a comparable Telegram-based assistant), whose Mini App shows a static
+   a comparable Telegram-based assistant, whose Mini App shows a static
    "opened your dashboard in the browser, Telegram desktop can't keep you logged
    in inside this window" screen rather than attempting to render an
    authenticated dashboard inside its own webview at all. So the existing
@@ -154,7 +154,7 @@ if (data.ok && data.linked && data.redeemUrl) {
 }
 ```
 
-A new `"opened"` status renders a static confirmation screen (Folk's pattern,
+A new `"opened"` status renders a static confirmation screen (a common pattern,
 Yomi-voiced): "Opened your dashboard in the browser — tap back to chat." If
 `window.Telegram?.WebApp?.openLink` isn't available (an old Telegram client —
 `openExternal()` already falls back to `window.location.href` in that case,

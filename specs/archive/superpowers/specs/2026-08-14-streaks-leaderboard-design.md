@@ -6,18 +6,17 @@ Date: 2026-08-14
 ## Problem
 
 Yomi has no streak or leaderboard concept today (zero matches for
-"streak"/"leaderboard" repo-wide). Folk's homescreen banner ("start a
-streak") and public "who folks the hardest" leaderboard are engagement
-mechanics worth porting, but Folk's specific implementation doesn't
-transfer directly:
+"streak"/"leaderboard" repo-wide). A homescreen streak banner and a public
+usage leaderboard are common engagement mechanics worth adapting, but the
+usual implementation doesn't transfer directly:
 
-- Folk's leaderboard is a **public** page on the marketing site, ranking
+- The usual leaderboard is a **public** page on the marketing site, ranking
   strangers by a substance-weighted "yaps" score, with optional real
   usernames. Yomi is a private productivity assistant tied to a user's
   Gmail/Calendar/work data — a public cross-user ranking doesn't fit that
   positioning, and Yomi's dashboard already has an explicit
   consent/privacy posture (PII redaction, `services/privacy/*`) that a
-  Folk-style public leaderboard would cut against.
+  public leaderboard would cut against.
 - Yomi has no username/handle system (`user` table has only `name`/`email`,
   both tied to the real OAuth identity) and no existing lifetime message
   counter — the daily-reset columns that exist on `user`
@@ -146,7 +145,7 @@ Query: users where `leaderboardOptIn = true`, ordered by
 `totalMessagesSent` desc, limited to top 50. If the requesting user is
 opted in but outside the top 50, their own row is appended separately
 (computed via a count-of-users-with-a-higher-score query) so they can
-always see their position, matching Folk's pattern of always surfacing
+always see their position, following the common pattern of always surfacing
 "you are here" even off the visible top of the list.
 
 ### E. Dashboard
