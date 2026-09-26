@@ -11,6 +11,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from yomi.services.character_gallery_more import MORE_A
+from yomi.services.character_gallery_more_b import MORE_B
+
 _ANILIST = "https://s4.anilist.co/file/anilistcdn/character/large/"
 
 
@@ -943,3 +946,5 @@ GALLERY: list[dict[str, Any]] = [
         ],
     },
 ]
+# Bigger casts built with character_gallery_fan.fan().
+GALLERY += MORE_A + MORE_B
