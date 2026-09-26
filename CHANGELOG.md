@@ -5,6 +5,42 @@ All notable changes to Yomi are documented here. The format follows
 from conventional commits via
 [release-please](https://github.com/googleapis/release-please).
 
+## [1.5.0](https://github.com/arka6fx/yomi/compare/v1.4.1...v1.5.0) (2026-09-26)
+
+
+### Features
+
+* add edward elric and 15 more fullmetal alchemist characters ([a3bfa28](https://github.com/arka6fx/yomi/commit/a3bfa28ffae0387568394f9eda58152c5c2bef47))
+* add stranger things, solo leveling and attack on titan characters ([222a635](https://github.com/arka6fx/yomi/commit/222a6358b86a2e00f16201b1ab9b38a53b1a9cdb))
+* ai sdk chat with photos and voice notes ([#170](https://github.com/arka6fx/yomi/issues/170)) ([39b86cb](https://github.com/arka6fx/yomi/commit/39b86cbdaaa4f3a213d6e684562d4ebf0edd4c3b))
+* animate the vault as it loads ([449704c](https://github.com/arka6fx/yomi/commit/449704c36e64f58a191f10cf06153bf4b2ecfb7a))
+* ask before yomi presses a buy, pay or place-order button ([ea92dec](https://github.com/arka6fx/yomi/commit/ea92decdde7b04a515ee1bb3f671aa01006823fc))
+* loading placeholders on the remaining dashboard tabs ([5f18e91](https://github.com/arka6fx/yomi/commit/5f18e915f4a175d8a9c945b2c7fb9194bda91072))
+* pick a character's face from source pictures ([#168](https://github.com/arka6fx/yomi/issues/168)) ([94e4cf0](https://github.com/arka6fx/yomi/commit/94e4cf0931fb4ff437888db4579006c31e53495c))
+* referral invites give 3 days of pro ([5f62739](https://github.com/arka6fx/yomi/commit/5f627398d0a3f83262c6631b772f5d766fb1515f))
+* richer memory page with import, sources and a 3d graph ([b4949b3](https://github.com/arka6fx/yomi/commit/b4949b31afb17929d0a05640c4ee86c80d97e93a))
+* stream yomi's replies on the conversation page ([e19d1c5](https://github.com/arka6fx/yomi/commit/e19d1c5fc711e8c1c110295d98a104a01f57c406))
+* text yomi from the dashboard conversation page ([79c9a0b](https://github.com/arka6fx/yomi/commit/79c9a0b1d55fd39c606565e7332b0537ef4248ae))
+* use support@getyomi.in as the support address everywhere ([597ae41](https://github.com/arka6fx/yomi/commit/597ae4126d02adaf55da1d26e28e20fc941b1b8c))
+* **web:** hinata and hello kitty in the landing hero ([dc61e82](https://github.com/arka6fx/yomi/commit/dc61e82033e3e96f59da16a7ad738ebb1e905bba))
+* **web:** pricing extras and auto-playing sign-up chat ([#164](https://github.com/arka6fx/yomi/issues/164)) ([974ab94](https://github.com/arka6fx/yomi/commit/974ab9450dcb5d94d4ebbe65d125e0698c1db2df))
+* **web:** scroll manifesto and approvals demo on landing ([#163](https://github.com/arka6fx/yomi/issues/163)) ([e1ac933](https://github.com/arka6fx/yomi/commit/e1ac93395b71a1d0026d813b9fbb23dbf93d6eac))
+* **web:** share characters without signing in ([#171](https://github.com/arka6fx/yomi/issues/171)) ([4f978c7](https://github.com/arka6fx/yomi/commit/4f978c79aa6fc872d235c6d1a46e231546d71766))
+* **web:** stickers, google data page, random cast, loader ([#167](https://github.com/arka6fx/yomi/issues/167)) ([216d404](https://github.com/arka6fx/yomi/commit/216d404ea6da98e11faa8f9606ad59196ac5650d))
+
+
+### Bug Fixes
+
+* **api:** record streaks again and backfill them ([#172](https://github.com/arka6fx/yomi/issues/172)) ([1554a3c](https://github.com/arka6fx/yomi/commit/1554a3cb0ddf0a66b1ae1fafcc8aa7606bd7d552))
+* keep history newest-first when two threads share a timestamp ([6e975d7](https://github.com/arka6fx/yomi/commit/6e975d7abe8723114a2afc40ac866a62c435bacb))
+* **web:** label the hero character shoyo hinata ([25bf4ea](https://github.com/arka6fx/yomi/commit/25bf4ea19f292ca4c32c63a683533b21001ac241))
+* **web:** stop the hero phone resizing on mobile scroll ([#169](https://github.com/arka6fx/yomi/issues/169)) ([2338e38](https://github.com/arka6fx/yomi/commit/2338e38345737bea020578b62ac9f9a18817a1bf))
+
+
+### Performance Improvements
+
+* stream short replies, keep warm, lighter dashboard ([#166](https://github.com/arka6fx/yomi/issues/166)) ([18823e9](https://github.com/arka6fx/yomi/commit/18823e91839c1e0fdf3c3b8fce30385fc8660ca1))
+
 ## [1.4.1](https://github.com/arka6fx/yomi/compare/v1.4.0...v1.4.1) (2026-09-26)
 
 
