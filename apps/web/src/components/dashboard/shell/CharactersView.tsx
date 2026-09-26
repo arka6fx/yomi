@@ -21,6 +21,7 @@ import {
   Wand2,
   X,
 } from "lucide-react"
+import { Skeleton } from "@/components/dashboard/shell/motion"
 import { SURFACE } from "@/components/dashboard/shell/ui"
 import { matchesSearch } from "@/lib/search"
 import { TELEGRAM_BOT_URL } from "@/lib/site"
@@ -311,13 +312,19 @@ export function CharactersView({ token }: { token: string }) {
   )
 
   if (!data) {
+    if (error) return <p className="pt-16 text-sm text-destructive">{error}</p>
     return (
-      <div className="flex items-center gap-2 pt-16 text-sm text-muted-foreground">
-        {error || (
-          <>
-            <Loader2 size={15} className="animate-spin" /> loading characters…
-          </>
-        )}
+      <div className="page-fade space-y-8 pt-6" aria-busy="true" aria-label="loading characters">
+        <div className="space-y-3">
+          <Skeleton className="h-14 w-72 rounded-2xl" />
+          <Skeleton className="h-4 w-96 max-w-full rounded-full" />
+        </div>
+        <Skeleton className="h-24 rounded-[1.75rem]" />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2, 3, 4, 5].map((n) => (
+            <Skeleton key={n} className="min-h-[150px] rounded-[20px]" />
+          ))}
+        </div>
       </div>
     )
   }
@@ -328,8 +335,12 @@ export function CharactersView({ token }: { token: string }) {
     "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_6px_18px_rgba(34,158,217,0.3)] disabled:opacity-60"
   const blue = { background: "linear-gradient(180deg, #37aee2 0%, #1e96c8 100%)" }
 
-  const CharacterCard = ({ c, from }: { c: Character; from: string }) => (
-    <button onClick={() => setOpenId(c.id)} className={card}>
+  const CharacterCard = ({ c, from, i = 0 }: { c: Character; from: string; i?: number }) => (
+    <button
+      onClick={() => setOpenId(c.id)}
+      style={{ "--i": Math.min(i, 11) } as React.CSSProperties}
+      className={cn(card, "rise")}
+    >
       <div className="flex items-start justify-between">
         <Avatar character={c} />
         {c.chatsThisWeek ? (
@@ -368,7 +379,7 @@ export function CharactersView({ token }: { token: string }) {
     const inMine = opened.mine || savedIds.has(opened.id)
     const isActive = data.active?.id === opened.id
     return (
-      <div className="mx-auto max-w-3xl space-y-6 pt-6">
+      <div className="page-fade mx-auto max-w-3xl space-y-6 pt-6">
         <button
           onClick={() => setOpenId(null)}
           className="inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground"
@@ -1251,7 +1262,7 @@ export function CharactersView({ token }: { token: string }) {
   // ── lists ───────────────────────────────────────────────────────
   const mineList = [...data.mine, ...data.saved]
   return (
-    <div className="space-y-8 pt-6">
+    <div className="page-fade space-y-8 pt-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
@@ -1336,8 +1347,9 @@ export function CharactersView({ token }: { token: string }) {
             </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {mineList.map((c) => (
+              {mineList.map((c, i) => (
                 <CharacterCard
+                  i={i}
                   key={c.id}
                   c={c}
                   from={c.mine ? "made by you" : "from the gallery"}
@@ -1387,8 +1399,9 @@ export function CharactersView({ token }: { token: string }) {
             ))}
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {shown.map((c) => (
+            {shown.map((c, i) => (
               <CharacterCard
+                i={i}
                 key={c.id}
                 c={c}
                 from={c.basedOn ? `fan-made · based on ${c.basedOn}` : "by yomi"}
