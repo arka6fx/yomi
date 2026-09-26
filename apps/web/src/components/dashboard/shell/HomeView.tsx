@@ -20,6 +20,7 @@ import type { DashboardTab } from "@/components/dashboard/tabs"
 import { Reveal, Skeleton } from "@/components/dashboard/shell/motion"
 import { TELEGRAM_BOT_URL } from "@/lib/site"
 import { cn } from "@/lib/utils"
+import { Mascot } from "@/components/Mascot"
 
 type Geo = { city: string | null; weather: { tempC: number; code: number } | null }
 type Schedule = { enabled: boolean; nextRunAt?: string | null; prompt: string }
@@ -392,7 +393,7 @@ export function HomeView({
           {active ? (
             <Portrait character={active} className="size-14 rounded-2xl" />
           ) : (
-            <img src="/brand-mark-128.png" alt="" className="size-14 rounded-2xl" />
+            <Mascot pose="waving" className="w-14 shrink-0" />
           )}
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold text-muted-foreground">who yomi is right now</p>

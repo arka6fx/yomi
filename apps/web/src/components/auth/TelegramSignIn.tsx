@@ -6,6 +6,7 @@ import { Loader2, RefreshCw } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { BrandMark } from "@/components/BrandMark"
 import { TelegramIcon } from "@/components/TelegramIcon"
+import { Mascot } from "@/components/Mascot"
 
 type Login = { token: string; code: string; url: string; expiresAt: string }
 type Phase = "idle" | "starting" | "waiting" | "done" | "expired" | "cancelled"
@@ -126,13 +127,7 @@ export function TelegramSignIn({ mode }: { mode: "signin" | "signup" }) {
         ) : (
           // decorative preview of a chat with yomi
           <div aria-hidden className="mt-10 flex flex-1 flex-col items-center">
-            <img
-              src="/brand-mark-128.png"
-              alt=""
-              width={60}
-              height={60}
-              className="size-[60px] rounded-full shadow-[0_8px_20px_-8px_rgba(16,24,40,0.5)]"
-            />
+            <Mascot pose="waving" float className="w-20" />
             <p className="mt-1.5 text-xs font-semibold text-muted-foreground">yomi</p>
             <div className="mt-6 w-full max-w-sm space-y-2.5">
               <p className="bubble-in w-fit max-w-[80%] px-4 py-2.5 text-[15px] font-medium">

@@ -4,8 +4,8 @@
   "description": "AI assistant on Telegram that connects to Gmail, Calendar, Drive, GitHub, Slack, Notion, Linear, and more. Message it with text, voice, or a photo.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0b",
-  "theme_color": "#0a0a0b",
+  "background_color": "#f3f5f8",
+  "theme_color": "#3fb0f0",
   "lang": "en",
   "categories": ["productivity", "utilities"],
   "icons": [
