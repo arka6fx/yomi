@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { CharacterAvatar } from "@/components/characters/CharacterAvatar"
+import { ShareCharacter } from "@/components/characters/ShareCharacter"
 import { TelegramIcon } from "@/components/TelegramIcon"
 import { cn } from "@/lib/utils"
 import { characterTelegramLink, seriesOf, type GalleryCharacter } from "@/lib/characters"
@@ -35,31 +36,43 @@ export function CharacterCard({
   compact?: boolean
 }) {
   return (
-    <Link
-      href={`/characters/${character.slug}`}
-      className="surface group relative flex gap-4 p-3 transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-12px_rgba(16,40,80,0.25)]"
-    >
-      <CharacterAvatar character={character} size={compact ? 84 : 112} />
-      <span className="flex min-w-0 flex-1 flex-col py-1">
-        <span className="truncate text-[15px] font-semibold text-foreground">{character.name}</span>
-        <span className="truncate text-xs text-muted-foreground">{seriesOf(character)}</span>
-        <span className="mt-2 line-clamp-2 text-[13px] leading-snug text-foreground/80">
-          {character.tagline}
-        </span>
-        {!compact && (
-          <span className="mt-auto flex flex-wrap gap-1 pt-2">
-            {character.tags.slice(0, 2).map((t) => (
-              <span
-                key={t}
-                className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
-              >
-                {t}
-              </span>
-            ))}
+    <div className="group/card relative">
+      <Link
+        href={`/characters/${character.slug}`}
+        className="surface group relative flex gap-4 p-3 transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-12px_rgba(16,40,80,0.25)]"
+      >
+        <CharacterAvatar character={character} size={compact ? 84 : 112} />
+        <span className="flex min-w-0 flex-1 flex-col py-1">
+          <span className="truncate text-[15px] font-semibold text-foreground">
+            {character.name}
           </span>
-        )}
-      </span>
-    </Link>
+          <span className="truncate text-xs text-muted-foreground">{seriesOf(character)}</span>
+          <span className="mt-2 line-clamp-2 text-[13px] leading-snug text-foreground/80">
+            {character.tagline}
+          </span>
+          {!compact && (
+            <span className="mt-auto flex flex-wrap gap-1 pt-2">
+              {character.tags.slice(0, 2).map((t) => (
+                <span
+                  key={t}
+                  className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
+                >
+                  {t}
+                </span>
+              ))}
+            </span>
+          )}
+        </span>
+      </Link>
+      {/* A sibling of the link, not inside it: a button can't live in an anchor. Always
+          shown on touch screens, on hover elsewhere. */}
+      <ShareCharacter
+        slug={character.slug}
+        name={character.name}
+        variant="icon"
+        className="absolute right-2 top-2 transition-opacity focus-within:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/card:opacity-100"
+      />
+    </div>
   )
 }
 

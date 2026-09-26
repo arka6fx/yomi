@@ -3,6 +3,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ArrowRight, ChevronRight } from "lucide-react"
 import { SitePage } from "@/components/SitePage"
+import { ShareCharacter } from "@/components/characters/ShareCharacter"
 import {
   CharacterAvatar,
   CharacterCard,
@@ -38,6 +39,8 @@ export async function generateMetadata({
     title: `Text ${character.name} on Telegram`,
     description: `${character.tagline} ${character.description}`.slice(0, 158),
     path: `/characters/${character.slug}`,
+    // Shared links preview with the character's own picture.
+    image: character.imageUrl || undefined,
   })
 }
 
@@ -117,6 +120,7 @@ export default async function CharacterPage({ params }: { params: Promise<{ slug
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <TextOnTelegram character={character} />
+          <ShareCharacter slug={character.slug} name={character.name} />
           <Link
             href="/signup"
             className="text-sm font-semibold text-foreground/70 hover:text-foreground"
