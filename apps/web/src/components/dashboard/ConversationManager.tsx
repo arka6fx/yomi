@@ -5,13 +5,18 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport, type FileUIPart, type UIMessage } from "ai"
 import {
+  ArrowDown,
   ArrowUp,
+  Bell,
+  CalendarDays,
   Check,
   Copy,
   ImagePlus,
+  Inbox,
   Loader2,
   Mic,
   RotateCcw,
+  Send,
   Sparkles,
   Square,
   X,
@@ -22,6 +27,7 @@ import { ListSkeleton } from "@/components/dashboard/shell/motion"
 import { closeOpenMarks, parseMarkdown, type Inline } from "@/lib/chat-markdown"
 import { MAX_PHOTOS, isAcceptedImage, photoToDataUrl } from "@/lib/chat-images"
 import { useVoiceRecorder } from "@/lib/use-voice-recorder"
+import { TELEGRAM_BOT_URL } from "@/lib/site"
 
 type Turn = { role: "user" | "assistant" | "system"; content: string; createdAt?: string | null }
 
@@ -34,10 +40,48 @@ type YomiMessage = UIMessage<Meta, Data>
 type Attachment = { id: string; name: string; url: string; mediaType: string }
 
 const SUGGESTIONS = [
-  "what's on my calendar today?",
-  "anything important in my inbox?",
-  "remind me at 6pm to call mum",
+  { icon: CalendarDays, title: "plan my day", prompt: "what's on my calendar today?" },
+  { icon: Inbox, title: "check my inbox", prompt: "anything important in my inbox?" },
+  { icon: Bell, title: "set a reminder", prompt: "remind me at 6pm to call mum" },
+  { icon: Sparkles, title: "surprise me", prompt: "teach me one useful thing in 30 seconds" },
 ]
+
+// Who's answering: plain Yomi, or the character the user switched to.
+type Persona = { name: string; imageUrl?: string; emoji?: string; color?: string }
+const YOMI: Persona = { name: "yomi", imageUrl: "/brand-mark-128.png" }
+
+// The dashboard's Telegram blue: user bubbles and the send button share it.
+const BLUE = { background: "linear-gradient(180deg, #37aee2 0%, #1e96c8 100%)" }
+
+function Avatar({ persona, size = 32 }: { persona: Persona; size?: number }) {
+  const [broken, setBroken] = useState(false)
+  if (persona.imageUrl && !broken) {
+    return (
+      <img
+        src={persona.imageUrl}
+        alt=""
+        referrerPolicy="no-referrer"
+        onError={() => setBroken(true)}
+        style={{ width: size, height: size }}
+        className="shrink-0 rounded-full bg-muted object-cover object-top ring-2 ring-background"
+      />
+    )
+  }
+  return (
+    <span
+      aria-hidden
+      style={{
+        width: size,
+        height: size,
+        background: `${persona.color ?? "#2b8fff"}22`,
+        fontSize: size * 0.5,
+      }}
+      className="grid shrink-0 place-items-center rounded-full ring-2 ring-background"
+    >
+      {persona.emoji || persona.name.slice(0, 1).toUpperCase()}
+    </span>
+  )
+}
 
 // Telegram messages show up here too; check for new ones while the page is open.
 const POLL_MS = 15_000
@@ -290,8 +334,9 @@ function Status({ label }: { label: string | null }) {
   )
 }
 
-const ASSISTANT_BUBBLE =
-  "rounded-2xl rounded-bl-md border border-border/60 bg-background text-foreground"
+const ASSISTANT_BUBBLE = "rounded-[1.35rem] rounded-bl-md bg-muted/70 text-foreground dark:bg-muted"
+const USER_BUBBLE =
+  "whitespace-pre-wrap rounded-[1.35rem] rounded-br-md text-white shadow-[0_6px_18px_rgba(34,158,217,0.22)]"
 
 /** A live waveform from the recorder's level meter. */
 function Waveform({ levels }: { levels: number[] }) {
@@ -330,6 +375,8 @@ export function ConversationManager({ token }: { token: string }) {
   const input = useRef<HTMLTextAreaElement>(null)
   const filePicker = useRef<HTMLInputElement>(null)
   const pinned = useRef(true)
+  const [atBottom, setAtBottom] = useState(true)
+  const [persona, setPersona] = useState<Persona>(YOMI)
   const reduce = useReducedMotion()
   const recorder = useVoiceRecorder()
 
@@ -396,13 +443,38 @@ export function ConversationManager({ token }: { token: string }) {
     [setMessages],
   )
 
+  const loadPersona = useCallback(async () => {
+    try {
+      const res = await fetch("/api/characters", {
+        headers: { Authorization: `Bearer ${tokenRef.current}` },
+      })
+      if (!res.ok) return
+      const data = (await res.json()) as { active?: Persona | null }
+      setPersona(data.active ? { ...data.active } : YOMI)
+    } catch {
+      // Keep showing whoever was answering before.
+    }
+  }, [])
+
   useEffect(() => {
     void load()
+    void loadPersona()
     const timer = setInterval(() => {
-      if (document.visibilityState === "visible") void load(true)
+      if (document.visibilityState === "visible") {
+        void load(true)
+        void loadPersona()
+      }
     }, POLL_MS)
     return () => clearInterval(timer)
-  }, [load])
+  }, [load, loadPersona])
+
+  function jumpToLatest() {
+    const el = scroller.current
+    if (!el) return
+    pinned.current = true
+    setAtBottom(true)
+    el.scrollTo({ top: el.scrollHeight, behavior: reduce ? "auto" : "smooth" })
+  }
 
   const last = messages[messages.length - 1]
   const liveText = status === "streaming" && last?.role === "assistant" ? textOf(last) : ""
@@ -541,13 +613,13 @@ export function ConversationManager({ token }: { token: string }) {
     <section className="space-y-6 pt-6">
       <PageHeader
         title="conversation"
-        subtitle="text yomi here or on telegram; it's one thread. send photos or a voice note too. start fresh any time and the old one moves to history."
+        subtitle="one chat with yomi, here and on telegram. send photos or voice notes too."
         actions={
           messages.length > 0 && (
             <button
               onClick={handleReset}
               disabled={resetting || busy}
-              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive disabled:opacity-50"
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition-colors hover:text-destructive disabled:opacity-50"
             >
               {resetting ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
               {confirmReset ? "Start fresh?" : "Start fresh"}
@@ -558,7 +630,7 @@ export function ConversationManager({ token }: { token: string }) {
       <div
         className={cn(
           SURFACE,
-          "relative flex h-[calc(100svh-15rem)] min-h-[440px] flex-col overflow-hidden",
+          "relative flex h-[calc(100svh-16.5rem)] min-h-[460px] flex-col overflow-hidden",
         )}
         onDragOver={(e) => {
           if ([...e.dataTransfer.types].includes("Files")) {
@@ -575,6 +647,47 @@ export function ConversationManager({ token }: { token: string }) {
           if (e.dataTransfer.files.length) void addPhotos(e.dataTransfer.files)
         }}
       >
+        <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="relative">
+              <Avatar persona={persona} size={40} />
+              <span className="absolute bottom-0 right-0 size-3 rounded-full bg-emerald-500 ring-2 ring-card" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-semibold capitalize leading-tight">
+                {persona.name}
+              </p>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.p
+                  key={busy ? (toolStatus ?? "typing") : "idle"}
+                  initial={{ opacity: 0, y: 3 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -3 }}
+                  transition={{ duration: 0.15 }}
+                  className={cn(
+                    "truncate text-xs",
+                    busy ? "font-medium text-[#1e96c8]" : "text-muted-foreground",
+                  )}
+                >
+                  {busy
+                    ? toolStatus
+                      ? `${toolStatus}…`
+                      : "typing…"
+                    : "online · the same chat as telegram"}
+                </motion.p>
+              </AnimatePresence>
+            </div>
+          </div>
+          <a
+            href={TELEGRAM_BOT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden shrink-0 items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted/70 sm:inline-flex"
+          >
+            <Send size={12} /> open in telegram
+          </a>
+        </div>
+
         <AnimatePresence>
           {dragging && (
             <motion.div
@@ -601,8 +714,9 @@ export function ConversationManager({ token }: { token: string }) {
           onScroll={(e) => {
             const el = e.currentTarget
             pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+            if (pinned.current !== atBottom) setAtBottom(pinned.current)
           }}
-          className="flex-1 overflow-y-auto px-4 py-5 sm:px-6"
+          className="flex-1 overflow-y-auto px-3 py-5 sm:px-6"
         >
           {loading ? (
             <ListSkeleton label="loading your conversation" />
@@ -611,43 +725,58 @@ export function ConversationManager({ token }: { token: string }) {
           ) : messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center px-4 text-center">
               <motion.div
-                initial={reduce ? false : { scale: 0.6, opacity: 0, rotate: -20 }}
+                initial={reduce ? false : { scale: 0.6, opacity: 0, rotate: -12 }}
                 animate={{ scale: 1, opacity: 1, rotate: 0 }}
                 transition={SPRING}
-                className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground"
+                className="mb-4"
               >
-                <Sparkles size={20} />
+                <Avatar persona={persona} size={72} />
               </motion.div>
-              <p className="text-base font-semibold text-foreground">say hi to yomi</p>
-              <p className="mt-1 max-w-xs text-sm text-muted-foreground">
-                ask anything, send a photo, or hold a voice note. it&apos;s the same thread as
-                telegram.
+              <p className="text-3xl font-bold tracking-tight text-foreground">
+                hey, it&apos;s {persona.name}.
               </p>
-              <div className="mt-5 flex flex-wrap justify-center gap-2">
+              <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+                ask anything, send a photo or a voice note. it&apos;s the same chat as telegram, so
+                you can switch any time.
+              </p>
+              <div className="mt-7 grid w-full max-w-lg grid-cols-2 gap-2.5">
                 {SUGGESTIONS.map((s, i) => (
                   <motion.button
-                    key={s}
-                    initial={reduce ? false : { opacity: 0, y: 10 }}
+                    key={s.title}
+                    initial={reduce ? false : { opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ ...SPRING, delay: 0.15 + i * 0.07 }}
-                    whileHover={{ y: -2 }}
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => send(s)}
-                    className="rounded-full border border-border bg-background px-3.5 py-1.5 text-xs text-foreground transition-colors hover:border-foreground/30"
+                    transition={{ ...SPRING, delay: 0.12 + i * 0.06 }}
+                    whileHover={{ y: -3 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => send(s.prompt)}
+                    className="flex flex-col items-start gap-2 rounded-2xl bg-muted/60 p-4 text-left transition-colors hover:bg-muted"
                   >
-                    {s}
+                    <span className="grid size-8 place-items-center rounded-xl bg-background text-[#1e96c8] shadow-sm">
+                      <s.icon size={16} />
+                    </span>
+                    <span className="text-sm font-semibold text-foreground">{s.title}</span>
+                    <span className="line-clamp-1 text-xs text-muted-foreground">{s.prompt}</span>
                   </motion.button>
                 ))}
               </div>
             </div>
           ) : (
-            <ul className="space-y-3">
+            <ul>
               {messages.map((message, i) => {
                 const stamp = stampOf(message)
                 const day = dayLabel(stamp)
                 const prev = messages[i - 1]
+                const next = messages[i + 1]
                 const showDay = day && day !== dayLabel(prev ? stampOf(prev) : undefined)
                 const mine = message.role === "user"
+                // Consecutive messages from one side read as one run: tight spacing,
+                // one avatar and one timestamp at the end.
+                const startsRun = showDay || !prev || prev.role !== message.role
+                const endsRun =
+                  !next ||
+                  next.role !== message.role ||
+                  (dayLabel(stampOf(next)) || day) !== day ||
+                  (i === messages.length - 2 && status === "streaming")
                 const streamingThis = !mine && i === messages.length - 1 && status === "streaming"
                 const text = textOf(message)
                 const photos = photosOf(message)
@@ -655,10 +784,12 @@ export function ConversationManager({ token }: { token: string }) {
                 return (
                   <Fragment key={message.id}>
                     {showDay && (
-                      <li className="flex justify-center py-1">
-                        <span className="rounded-full bg-background px-3 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      <li className="flex items-center gap-3 py-3">
+                        <span className="h-px flex-1 bg-border/70" />
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                           {day}
                         </span>
+                        <span className="h-px flex-1 bg-border/70" />
                       </li>
                     )}
                     <motion.li
@@ -666,51 +797,82 @@ export function ConversationManager({ token }: { token: string }) {
                       animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
                       transition={SPRING}
                       style={{ transformOrigin: mine ? "bottom right" : "bottom left" }}
-                      className={cn("group flex flex-col", mine ? "items-end" : "items-start")}
+                      className={cn(
+                        "group flex gap-2.5",
+                        mine ? "flex-row-reverse" : "flex-row",
+                        startsRun ? "mt-4" : "mt-1",
+                      )}
                     >
-                      {photos.length > 0 && (
-                        <div
-                          className={cn(
-                            "mb-1.5 grid max-w-[75%] gap-1.5",
-                            photos.length > 1 ? "grid-cols-2" : "grid-cols-1",
-                          )}
-                        >
-                          {photos.map((p, j) => (
-                            <motion.img
-                              key={j}
-                              src={p.url}
-                              alt={p.filename ?? "photo"}
-                              initial={reduce ? false : { opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ ...POP, delay: j * 0.05 }}
-                              className="max-h-56 w-full rounded-2xl object-cover shadow-sm"
-                            />
-                          ))}
+                      {!mine && (
+                        <div className="w-8 shrink-0 self-end pb-6">
+                          {endsRun && <Avatar persona={persona} size={32} />}
                         </div>
                       )}
-                      {(text || !photos.length) && (
-                        <motion.div
-                          layout={streamingThis && !reduce}
-                          transition={SPRING}
-                          className={cn(
-                            "max-w-[88%] break-words px-4 py-2.5 text-sm leading-relaxed sm:max-w-[75%]",
-                            mine
-                              ? "whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary text-primary-foreground"
-                              : ASSISTANT_BUBBLE,
-                          )}
-                        >
-                          {mine ? (
-                            text
-                          ) : streamingThis ? (
-                            <Formatted text={shown} caret />
-                          ) : (
-                            <Formatted text={text} />
-                          )}
-                        </motion.div>
-                      )}
-                      <div className="mt-1 flex h-5 items-center gap-1 px-1 text-[11px] text-muted-foreground">
-                        <span>{timeLabel(stamp)}</span>
-                        {!mine && !streamingThis && text && <CopyButton text={text} />}
+                      <div
+                        className={cn(
+                          "flex min-w-0 max-w-[85%] flex-col sm:max-w-[72%]",
+                          mine ? "items-end" : "items-start",
+                        )}
+                      >
+                        {!mine && startsRun && (
+                          <span className="mb-1 px-1 text-[11px] font-semibold capitalize text-muted-foreground">
+                            {persona.name}
+                          </span>
+                        )}
+                        {photos.length > 0 && (
+                          <div
+                            className={cn(
+                              "mb-1.5 grid w-full max-w-xs gap-1.5",
+                              photos.length > 1 ? "grid-cols-2" : "grid-cols-1",
+                            )}
+                          >
+                            {photos.map((p, j) => (
+                              <motion.img
+                                key={j}
+                                src={p.url}
+                                alt={p.filename ?? "photo"}
+                                initial={reduce ? false : { opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ ...POP, delay: j * 0.05 }}
+                                className="max-h-56 w-full rounded-2xl object-cover shadow-sm"
+                              />
+                            ))}
+                          </div>
+                        )}
+                        {(text || !photos.length) && (
+                          <motion.div
+                            layout={streamingThis && !reduce}
+                            transition={SPRING}
+                            style={mine ? BLUE : undefined}
+                            className={cn(
+                              "break-words px-4 py-2.5 text-[14.5px] leading-relaxed",
+                              mine ? USER_BUBBLE : ASSISTANT_BUBBLE,
+                            )}
+                          >
+                            {mine ? (
+                              text
+                            ) : streamingThis ? (
+                              <Formatted text={shown} caret />
+                            ) : (
+                              <Formatted text={text} />
+                            )}
+                          </motion.div>
+                        )}
+                        {endsRun ? (
+                          <div className="mt-1 flex h-5 items-center gap-1 px-1 text-[11px] text-muted-foreground">
+                            <span>{timeLabel(stamp)}</span>
+                            {mine && <Check size={11} className="text-[#1e96c8]" />}
+                            {!mine && !streamingThis && text && <CopyButton text={text} />}
+                          </div>
+                        ) : (
+                          !mine &&
+                          !streamingThis &&
+                          text && (
+                            <div className="flex h-0 items-center overflow-visible px-1">
+                              <CopyButton text={text} />
+                            </div>
+                          )
+                        )}
                       </div>
                     </motion.li>
                   </Fragment>
@@ -725,9 +887,10 @@ export function ConversationManager({ token }: { token: string }) {
                     exit={{ opacity: 0, transition: { duration: 0.1 } }}
                     transition={SPRING}
                     style={{ transformOrigin: "bottom left" }}
-                    className="flex flex-col items-start"
+                    className="mt-4 flex items-end gap-2.5"
                   >
-                    <div className={cn("px-4 py-2.5 text-sm", ASSISTANT_BUBBLE)}>
+                    <Avatar persona={persona} size={32} />
+                    <div className={cn("px-4 py-3 text-sm", ASSISTANT_BUBBLE)}>
                       <Status label={toolStatus} />
                     </div>
                   </motion.li>
@@ -737,13 +900,30 @@ export function ConversationManager({ token }: { token: string }) {
           )}
         </div>
 
+        <AnimatePresence>
+          {!atBottom && messages.length > 0 && (
+            <motion.button
+              type="button"
+              onClick={jumpToLatest}
+              aria-label="jump to the latest message"
+              initial={{ opacity: 0, y: 10, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.8 }}
+              transition={POP}
+              className="absolute bottom-28 left-1/2 z-10 grid size-9 -translate-x-1/2 place-items-center rounded-full bg-card text-foreground shadow-[0_6px_20px_rgba(20,40,80,0.18)] ring-1 ring-border"
+            >
+              <ArrowDown size={16} />
+            </motion.button>
+          )}
+        </AnimatePresence>
+
         <form
           onSubmit={(e) => {
             e.preventDefault()
             if (recording) void toggleMic()
             else send(draft)
           }}
-          className="border-t border-border/60 p-3 sm:p-4"
+          className="p-3 pt-2 sm:p-4 sm:pt-2"
         >
           <AnimatePresence>
             {errorText && (
@@ -771,10 +951,10 @@ export function ConversationManager({ token }: { token: string }) {
             layout={!reduce}
             transition={SPRING}
             className={cn(
-              "rounded-2xl border bg-background px-2.5 py-2 shadow-sm transition-[border-color,box-shadow]",
+              "rounded-[1.6rem] border px-2.5 py-2 transition-[border-color,box-shadow,background-color]",
               recording
-                ? "border-destructive/40 shadow-[0_0_0_4px_rgba(239,68,68,0.08)]"
-                : "border-border focus-within:border-foreground/30 focus-within:shadow-md",
+                ? "border-destructive/40 bg-background shadow-[0_0_0_4px_rgba(239,68,68,0.08)]"
+                : "border-transparent bg-muted/60 focus-within:border-[#37aee2]/50 focus-within:bg-background focus-within:shadow-[0_0_0_4px_rgba(55,174,226,0.12)]",
             )}
           >
             <AnimatePresence initial={false}>
@@ -903,9 +1083,13 @@ export function ConversationManager({ token }: { token: string }) {
                     maxLength={4000}
                     disabled={transcribing}
                     placeholder={
-                      transcribing ? "listening back…" : busy ? "yomi is replying…" : "message yomi"
+                      transcribing
+                        ? "listening back…"
+                        : busy
+                          ? `${persona.name.toLowerCase()} is replying…`
+                          : `message ${persona.name.toLowerCase()}`
                     }
-                    aria-label="message yomi"
+                    aria-label={`message ${persona.name}`}
                     className="max-h-40 min-h-9 flex-1 resize-none bg-transparent px-1 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground"
                   />
                 )}
@@ -933,13 +1117,14 @@ export function ConversationManager({ token }: { token: string }) {
                 whileTap={{ scale: 0.85 }}
                 whileHover={{ scale: 1.06 }}
                 transition={POP}
+                style={action !== "mic" && !recording ? BLUE : undefined}
                 className={cn(
-                  "relative grid size-9 shrink-0 place-items-center rounded-full text-primary-foreground shadow-sm transition-colors disabled:opacity-50",
+                  "relative grid size-9 shrink-0 place-items-center rounded-full text-white shadow-sm transition-colors disabled:opacity-50",
                   action === "mic" && !recording
                     ? "bg-foreground/85"
                     : recording
                       ? "bg-destructive"
-                      : "bg-primary",
+                      : "shadow-[0_4px_14px_rgba(34,158,217,0.35)]",
                 )}
               >
                 {recording && !reduce && (
@@ -974,9 +1159,8 @@ export function ConversationManager({ token }: { token: string }) {
               </motion.button>
             </div>
           </motion.div>
-          <p className="mt-1.5 px-1 text-[11px] text-muted-foreground">
-            enter to send · shift+enter for a new line · paste or drop photos · tap the mic for a
-            voice note
+          <p className="mt-1.5 hidden px-3 text-[11px] text-muted-foreground sm:block">
+            enter to send · shift+enter for a new line · drop photos anywhere
           </p>
         </form>
       </div>
