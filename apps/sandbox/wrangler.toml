@@ -1,0 +1,28 @@
+# Production computer gateway: one isolated Linux desktop per Yomi user.
+# Staging equivalent: wrangler.staging.toml. Deployed by
+# .github/workflows/deploy-computer.yml (the image needs Docker to build).
+name = "yomi-computer"
+main = "worker/computer.ts"
+compatibility_date = "2026-09-22"
+workers_dev = true
+
+[[containers]]
+class_name = "Computer"
+image = "./image/Dockerfile"
+# standard-1 has room for Xvfb + Chrome. Desktops sleep after 5 idle minutes
+# (Computer.sleepAfter), so memory and disk only bill while someone is using one.
+instance_type = "standard-1"
+max_instances = 10
+
+[[durable_objects.bindings]]
+name = "Computer"
+class_name = "Computer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Computer"]
+
+[observability]
+enabled = true
+
+# Configure with: npx wrangler secret put COMPUTER_GATEWAY_SECRET --config wrangler.toml

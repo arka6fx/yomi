@@ -1,0 +1,57 @@
+name: Deploy Computer (desktop sandbox)
+
+# The desktop image (Xvfb + Chrome + control service) needs Docker to build, so
+# it deploys from CI rather than a developer machine.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/sandbox/**"
+      - ".github/workflows/deploy-computer.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-computer
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: build + deploy computer gateway
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install workspace deps
+        run: npm ci --workspace apps/sandbox --include-workspace-root=false
+
+      - name: Typecheck gateway worker
+        working-directory: apps/sandbox
+        run: npm run typecheck
+
+      - name: Check deploy secrets
+        id: creds
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::Cloudflare deploy secrets missing; skipping deploy."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy
+        if: steps.creds.outputs.ready == 'true'
+        working-directory: apps/sandbox
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --config wrangler.toml

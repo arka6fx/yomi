@@ -127,6 +127,25 @@ inventing weather or appointments.
     )
 
 
+def drop_old_screenshots(messages: list[dict[str, Any]]) -> None:
+    """Keep only the newest screenshot's pixels in context.
+
+    A computer task takes a screenshot after most steps; resending every one of
+    them makes each call slower and costlier while only the latest matters."""
+    seen_latest = False
+    for message in reversed(messages):
+        content = message.get("content")
+        if message.get("role") != "tool" or not isinstance(content, list):
+            continue
+        if not any(part.get("type") == "image_url" for part in content):
+            continue
+        if not seen_latest:
+            seen_latest = True
+            continue
+        text = " ".join(part.get("text", "") for part in content if part.get("type") == "text")
+        message["content"] = f"{text} (earlier screenshot, no longer shown)".strip()
+
+
 def format_tool_result(tool_call_id: str, result: Any) -> dict[str, Any]:
     """Build the tool reply message. Dict results carrying ``images`` (raw PNG
     bytes) become multi-part content so vision models can see screenshots."""
@@ -208,6 +227,7 @@ async def run_agent_loop(
 
         for step in range(max_steps):
             is_last_step = step == max_steps - 1
+            drop_old_screenshots(messages)
 
             data = await chat_completion(
                 purpose, messages, tools=tools if tools and not is_last_step else None,

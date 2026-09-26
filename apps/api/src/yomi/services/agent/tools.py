@@ -113,13 +113,19 @@ def register_computer_tools(tool_registry: ToolRegistry, user_id: str) -> None:
     results carry raw PNG bytes so the agent loop can forward them to the
     vision model as image parts.
     """
-    import httpx
-
     from yomi.services.computer.client import ComputerClient
 
-    def _client() -> tuple[ComputerClient, httpx.AsyncClient]:
-        http = httpx.AsyncClient()
-        return ComputerClient.for_user(http, user_id), http
+    class _Shared:
+        """The process-wide client stays open; closing it per action is a no-op."""
+
+        async def aclose(self) -> None:
+            return None
+
+    def _client() -> tuple[ComputerClient, _Shared]:
+        from yomi.services.http_pool import shared_client
+
+        # One warm connection to the gateway instead of a TLS handshake per click.
+        return ComputerClient.for_user(shared_client(), user_id), _Shared()
 
     async def computer_screenshot() -> dict:
         client, http = _client()

@@ -75,3 +75,16 @@ async def test_agent_sends_a_bounded_window_without_compaction(monkeypatch):
     assert len(sent) == 1  # one model call: no compaction pass
     assert sent[0][0] == {"role": "system", "content": "SYSTEM"}
     assert len(sent[0]) == 1 + loop.CONTEXT_MESSAGES and sent[0][-1]["content"] == "79"
+
+
+def test_only_the_newest_screenshot_keeps_its_pixels():
+    from yomi.services.agent.loop import drop_old_screenshots, format_tool_result
+
+    messages = [
+        format_tool_result("a", {"text": "first", "images": [b"\x89PNG1"]}),
+        {"role": "assistant", "content": "clicking"},
+        format_tool_result("b", {"text": "second", "images": [b"\x89PNG2"]}),
+    ]
+    drop_old_screenshots(messages)
+    assert messages[0]["content"] == "first (earlier screenshot, no longer shown)"
+    assert any(p["type"] == "image_url" for p in messages[2]["content"])

@@ -111,6 +111,9 @@ export class YomiContainer extends Container {
     // Cloudflare REST API (Browser Run, Workers AI, Vectorize)
     CLOUDFLARE_API_TOKEN: workerEnv.CLOUDFLARE_API_TOKEN ?? "",
     CLOUDFLARE_ACCOUNT_ID: workerEnv.CLOUDFLARE_ACCOUNT_ID ?? "",
+    // Personal computer gateway (apps/sandbox): one desktop per user
+    COMPUTER_GATEWAY_URL: workerEnv.COMPUTER_GATEWAY_URL ?? "",
+    COMPUTER_GATEWAY_SECRET: workerEnv.COMPUTER_GATEWAY_SECRET ?? "",
     // R2 object storage (S3-compatible)
     R2_ACCESS_KEY_ID: workerEnv.R2_ACCESS_KEY_ID ?? "",
     R2_SECRET_ACCESS_KEY: workerEnv.R2_SECRET_ACCESS_KEY ?? "",
@@ -204,6 +207,8 @@ declare global {
     COMPOSIO_TASKS_AUTH_CONFIG_ID: string;
     CLOUDFLARE_API_TOKEN: string;
     CLOUDFLARE_ACCOUNT_ID: string;
+    COMPUTER_GATEWAY_URL: string;
+    COMPUTER_GATEWAY_SECRET: string;
     R2_ACCESS_KEY_ID: string;
     R2_SECRET_ACCESS_KEY: string;
     R2_ENDPOINT: string;
