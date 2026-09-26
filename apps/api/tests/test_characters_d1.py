@@ -257,13 +257,27 @@ async def test_shared_character_link_switches_the_chat(backend, monkeypatch):
 
     monkeypatch.setattr(telegram, "send_message", fake_send)
     await characters_d1.set_settings(backend, USER, GOJO, {"textsFirst": False})
-    await telegram._start_shared_character(backend, "tg", "chat-1", "satoru-gojo")
+    me = {"from": {"id": "tg"}, "chat": {"id": "chat-1", "type": "private"}}
+    await telegram._start_shared_character(backend, me, "chat-1", "satoru-gojo")
     assert (await characters_d1.active(backend, USER))["id"] == GOJO
     assert "Satoru Gojo" in sent[-1][1]  # says hello even with texts-first off
-    await telegram._start_shared_character(backend, "tg", "chat-1", "nobody")
+    await telegram._start_shared_character(backend, me, "chat-1", "nobody")
     assert "isn't available" in sent[-1][1]
-    await telegram._start_shared_character(backend, "stranger", "chat-9", "satoru-gojo")
-    assert "Link your Yomi account" in sent[-1][1]
+
+    # A friend who has never used Yomi taps the link: no code, no website.
+    sent.clear()
+    friend = {"from": {"id": 999, "first_name": "Riya"}, "chat": {"id": 999, "type": "private"}}
+    await telegram._start_shared_character(backend, friend, "999", "satoru-gojo")
+    from yomi.services import connectors_d1
+
+    new_user = await connectors_d1.resolve_platform_user(backend, "telegram", "999", "999")
+    assert new_user is not None and new_user != USER
+    assert (await characters_d1.active(backend, new_user))["id"] == GOJO
+    assert "Welcome to Yomi" in sent[0][1] and "Satoru Gojo" in sent[-1][1]
+
+    group = {"from": {"id": 777}, "chat": {"id": -5, "type": "group"}}
+    await telegram._start_shared_character(backend, group, "-5", "satoru-gojo")
+    assert "private chat" in sent[-1][1]
 
 
 async def test_gallery_counts_chats_this_week_and_likes(backend):

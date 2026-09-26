@@ -296,7 +296,7 @@ class TestEnqueue:
         assert res2 == {"status": "ok", "deduplicated": True}
         assert len(calls) == 1
 
-    async def test_unlinked_user_gets_link_prompt(self) -> None:
+    async def test_group_chat_without_an_account_gets_a_hint(self) -> None:
         from yomi.gateway import telegram as tg
 
         backend = Backend()
@@ -310,11 +310,12 @@ class TestEnqueue:
         tgmod.send_message = fake_send  # type: ignore[assignment]
         try:
             update = {"update_id": 1, "message": {
-                "message_id": 1, "chat": {"id": 5}, "from": {"id": 6}, "text": "hi"}}
+                "message_id": 1, "chat": {"id": 5, "type": "group"}, "from": {"id": 6},
+                "text": "hi"}}
             res = await tg._handle_update(update, None, backend)  # type: ignore[arg-type]
         finally:
             tgmod.send_message = orig
-        assert res == {"status": "ok"} and sent and "isn't linked" in sent[0]
+        assert res == {"status": "ok"} and sent and "private chat" in sent[0]
 
 
 class TestDispatch:

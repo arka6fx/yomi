@@ -6,6 +6,7 @@ import re
 import traceback
 from collections import deque
 from datetime import UTC, datetime
+from typing import Any
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -433,8 +434,48 @@ async def _greet_as_active_character(d1: D1Backend, tg_user_id: str, chat_id: st
         logger.warning("could not greet as the active character", exc_info=True)
 
 
+WELCOME_NEW = (
+    "👋 Welcome to Yomi! You're all set, no sign-up needed.\n\n"
+    "I'm your personal assistant right here in Telegram. Just text me like a friend: "
+    "ask anything, send a voice note or a photo, or say \"remind me to…\".\n\n"
+    "Your dashboard (sign in with Telegram): {app}/dashboard"
+)
+GROUP_HINT = "Message me in a private chat to get started 👋"
+
+
+async def _account_for_sender(
+    d1: D1Backend | None, message: dict[str, Any], chat_id: str
+) -> tuple[str | None, bool]:
+    """The sender's Yomi account, created on their first private message.
+
+    Returns (user_id, created). New people shouldn't need a website, a code or a
+    settings page: texting the bot is signing up, exactly like "Sign in with
+    Telegram" on the site. If they later sign in with Google and link Telegram,
+    this account is merged into that one.
+    """
+    sender = message.get("from") or {}
+    if d1 is None or not sender.get("id") or sender.get("is_bot"):
+        return None, False
+    from yomi.services import connectors_d1 as _connectors_d1
+
+    existing = await _connectors_d1.resolve_platform_user(
+        d1, "telegram", str(sender["id"]), chat_id
+    )
+    if existing is not None:
+        return existing, False
+    if (message.get("chat") or {}).get("type", "private") != "private":
+        return None, False  # a group chat isn't one person's account
+    from yomi.app.routes.auth import telegram_account_for
+
+    return await telegram_account_for(d1, sender), True
+
+
+async def _welcome_new(chat_id: str) -> None:
+    await send_message(chat_id, WELCOME_NEW.format(app=settings.app_url.rstrip("/")))
+
+
 async def _start_shared_character(
-    d1: D1Backend | None, tg_user_id: str, chat_id: str, slug: str
+    d1: D1Backend | None, message: dict[str, Any], chat_id: str, slug: str
 ) -> None:
     from yomi.services import characters_d1
 
@@ -443,16 +484,17 @@ async def _start_shared_character(
         await send_message(chat_id, "That character isn't available any more.")
         return
     from yomi.app.routes.characters import say_first_line
-    from yomi.services import connectors_d1 as _connectors_d1
 
-    owner = await _connectors_d1.resolve_platform_user(d1, "telegram", tg_user_id, chat_id)
+    owner, created = await _account_for_sender(d1, message, chat_id)
     if owner is None:
+        await send_message(chat_id, GROUP_HINT)
+        return
+    if created:
         await send_message(
             chat_id,
-            "Link your Yomi account first: open the dashboard, go to Settings, then send "
-            "/start <code> here. After that, tap the character link again.",
+            "👋 Welcome to Yomi! You're all set, no sign-up needed. Say /yomi any time to "
+            "talk to plain Yomi instead.",
         )
-        return
     character = await characters_d1.activate(d1, owner, character_id)
     # They tapped the link to talk, so say hello even if "texts you first" is off.
     if not await say_first_line(d1, owner, {**character, "textsFirst": True}):
@@ -556,14 +598,22 @@ async def _handle_update(
         text = skill["prompt"]
 
     if text == "/start":
-        await send_message(chat_id, "Welcome! Send /start <code> with the code from the dashboard to link your account.")
+        _, created = await _account_for_sender(d1, message, chat_id)
+        if created:
+            await _welcome_new(chat_id)
+        else:
+            await send_message(
+                chat_id, "Hey, welcome back 👋 Just send me a message or a voice note."
+            )
         return {"status": "ok"}
     elif text.startswith("/start login_"):
         await _start_web_login(chat_id, text.split("login_", 1)[1].strip(), d1)
         return {"status": "ok"}
     elif text.startswith("/start char_"):
         # A shared character link: switch this chat to them and let them say hello.
-        await _start_shared_character(d1, tg_user_id, chat_id, text.split("char_", 1)[1].strip())
+        await _start_shared_character(
+            d1, message, chat_id, text.split("char_", 1)[1].strip()
+        )
         return {"status": "ok"}
     elif text.startswith("/start "):
         code = text.split(" ")[1]
@@ -612,11 +662,12 @@ async def _handle_update(
 
     row = await _resolve_yomi_user(db_session, tg_user_id, chat_id, d1)
     if row is None:
-        await send_message(
-            chat_id,
-            "Your Telegram isn't linked to a Yomi account yet. Open the dashboard, go to Settings, "
-            "then send /start <code> here with the code you see.",
-        )
+        _, created = await _account_for_sender(d1, message, chat_id)
+        if created:
+            await _welcome_new(chat_id)
+            row = await _resolve_yomi_user(db_session, tg_user_id, chat_id, d1)
+    if row is None:
+        await send_message(chat_id, GROUP_HINT)
         return {"status": "ok"}
     user = _metering_user(row)
 
