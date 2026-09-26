@@ -33,6 +33,8 @@ class FakeMisc(D1Store):
             return row.get(m.group(1)) != params[pos], pos + 1
         if m := re.match(r"(\w+) = (\d+)$", cond):
             return int(row.get(m.group(1)) or 0) == int(m.group(2)), pos
+        if m := re.match(r"(\w+) > (\d+)$", cond):
+            return int(row.get(m.group(1)) or 0) > int(m.group(2)), pos
         if m := re.match(r"(\w+) IS NULL$", cond):
             return row.get(m.group(1)) is None, pos
         raise AssertionError(f"unsupported cond: {cond}")
@@ -142,6 +144,8 @@ def seed_user(backend: Backend, user_id: str = "u-1", **overrides: Any) -> None:
         "total_messages_sent": 42, "leaderboard_opt_in": 1,
         "leaderboard_handle": None, "leaderboard_show_photo": 1,
         "image": None, "plan": "pro", "deleted_at": None,
+        # messaged today, so the seeded streak is alive
+        "last_active_date": streaks_d1.streak_today().isoformat(),
     }
     row.update(overrides)
     backend.store.tables["user"].append(row)
