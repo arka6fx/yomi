@@ -189,7 +189,7 @@ class Handler(BaseHTTPRequestHandler):
                 import chrome
                 from browser_driver import driver
 
-                driver().forget()
+                driver().close_chrome()
                 chrome.stop()
                 self._send_json(200, {"ok": True})
             elif self.path == "/browser/navigate":

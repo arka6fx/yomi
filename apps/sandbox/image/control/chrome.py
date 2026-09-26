@@ -67,9 +67,9 @@ def start(timeout: float = 20.0) -> bool:
 
 
 def stop(timeout: float = 10.0) -> None:
-    """Close Chrome so it writes cookies and local storage to disk."""
+    """Wait for Chrome to finish quitting (the driver asks it to close cleanly
+    first); only processes still alive after the timeout are forced to stop."""
     global _process
-    subprocess.run(["pkill", "-TERM", "-f", "google-chrome|chrome/chrome"], check=False)
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         busy = subprocess.run(["pgrep", "-f", "chrome/chrome"], capture_output=True, check=False)
@@ -77,6 +77,8 @@ def stop(timeout: float = 10.0) -> None:
             break
         time.sleep(0.3)
     else:
+        subprocess.run(["pkill", "-TERM", "-f", "chrome/chrome"], check=False)
+        time.sleep(2)
         subprocess.run(["pkill", "-KILL", "-f", "chrome/chrome"], check=False)
     if _process is not None:
         try:

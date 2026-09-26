@@ -165,19 +165,23 @@ class BrowserDriver:
         return locator
 
     # -- public API (called from HTTP threads) --------------------------------
-    def forget(self) -> None:
-        """Chrome is about to close: drop the stale DevTools connection."""
+    def close_chrome(self) -> None:
+        """Quit Chrome the way its own menu does, so cookies and local storage are
+        written to disk. A SIGTERM skips that and loses fresh logins."""
+        import chrome
 
         def job():
-            if self._browser is not None:
+            if chrome.running():
                 try:
-                    self._browser.close()
-                except Exception:  # noqa: BLE001 — already gone
+                    browser = self._connect()
+                    session = browser.new_browser_cdp_session()
+                    session.send("Browser.close")
+                except Exception:  # noqa: BLE001 — chrome.stop() still ends it
                     pass
             self._browser = None
             self._page = None
 
-        self._call(job, timeout=15)
+        self._call(job, timeout=20)
 
     def snapshot(self) -> dict[str, Any]:
         return self._call(lambda: self._snapshot(self._current()))
