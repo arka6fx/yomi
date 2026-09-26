@@ -33,6 +33,10 @@ RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd6
     && rm -rf /var/lib/apt/lists/* \
     && google-chrome --version
 
+# Playwright's client only: it attaches to the desktop's Chrome over DevTools,
+# so no bundled browsers are downloaded.
+RUN python3 -m pip install --no-cache-dir --break-system-packages playwright==1.63.0
+
 COPY control/ /opt/yomi/control/
 COPY startup.sh /opt/yomi/startup.sh
 RUN chmod +x /opt/yomi/startup.sh

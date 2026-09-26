@@ -8,6 +8,7 @@ the ``open`` helper and the ``exec`` escape hatch.
 
 from __future__ import annotations
 
+import contextlib
 import re
 from typing import Any
 from urllib.parse import urlsplit
@@ -126,7 +127,14 @@ class ComputerClient:
         except httpx.HTTPError:
             raise ComputerError("Computer transport failed; outcome unknown") from None
         if response.status_code != 200:
-            raise ComputerError(f"Computer request failed (HTTP {response.status_code})")
+            # Surface the desktop's reason ("element 12 is gone…") so the agent can recover.
+            detail = ""
+            with contextlib.suppress(ValueError, AttributeError):
+                detail = str(response.json().get("error") or "")[:300]
+            raise ComputerError(
+                f"Computer request failed (HTTP {response.status_code})"
+                + (f": {detail}" if detail else "")
+            )
         try:
             data = response.json()
         except ValueError:
@@ -173,3 +181,21 @@ class ComputerClient:
         if not argv or not all(isinstance(a, str) for a in argv):
             raise ValueError("argv must be a non-empty list of strings")
         return await self._post("exec", {"argv": argv})
+
+    async def browser_snapshot(self) -> dict[str, Any]:
+        response = await self._get("browser-snapshot")
+        try:
+            data = response.json()
+        except ValueError:
+            raise ComputerError("Invalid computer response") from None
+        if not isinstance(data, dict):
+            raise ComputerError("Invalid computer response")
+        return data
+
+    async def browser_navigate(self, url: str) -> dict[str, Any]:
+        if not isinstance(url, str) or not re.match(r"^https?://", url):
+            raise ValueError("only http(s) URLs may be opened")
+        return await self._post("browser-navigate", {"url": url})
+
+    async def browser_act(self, action: dict[str, Any]) -> dict[str, Any]:
+        return await self._post("browser-act", dict(action))

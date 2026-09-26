@@ -106,8 +106,12 @@ def do_input(action: dict) -> dict:
 def open_url(url: str) -> dict:
     if not re.match(r"^https?://", url):
         raise ValueError("only http(s) URLs may be opened")
-    _run(["google-chrome", "--new-tab", url])
-    return {"ok": True, "url": url}
+    # Drive the running Chrome over DevTools. A bare `google-chrome URL` starts a
+    # second browser with the default profile, which fails silently as root.
+    from browser_driver import driver
+
+    page = driver().navigate(url)
+    return {"ok": True, "url": page["url"], "title": page["title"]}
 
 
 def list_windows() -> dict:
@@ -156,6 +160,10 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(shot)
             elif self.path == "/windows":
                 self._send_json(200, list_windows())
+            elif self.path == "/browser/snapshot":
+                from browser_driver import driver
+
+                self._send_json(200, driver().snapshot())
             else:
                 self._send_json(404, {"error": "not found"})
         except Exception as exc:  # noqa: BLE001 — control plane must stay up
@@ -167,6 +175,17 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, do_input(self._read_json()))
             elif self.path == "/open":
                 self._send_json(200, open_url(str(self._read_json().get("url", ""))))
+            elif self.path == "/browser/navigate":
+                from browser_driver import driver
+
+                url = str(self._read_json().get("url", ""))
+                if not re.match(r"^https?://", url):
+                    raise ValueError("only http(s) URLs may be opened")
+                self._send_json(200, driver().navigate(url))
+            elif self.path == "/browser/act":
+                from browser_driver import driver
+
+                self._send_json(200, driver().act(self._read_json()))
             else:
                 self._send_json(404, {"error": "not found"})
         except Exception as exc:  # noqa: BLE001

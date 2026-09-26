@@ -18,8 +18,11 @@ x11vnc -display :99 -forever -shared -nopw -listen localhost -xkb -rfbport 5900 
 
 # Fresh browser profile per boot; the agent restores saved state separately.
 # --no-first-run keeps boots deterministic (no welcome/terms dialogs).
+# DevTools on localhost only: the control service drives this same, visible
+# browser (see control/browser_driver.py).
 google-chrome --no-sandbox --disable-dev-shm-usage --disable-gpu \
-  --no-first-run --no-default-browser-check \
+  --no-first-run --no-default-browser-check --test-type \
+  --remote-debugging-address=127.0.0.1 --remote-debugging-port=9222 \
   --user-data-dir=/tmp/chrome-profile --window-size="${WIDTH},${HEIGHT}" \
   about:blank >/tmp/chrome.log 2>&1 &
 

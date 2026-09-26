@@ -103,7 +103,9 @@ export default {
     if (!checkAuth(request, env)) return unauthorized();
 
     const url = new URL(request.url);
-    const match = url.pathname.match(/^\/computer\/([^/]+)\/(health|screenshot|windows|input|open|exec)$/);
+    const match = url.pathname.match(
+      /^\/computer\/([^/]+)\/(health|screenshot|windows|input|open|exec|browser-snapshot|browser-navigate|browser-act)$/,
+    );
     if (request.method === "GET" && url.pathname === "/health") {
       return Response.json({ status: "ok" });
     }
@@ -133,6 +135,16 @@ export default {
           status: 200,
           headers: { "Content-Type": "image/png", "Cache-Control": "no-store" },
         });
+      }
+      if (action === "browser-snapshot" && request.method === "GET") {
+        const result = await control(sandbox, "GET", "/browser/snapshot");
+        return Response.json(result.json, { status: result.status });
+      }
+      if ((action === "browser-navigate" || action === "browser-act") && request.method === "POST") {
+        const body = await readBody(request);
+        const path = action === "browser-navigate" ? "/browser/navigate" : "/browser/act";
+        const result = await control(sandbox, "POST", path, body);
+        return Response.json(result.json, { status: result.status });
       }
       if ((action === "input" || action === "open") && request.method === "POST") {
         const body = await readBody(request);

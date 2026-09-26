@@ -106,6 +106,29 @@ def computer_configured() -> bool:
     return bool(settings.computer_gateway_url and settings.computer_gateway_secret)
 
 
+def format_page(page: dict) -> str:
+    """Compact text view of a browser snapshot: what's on the page and what can be used."""
+    lines = [
+        f"Page: {page.get('title') or '(untitled)'} | {page.get('url') or ''}"
+        + (f" | {page['tabs']} tabs" if page.get("tabs", 1) > 1 else ""),
+        "Elements (act with web_act ref=N):",
+    ]
+    for el in page.get("elements") or []:
+        bits = [f"[{el.get('ref')}] {el.get('role')} \"{el.get('name') or ''}\""]
+        if el.get("value"):
+            bits.append(f"value={el['value']!r}")
+        if el.get("checked") is not None:
+            bits.append("checked" if el["checked"] else "unchecked")
+        if el.get("disabled"):
+            bits.append("disabled")
+        if el.get("options"):
+            bits.append("options=" + " / ".join(el["options"]))
+        lines.append(" ".join(bits))
+    lines.append("Page text:")
+    lines.append(str(page.get("text") or "").strip())
+    return "\n".join(lines)
+
+
 def register_computer_tools(tool_registry: ToolRegistry, user_id: str) -> None:
     """Personal-computer tools for the user's isolated desktop.
 
@@ -148,15 +171,18 @@ def register_computer_tools(tool_registry: ToolRegistry, user_id: str) -> None:
             await http.aclose()
         return _json.dumps(result)
 
-    async def computer_open(url: str) -> str:
-        import json as _json
+    async def web_open(url: str) -> str:
+        client, _ = _client()
+        return format_page(await client.browser_navigate(url))
 
-        client, http = _client()
-        try:
-            result = await client.open_url(url)
-        finally:
-            await http.aclose()
-        return _json.dumps(result)
+    async def web_page() -> str:
+        client, _ = _client()
+        return format_page(await client.browser_snapshot())
+
+    async def web_act(**kwargs) -> str:
+        client, _ = _client()
+        action = {k: v for k, v in kwargs.items() if v is not None}
+        return format_page(await client.browser_act(action))
 
     async def computer_windows() -> str:
         import json as _json
@@ -213,14 +239,53 @@ def register_computer_tools(tool_registry: ToolRegistry, user_id: str) -> None:
         func=computer_input,
     )
     tool_registry.register(
-        name="computer_open",
-        description="Open an http(s) URL in a new tab on the user's desktop browser.",
+        name="web_open",
+        description=(
+            "Open a website in the browser on the user's private computer (shopping, food, "
+            "rides, bookings, any site). Returns the page as text plus numbered elements "
+            "you can act on with web_act."
+        ),
         parameters={
             "type": "object",
             "properties": {"url": {"type": "string"}},
             "required": ["url"],
         },
-        func=computer_open,
+        func=web_open,
+    )
+    tool_registry.register(
+        name="web_page",
+        description="Read the current page in the computer's browser (text + numbered elements).",
+        parameters={"type": "object", "properties": {}},
+        func=web_page,
+    )
+    tool_registry.register(
+        name="web_act",
+        description=(
+            "Act on the current page by element number from web_open/web_page/web_act: "
+            "click (ref), type (ref, text, submit), select (ref, value), check (ref, checked), "
+            "press (key), scroll (direction up|down), back, wait (seconds). Returns the page "
+            "after the action. Never place an order or pay without the user's approval."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["click", "type", "select", "check", "press", "scroll", "back",
+                             "wait"],
+                },
+                "ref": {"type": "string", "description": "Element number, e.g. '12'"},
+                "text": {"type": "string"},
+                "submit": {"type": "boolean", "description": "Press Enter after typing"},
+                "value": {"type": "string", "description": "Option label for select"},
+                "checked": {"type": "boolean"},
+                "key": {"type": "string", "description": "e.g. Enter, Escape, Tab"},
+                "direction": {"type": "string", "enum": ["up", "down"]},
+                "seconds": {"type": "number"},
+            },
+            "required": ["action"],
+        },
+        func=web_act,
     )
     tool_registry.register(
         name="computer_windows",

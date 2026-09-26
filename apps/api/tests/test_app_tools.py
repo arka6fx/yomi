@@ -88,3 +88,20 @@ def test_only_the_newest_screenshot_keeps_its_pixels():
     drop_old_screenshots(messages)
     assert messages[0]["content"] == "first (earlier screenshot, no longer shown)"
     assert any(p["type"] == "image_url" for p in messages[2]["content"])
+
+
+def test_format_page_lists_elements_for_the_model():
+    from yomi.services.agent.tools import format_page
+
+    text = format_page({
+        "title": "Amazon.in", "url": "https://www.amazon.in/", "tabs": 1,
+        "elements": [
+            {"ref": "1", "role": "searchbox", "name": "Search Amazon.in", "value": ""},
+            {"ref": "2", "role": "button", "name": "Go"},
+            {"ref": "3", "role": "checkbox", "name": "Prime", "checked": False},
+        ],
+        "text": "Today's deals",
+    })
+    assert "Page: Amazon.in | https://www.amazon.in/" in text
+    assert '[1] searchbox "Search Amazon.in"' in text and "[3] checkbox \"Prime\" unchecked" in text
+    assert text.endswith("Today's deals")
