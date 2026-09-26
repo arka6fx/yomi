@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -98,6 +99,63 @@ async def reset_shared_conversation(
         raise HTTPException(status_code=501, detail="Requires the D1 storage backend")
     await sessions_d1.close_sessions(d1, user.id)
     return {"ok": True}
+
+
+class SendIn(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+
+
+@conversation_router.post("/shared/send")
+async def send_to_shared_conversation(
+    body: SendIn,
+    user: User = Depends(get_current_user),
+    d1: D1Backend | None = Depends(get_d1_backend),
+):
+    """Text Yomi from the dashboard. The message joins the same thread as Telegram,
+    so either place picks up where the other left off."""
+    import asyncio
+
+    from yomi.gateway.telegram import get_lock
+    from yomi.services import billing_d1, connectors_d1
+    from yomi.services.agent import sessions_d1
+    from yomi.services.agent.loop import run_agent_loop
+    from yomi.services.metering import ChargeInput
+
+    if d1 is None:
+        raise HTTPException(status_code=501, detail="Requires the D1 storage backend")
+    text = body.text.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="Say something first")
+    user_id = str(user.id)
+    plan = getattr(user, "plan", None) or "explore"
+    platform, chat_id = await sessions_d1.live_thread(d1, user_id)
+    # One turn at a time per chat, whether it came from Telegram or here.
+    async with get_lock(chat_id):
+        metering = {"id": user_id, "plan": plan, "subscription_status": "active"}
+        charged = await billing_d1.charge_usage(
+            d1, ChargeInput(user=metering, kind="chat", units=1)  # type: ignore[arg-type]
+        )
+        if not charged.ok:
+            raise HTTPException(status_code=402, detail=charged.message)
+        history = await sessions_d1.load_history(d1, user_id, platform, chat_id)
+        await sessions_d1.append_turn(d1, user_id, platform, chat_id, "user", text)
+        history.append({"role": "user", "content": text})
+        pending = connectors_d1.create_pending_action(
+            d1, user_id=user_id, source_platform=platform, source_chat_id=chat_id
+        )
+        try:
+            reply = await asyncio.wait_for(
+                run_agent_loop(
+                    history, user_id, plan, db_session=None,
+                    create_pending_action=pending, d1=d1,
+                ),
+                timeout=120.0,
+            )
+        except TimeoutError as exc:
+            raise HTTPException(status_code=504, detail="Yomi took too long; try again") from exc
+        reply = (reply or "").strip()
+        await sessions_d1.append_turn(d1, user_id, platform, chat_id, "assistant", reply)
+    return {"reply": {"role": "assistant", "content": reply}}
 
 
 @conversation_router.get("/{conversation_id}")

@@ -235,6 +235,26 @@ async def get_session_detail(
     }
 
 
+async def live_thread(backend: D1Backend, user_id: str) -> tuple[str, str]:
+    """Where a message typed on the dashboard belongs: the live conversation if there
+    is one, else the user's Telegram chat, else a web-only thread."""
+    latest = await backend.store.fetch_one(
+        "SELECT platform, chat_id FROM agent_sessions WHERE user_id = ? AND status = 'active' "
+        "ORDER BY last_message_at DESC, rowid DESC LIMIT 1",
+        [user_id],
+    )
+    if latest is not None:
+        return str(latest["platform"]), str(latest["chat_id"])
+    telegram = await backend.store.fetch_one(
+        "SELECT platform_chat_id FROM platform_connections WHERE user_id = ? "
+        "AND platform = 'telegram' AND platform_chat_id IS NOT NULL LIMIT 1",
+        [user_id],
+    )
+    if telegram is not None:
+        return "telegram", str(telegram["platform_chat_id"])
+    return "web", user_id
+
+
 async def load_shared_thread(
     backend: D1Backend, user_id: str, limit: int = HISTORY_LIMIT
 ) -> list[dict[str, Any]]:

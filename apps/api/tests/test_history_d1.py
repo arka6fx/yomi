@@ -148,3 +148,42 @@ async def test_chat_runs_leave_schedules_alone(backend):
     await runs_d1.complete_run(backend, str(run["id"]), "hey")
     status, _ = _status(backend)
     assert status is None
+
+
+async def test_dashboard_message_joins_the_telegram_thread(backend, monkeypatch):
+    backend.store.db.execute(
+        "INSERT INTO platform_connections (user_id, platform, platform_user_id, platform_chat_id) "
+        "VALUES ('alice', 'telegram', 'tg', 'chat-1')"
+    )
+    seen: list[list[dict]] = []
+
+    async def fake_loop(history, user_id, plan, **_):
+        seen.append(list(history))
+        return "  on it  "
+
+    monkeypatch.setattr("yomi.services.agent.loop.run_agent_loop", fake_loop)
+    app = FastAPI()
+    app.include_router(conversation_router)
+
+    class _User:
+        id = "alice"
+        plan = "explore"
+
+    app.dependency_overrides[get_current_user] = lambda: _User()
+    app.dependency_overrides[get_d1_backend] = lambda: backend
+    client = TestClient(app)
+
+    sent = client.post("/api/conversation/shared/send", json={"text": "book a cab"})
+    assert sent.status_code == 200
+    assert sent.json()["reply"] == {"role": "assistant", "content": "on it"}
+    assert seen[0][-1] == {"role": "user", "content": "book a cab"}
+    # It landed in Alice's Telegram chat, so Telegram carries on from here.
+    history = await sessions_d1.load_history(backend, "alice", "telegram", "chat-1")
+    assert [t["content"] for t in history] == ["book a cab", "on it"]
+    assert client.post("/api/conversation/shared/send", json={"text": "  "}).status_code == 422
+
+
+async def test_live_thread_falls_back_to_the_web(backend):
+    assert await sessions_d1.live_thread(backend, "bob") == ("web", "bob")
+    await _chat(backend, "bob", "c9", ("user", "hi"))
+    assert await sessions_d1.live_thread(backend, "bob") == ("telegram", "c9")

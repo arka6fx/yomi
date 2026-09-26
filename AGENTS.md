@@ -6,7 +6,8 @@ overview see [`README.md`](./README.md); for the system design see
 
 Yomi is a personal AI assistant. Users talk to it on **Telegram** (text, voice,
 images). The web app at `getyomi.in` is a **management dashboard** (account
-linking, approvals, routines, memory, billing), not a chat surface.
+linking, approvals, routines, memory, billing). Its conversation page can text
+Yomi too, in the same thread as Telegram.
 
 ---
 
