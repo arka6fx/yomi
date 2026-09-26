@@ -199,7 +199,7 @@ async function control(
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     // Live view / take-over from the dashboard. Browsers can't send the bearer
@@ -216,14 +216,16 @@ export default {
         return unauthorized();
       }
       const sandbox = getSandbox(env.Computer, `yomi-${workspace}`);
-      await sandbox.ensureDesktop();
+      // Show the screen as soon as the display is up; restoring logins and starting
+      // Chrome carry on in the background and appear in the live view.
+      ctx.waitUntil(sandbox.ensureDesktop().catch(() => undefined));
       return sandbox.wsConnect(request, 6080);
     }
 
     if (!checkAuth(request, env)) return unauthorized();
 
     const match = url.pathname.match(
-      /^\/computer\/([^/]+)\/(health|screenshot|windows|input|open|exec|browser-snapshot|browser-navigate|browser-act|save)$/,
+      /^\/computer\/([^/]+)\/(health|screenshot|windows|input|open|exec|browser-snapshot|browser-navigate|browser-act|save|wake)$/,
     );
     if (request.method === "GET" && url.pathname === "/health") {
       return Response.json({ status: "ok" });
@@ -232,6 +234,11 @@ export default {
     const [, workspace, action] = match;
     if (!WORKSPACE_PATTERN.test(workspace)) return badRequest("Invalid workspace");
 
+    if (action === "wake" && request.method === "POST") {
+      // Opening the computer page wakes the desktop early so "open" is instant.
+      await getSandbox(env.Computer, `yomi-${workspace}`).ensureDesktop();
+      return Response.json({ ok: true });
+    }
     if (action === "save" && request.method === "POST") {
       const stub = getSandbox(env.Computer, `yomi-${workspace}`);
       return Response.json(await stub.saveProfile(true));

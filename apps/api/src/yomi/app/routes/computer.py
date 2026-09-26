@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import time
+from contextlib import suppress
 from urllib.parse import urlsplit, urlunsplit
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -55,6 +56,22 @@ async def open_viewer(user: User = Depends(get_current_user)) -> dict:
         raise HTTPException(status_code=503, detail="The computer isn't available yet")
     token, exp = viewer_token(str(user.id))
     return {"url": viewer_url(str(user.id), token), "expiresAt": exp}
+
+
+@computer_router.post("/wake")
+async def wake(user: User = Depends(get_current_user)) -> dict:
+    """Start booting the desktop in the background; returns at once."""
+    if not configured():
+        return {"waking": False}
+    from yomi.services.computer.client import ComputerClient
+    from yomi.services.http_pool import fire_and_forget, shared_client
+
+    async def _wake() -> None:
+        with suppress(Exception):  # a failed warm-up just means a slower "open"
+            await ComputerClient.for_user(shared_client(), str(user.id)).wake()
+
+    fire_and_forget(_wake())
+    return {"waking": True}
 
 
 @computer_router.post("/save")

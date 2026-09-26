@@ -59,3 +59,14 @@ def test_unconfigured_computer_says_so(http, monkeypatch):
     monkeypatch.setattr("yomi.conf.settings.computer_gateway_url", "")
     assert http.post("/api/computer/viewer").status_code == 503
     assert http.get("/api/computer").json()["available"] is False
+
+
+def test_wake_returns_at_once_and_boots_in_background(http, monkeypatch):
+    calls: list[str] = []
+
+    async def fake_post(self, action, payload):
+        calls.append(action)
+        return {"ok": True}
+
+    monkeypatch.setattr("yomi.services.computer.client.ComputerClient._post", fake_post)
+    assert http.post("/api/computer/wake").json() == {"waking": True}

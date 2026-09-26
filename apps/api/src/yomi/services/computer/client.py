@@ -203,3 +203,7 @@ class ComputerClient:
     async def save(self) -> dict[str, Any]:
         """Snapshot the browser profile (logins) to storage now."""
         return await self._post("save", {})
+
+    async def wake(self) -> dict[str, Any]:
+        """Boot the desktop and restore saved logins ahead of use."""
+        return await self._post("wake", {})

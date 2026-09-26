@@ -26,7 +26,11 @@ export function ComputerView({ token }: { token: string }) {
   useEffect(() => {
     fetch("/api/computer", { headers: auth })
       .then((r) => (r.ok ? r.json() : { available: false }))
-      .then((d: { available: boolean }) => setAvailable(d.available))
+      .then((d: { available: boolean }) => {
+        setAvailable(d.available)
+        // Start booting now, so it's usually awake by the time "open" is pressed.
+        if (d.available) void fetch("/api/computer/wake", { method: "POST", headers: auth })
+      })
       .catch(() => setAvailable(false))
   }, [token])
 
@@ -115,7 +119,7 @@ export function ComputerView({ token }: { token: string }) {
             {status === "live"
               ? "live: you can click and type"
               : status === "connecting"
-                ? "waking your computer…"
+                ? "connecting… (about 10 seconds if it was asleep)"
                 : status === "ended"
                   ? "disconnected"
                   : "not connected"}
