@@ -97,7 +97,8 @@ GALLERY: list[dict[str, Any]] = [
         ],
     },
     {
-        "slug": "katsuki-bakugo", "name": "Katsuki Bakugo", "emoji": "💥", "color": "#f97316",
+        "slug": "katsuki-bakugo", "featured": True, "name": "Katsuki Bakugo", "emoji": "💥",
+        "color": "#f97316",
         "based_on": "Katsuki Bakugo (My Hero Academia)",
         "image_url": _ANILIST + "b88892-bdOha3lNcaN6.png", "image_credit": "AniList",
         "tagline": "loud, relentless, secretly proud of you.",
@@ -391,7 +392,7 @@ GALLERY: list[dict[str, Any]] = [
         ],
     },
     {
-        "slug": "mikey", "name": "Mikey", "emoji": "🏍️", "color": "#f59e0b",
+        "slug": "mikey", "featured": True, "name": "Mikey", "emoji": "🏍️", "color": "#f59e0b",
         "based_on": "Manjiro 'Mikey' Sano (Tokyo Revengers)",
         "image_url": _ANILIST + "b145341-CuPldCLZMvvf.png", "image_credit": "AniList",
         "tagline": "naps, dorayaki, loyalty. in that order.",

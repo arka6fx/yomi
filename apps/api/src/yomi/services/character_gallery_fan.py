@@ -27,6 +27,7 @@ def fan(
     starters: list[str],
     *,
     credit: str = "AniList",
+    featured: bool = False,
 ) -> dict[str, Any]:
     """``image`` is an AniList path (``b123-abc.png``) or a full https URL."""
     return {
@@ -34,6 +35,7 @@ def fan(
         "name": name,
         "emoji": emoji,
         "color": color,
+        "featured": featured,
         "based_on": f"{name} ({work})",
         "image_url": image if image.startswith("https://") else ANILIST + image,
         "image_credit": credit,

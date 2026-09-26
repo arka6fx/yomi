@@ -76,7 +76,9 @@ def gallery_character(character_id: str) -> dict[str, Any] | None:
 
 
 def gallery() -> list[dict[str, Any]]:
-    return [gallery_character(GALLERY_PREFIX + c["slug"]) for c in GALLERY]  # type: ignore[misc]
+    """Featured characters first; otherwise the order they're listed in (a stable sort)."""
+    ordered = sorted(GALLERY, key=lambda c: not c.get("featured"))
+    return [gallery_character(GALLERY_PREFIX + c["slug"]) for c in ordered]  # type: ignore[misc]
 
 
 def _row_view(row: dict) -> dict[str, Any]:

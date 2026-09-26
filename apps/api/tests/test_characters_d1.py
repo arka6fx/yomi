@@ -309,3 +309,12 @@ def test_like_route_and_listing(backend):
         assert http.post("/api/characters/nope/like", json={}).status_code == 400
     finally:
         app.dependency_overrides.clear()
+
+
+def test_featured_characters_come_first():
+    gallery = characters_d1.gallery()
+    featured = [c["name"] for c in gallery if c["featured"]]
+    assert len(featured) == 21
+    assert all(c["featured"] for c in gallery[: len(featured)])  # all at the top
+    for pick in ("Makima", "Asta", "Jinx", "Mikey", "Katsuki Bakugo", "Satoru Gojo"):
+        assert pick in featured

@@ -180,7 +180,8 @@ export function CharactersView({ token }: { token: string }) {
   const [busy, setBusy] = useState<string | null>(null)
   const [notice, setNotice] = useState("")
   const [query, setQuery] = useState("")
-  const [tag, setTag] = useState("all")
+  // Discover opens on the featured picks; "all" lists everyone (featured first).
+  const [tag, setTag] = useState("featured")
   const [found, setFound] = useState<Found[] | null>(null)
   const [guess, setGuess] = useState<Found | null>(null)
   const [notThem, setNotThem] = useState("")
@@ -302,7 +303,7 @@ export function CharactersView({ token }: { token: string }) {
     const q = query.trim().toLowerCase()
     return (data?.gallery ?? []).filter(
       (c) =>
-        (tag === "all" || c.tags.includes(tag)) &&
+        (tag === "all" || (tag === "featured" ? c.featured : c.tags.includes(tag))) &&
         (!q || `${c.name} ${c.tagline} ${c.basedOn}`.toLowerCase().includes(q)),
     )
   }, [data, query, tag])
@@ -1349,29 +1350,39 @@ export function CharactersView({ token }: { token: string }) {
             <Search size={16} className="text-muted-foreground" />
             <input
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value)
+                // a search should look through everyone, not just the featured picks
+                if (e.target.value && tag === "featured") setTag("all")
+              }}
               placeholder="search names and taglines"
               className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </label>
           <div className="flex flex-wrap gap-2" role="group" aria-label="Tags">
-            {["all", ...data.tags.filter((t) => data.gallery.some((c) => c.tags.includes(t)))].map(
-              (t) => (
-                <button
-                  key={t}
-                  aria-pressed={tag === t}
-                  onClick={() => setTag(t)}
-                  className={cn(
-                    "rounded-full px-4 py-2 text-sm font-semibold",
-                    tag === t
-                      ? "bg-foreground text-background"
-                      : "bg-card shadow-sm hover:bg-muted",
-                  )}
-                >
-                  {t}
-                </button>
-              ),
-            )}
+            {[
+              "featured",
+              "all",
+              ...data.tags.filter((t) => data.gallery.some((c) => c.tags.includes(t))),
+            ].map((t) => (
+              <button
+                key={t}
+                aria-pressed={tag === t}
+                onClick={() => setTag(t)}
+                className={cn(
+                  "rounded-full px-4 py-2 text-sm font-semibold",
+                  tag === t ? "bg-foreground text-background" : "bg-card shadow-sm hover:bg-muted",
+                )}
+              >
+                {t === "featured" ? (
+                  <span className="inline-flex items-center gap-1">
+                    <Star size={13} className="fill-current" /> featured
+                  </span>
+                ) : (
+                  t
+                )}
+              </button>
+            ))}
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {shown.map((c) => (
