@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from difflib import SequenceMatcher
 from typing import Any
 
 import httpx
@@ -58,15 +59,46 @@ def split_query(query: str) -> tuple[str, str]:
     return (match.group(1), match.group(2)) if match else (query.strip(), "")
 
 
-async def search_anilist(query: str) -> list[dict[str, Any]]:
-    name, _ = split_query(query)
+async def _anilist_characters(q: str) -> list[dict[str, Any]]:
     response = await shared_client().post(
-        ANILIST_URL,
-        json={"query": _ANILIST_QUERY, "variables": {"q": name or query}},
-        timeout=_TIMEOUT,
+        ANILIST_URL, json={"query": _ANILIST_QUERY, "variables": {"q": q}}, timeout=_TIMEOUT
     )
     response.raise_for_status()
-    characters = (((response.json().get("data") or {}).get("Page") or {}).get("characters")) or []
+    return (((response.json().get("data") or {}).get("Page") or {}).get("characters")) or []
+
+
+def _words(text: str) -> list[str]:
+    return [w for w in re.split(r"[^\w]+", text.lower()) if len(w) >= 3]
+
+
+def _same_word(a: str, b: str) -> bool:
+    """Romanisations differ: 'yuji' ~ 'yuuji', 'geto' ~ 'getou'."""
+    return a.startswith(b) or b.startswith(a) or SequenceMatcher(None, a, b).ratio() >= 0.8
+
+
+def name_score(typed: str, name: str) -> int:
+    """How well a found name fits what was typed; the first name counts extra, so
+    'levi ackerman' prefers Levi over Mikasa Ackerman. 0 means no shared word."""
+    typed_words, theirs = _words(typed), _words(name)
+    matched = [w for w in typed_words if any(_same_word(w, t) for t in theirs)]
+    return 2 * len(matched) + (1 if typed_words and typed_words[0] in matched else 0)
+
+
+async def search_anilist(query: str) -> list[dict[str, Any]]:
+    name, _ = split_query(query)
+    name = name or query
+    characters = await _anilist_characters(name)
+    if not characters and len(_words(name)) >= 2:
+        # AniList stores some characters under one name (Levi) or another spelling
+        # (Yuuji): search word by word and rank what comes back against the full name.
+        pool: dict[str, tuple[int, dict[str, Any]]] = {}
+        for word in _words(name):
+            for c in await _anilist_characters(word):
+                full = (c.get("name") or {}).get("full") or ""
+                if (score := name_score(name, full)) and full not in pool:
+                    pool[full] = (score, c)
+        ranked = sorted(pool.values(), key=lambda sc: -sc[0])
+        characters = [c for _, c in ranked][:5]
     results = []
     for c in characters:
         full = ((c.get("name") or {}).get("full") or "").strip()

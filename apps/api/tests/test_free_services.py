@@ -200,3 +200,28 @@ async def test_tvmaze_ignores_fuzzy_show_matches(monkeypatch):
     )
     monkeypatch.setattr(character_lookup, "shared_client", lambda: client)
     assert await character_lookup.lookup("Gojo") == []
+
+
+def test_name_score_prefers_the_first_name_and_forgives_spelling():
+    score = character_lookup.name_score
+    assert score("levi ackerman", "Levi") > score("levi ackerman", "Mikasa Ackerman") > 0
+    assert score("yuji itadori", "Yuuji Itadori") == 5
+    assert score("gojo", "Kento Nanami") == 0
+
+
+async def test_anilist_retries_word_by_word(monkeypatch):
+    calls: list[str] = []
+
+    async def fake_characters(q):
+        calls.append(q)
+        return {
+            "levi": [{"name": {"full": "Levi"}, "media": {"nodes": []}}],
+            "ackerman": [{"name": {"full": "Mikasa Ackerman"}, "media": {"nodes": []}}],
+        }.get(q, [])
+
+    monkeypatch.setattr(character_lookup, "_anilist_characters", fake_characters)
+    results = await character_lookup.search_anilist("Levi Ackerman")
+    assert calls == ["Levi Ackerman", "levi", "ackerman"]
+    assert [r["name"] for r in results] == ["Levi", "Mikasa Ackerman"]
+    calls.clear()
+    assert await character_lookup.search_anilist("Nobody") == [] and calls == ["Nobody"]

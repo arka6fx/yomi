@@ -128,8 +128,21 @@ async def test_linking_telegram_later_gets_the_first_text(backend, monkeypatch):
     assert sent and sent[-1][0] == "chat-1" and "Satoru Gojo" in sent[-1][1]
 
 
-def test_gallery_is_gojo_and_hello_kitty():
-    assert [c["name"] for c in characters_d1.gallery()] == ["Satoru Gojo", "Hello Kitty"]
+def test_gallery_is_complete_and_safe():
+    gallery = characters_d1.gallery()
+    names = [c["name"] for c in gallery]
+    assert names[:3] == ["Satoru Gojo", "Hello Kitty", "Ghost"] and len(names) == 35
+    assert len({c["id"] for c in gallery}) == len(gallery)  # unique slugs
+    for c in gallery:
+        assert c["basedOn"] and c["tagline"] and c["description"] and c["personality"], c["name"]
+        assert c["firstLines"] and len(c["starters"]) == 4, c["name"]
+        assert len(c["tagline"]) <= characters_d1.LIMITS["tagline"], c["name"]
+        assert 1 <= len(c["tags"]) <= characters_d1.MAX_TAGS, c["name"]
+        assert set(c["tags"]) <= set(characters_d1.TAGS), c["name"]
+        assert c["imageUrl"] == "" or c["imageUrl"].startswith("https://"), c["name"]
+        assert "no romance" in c["personality"] or c["id"] == "gallery:satoru-gojo", c["name"]
+        # the hard lines apply to built-in characters too
+        characters_d1.check_allowed(" ".join([c["name"], c["description"], c["personality"]]))
     kitty = characters_d1.gallery_character("gallery:hello-kitty")
     assert kitty["basedOn"] == "Hello Kitty (Sanrio)" and kitty["imageCredit"] == "AniList"
 
