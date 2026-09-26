@@ -1,3 +1,9 @@
+> [!WARNING]
+> Archived. This was the working plan for moving the backend into a Python
+> container. It predates the D1 cutover and the switch to Workers AI, so its
+> Postgres and OpenAI details are out of date. See
+> [`docs/architecture.md`](../../architecture.md) for the current design.
+
 # Architecture: Python Container ↔ Cloudflare Services
 
 > [!IMPORTANT]

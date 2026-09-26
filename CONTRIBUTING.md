@@ -1,119 +1,125 @@
 # Contributing to Yomi
 
-Thanks for contributing! Yomi is a personal AI assistant on Telegram: a FastAPI
-backend (Python, `apps/api/` — canonical), a Next.js dashboard
-(`apps/web`), an npm workspace, and a shared Python schema
-(`packages/db`, `yomi-db`). This guide keeps changes reviewable and CI green.
+Thanks for helping out. This guide covers setup, the development workflow, and
+what a pull request needs to be merged.
 
-## Getting started
+## Development setup
+
+**Prerequisites:** Node.js 22+, npm 10, [`uv`](https://docs.astral.sh/uv/), and
+Python 3.11+ (uv can install it for you).
 
 ```bash
 git clone https://github.com/arka6fx/yomi.git
 cd yomi
+npm install                              # JavaScript workspaces
 
-# Python backend (canonical for new backend work)
 cd apps/api
-uv sync --dev
-cp .env.example .env     # fill in at minimum the Cloudflare credentials
-uv run uvicorn yomi.run:app --reload --port 8080
-
-# Dashboard
-cd ../../apps/web
-npm install
-npm run dev
+uv sync --dev                            # Python backend
+cp .env.example .env                     # fill in the Cloudflare values
+cd ../..
 ```
 
-Dev targets: backend on `http://localhost:8080`, dashboard on
-`http://localhost:3000`.
+Run the two apps in separate terminals:
 
-## Repo layout
-
-```text
-apps/api/            FastAPI backend (Python): models, services, routers,
-                         alembic migrations, containers worker, tests
-apps/web/            Next.js on Workers: marketing, dashboard, account linking
-packages/db/             (Python) `yomi-db` — shared SQLAlchemy 2 async schema
-packages/shared/         (TS) TypeScript contracts shared across apps
-packages/ui/  (TS) Connector UI components
+```bash
+npm run python:dev                       # backend   → http://localhost:8080
+BACKEND_URL=http://localhost:8080 \
+  npm run dev --workspace @yomi/web      # dashboard → http://localhost:3000
 ```
 
-New backend work goes into `apps/api/` (FastAPI + SQLAlchemy 2 async; the
-schema lives in `packages/db`). Python code is linted with `ruff` (line length
-100) and tested with `pytest`; TypeScript as described below. The backend CI
-job is `.github/workflows/python-ci.yml` (also covered by `ci.yml`).
+## Where code goes
 
-## What to work on
+| Change                                   | Location                                |
+| ---------------------------------------- | --------------------------------------- |
+| API routes, agent, connectors, billing   | `apps/api/src/yomi/`                    |
+| Database schema                          | a new file in `apps/api/migrations-d1/` |
+| Marketing site and dashboard             | `apps/web/src/`                         |
+| Computer-use desktop                     | `apps/sandbox/`                         |
+| Types shared between TypeScript apps     | `packages/shared/`                      |
+| Connector catalog shown in the dashboard | `packages/ui/src/catalog.ts`            |
+| Documentation                            | `docs/`                                 |
 
-Open issues with `needs-triage` / `ready-for-agent` labels are the best place to
-start. See [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md) for
-the label vocabulary and `docs/agents/triage-labels.md`.
+The backend is the only thing that reads or writes storage. The web app talks to
+it over `/api/*`.
 
-Architecture decisions are recorded in [`docs/adr/`](docs/adr). If your change
-makes a structural decision, add an ADR ([`docs/adr/0000-template.md`](docs/adr/0000-template.md)).
+Before adding a new capability, check the footprint ladder in
+[`AGENTS.md`](./AGENTS.md#footprint-ladder): extend existing code before adding
+a new tool, service, or package.
 
-## Development workflow
+## Workflow
 
-1. Create a branch: `git checkout -b feat/my-change` (or `fix/`).
-2. Make focused commits. Conventional commits, lowercase, max 72 chars, no
-   trailing full stop:
+1. Branch from `main`: `git checkout -b feat/short-name` (or `fix/`, `docs/`).
+2. Make focused commits using
+   [Conventional Commits](https://www.conventionalcommits.org/): lowercase,
+   imperative, 72 characters at most, no trailing period.
+
    ```text
-   feat: add ...    fix: correct ...    refactor: ...
-   perf: ...        style: ...          test: ...
-   chore: ...       docs: ...
-   ```
-3. Before pushing, make sure your package is clean:
-
-   ```bash
-   # TypeScript workspace
-   npm run typecheck   # all packages, via Turbo
-   npm run lint
-   npm run test
-   npm run format      # prettier; CI runs format:check, so match it
-
-   # Python backend (apps/api/)
-   cd apps/api && uv run ruff check .
-   cd apps/api && uv run pytest -q
+   feat: add calendar digest routine
+   fix: handle expired connector token
+   docs: document d1 migration workflow
    ```
 
-   CI runs the same checks plus a docs sync check — a red build won't deploy.
+   Types: `feat`, `fix`, `refactor`, `perf`, `style`, `test`, `chore`, `docs`.
 
-## Test conventions
+3. Run the checks below.
+4. Open a pull request against `main` using the template.
 
-- Python tests live in `apps/api/tests/` (pytest, async-oriented; no real
-  network/LLM calls — mock httpx/DB as the `tests/test_memory_*` suites do).
-- TypeScript tests are colocated next to the code they exercise
-  (`packages/shared/src/*.test.ts`) and run under `vitest`.
-- Skip real network/LLM calls in tests; mock `fetch` or module dependencies.
-- Don't assert on private implementation details; test behavior.
+## Checks
+
+CI runs all of these, and a red build blocks the deploy.
+
+```bash
+# Python backend
+npm run python:lint        # ruff
+npm run python:test        # pytest
+
+# TypeScript workspace
+npm run format:check       # prettier (npm run format to fix)
+npm run lint
+npm run typecheck
+npm run test               # vitest
+npm run docs:check         # docs agree with the connector catalog
+```
+
+## Tests
+
+- Python tests live in `apps/api/tests/` and run against an in-memory SQLite
+  copy of the D1 schema. Mock `httpx` and model calls; tests must not reach the
+  network.
+- TypeScript tests sit next to the code they cover (`*.test.ts`) and run under
+  Vitest.
+- Test behavior, not private implementation details.
 
 ## Code style
 
-- One-liner comments on non-obvious logic only; never multi-line docstrings.
-- No unused imports, no `as any` in non-test files, no noisy production debug
-  logs. Empty catches use `// ignore` or `// best-effort`.
-- Never commit secrets. Real env values stay in gitignored `.env*` files and
-  Worker secrets — only `.env.example` templates go in the repo.
+- **Python:** ruff (`E, F, I, UP, B, SIM`), 100-character lines, async I/O
+  throughout.
+- **TypeScript:** ESLint and Prettier. No `as any` outside tests, no unused
+  imports.
+- Comment only what is not obvious from the code.
+- Never commit secrets. Only `.env.example` templates belong in the repo.
 
 ## Pull requests
 
-- Base your PR on `main`.
-- Reference the issue it closes: `Closes #123`.
-- Keep PRs small and focused; a large change is usually several PRs.
-- The maintainer may ask for changes; discussion happens in the review thread.
+- Keep each pull request to one concern. Split large changes.
+- Link the issue it resolves (`Closes #123`).
+- If the change touches memory, encryption, retention, or personal data, say so
+  in the description and explain how existing privacy guarantees are kept.
+- If it makes a structural decision, add an ADR in `docs/adr/`, starting from
+  [`0000-template.md`](./docs/adr/0000-template.md).
+- If it adds a D1 migration, mention it so it gets applied before the deploy.
 
-## Privacy & safety
+## Finding something to work on
 
-User data is sensitive. If your change touches memory, encryption, retention,
-or PII handling, call it out in the PR description and keep the existing
-privacy guarantees intact (see `README.md` → Privacy).
+Issues labeled `ready-for-agent` or `ready-for-human` are ready to pick up. The
+label vocabulary is in
+[`docs/agents/triage-labels.md`](./docs/agents/triage-labels.md).
+
+## Security
+
+Do not open a public issue for a vulnerability. Follow
+[`SECURITY.md`](./SECURITY.md) to report it privately.
 
 ## Code of conduct
 
-By contributing you agree to follow our [Code of Conduct](CODE_OF_CONDUCT.md).
-Be respectful; this is a small maintainer-run project and every contribution is
-appreciated.
-
-## Reporting security issues
-
-Do **not** open a public issue for a security vulnerability. See
-[`SECURITY.md`](SECURITY.md) for how to report it privately.
+By taking part you agree to the [Code of Conduct](./CODE_OF_CONDUCT.md).

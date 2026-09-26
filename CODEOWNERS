@@ -1,15 +1,26 @@
-# Default owners — the maintainer is responsible for all paths not listed below.
-* @arka6fx
+# Code owners. Later rules take precedence over earlier ones.
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-# Connectors (dashboard catalog + Python port)
-packages/ui/ @arka6fx
-apps/api/src/yomi/connectors/ @arka6fx
+# Default owner for everything not matched below.
+*                                 @arka6fx
 
-# Backend
-apps/api/src/ @arka6fx
+# Backend (FastAPI container, storage gateway, D1 migrations)
+/apps/api/                        @arka6fx
+/packages/db/                     @arka6fx
 
-# Landing / dashboard
-apps/web/ @arka6fx
+# Connectors (Python tool sets + dashboard catalog)
+/apps/api/src/yomi/connectors/    @arka6fx
+/packages/ui/                     @arka6fx
 
-# Docs
-README.md CONTRIBUTING.md SECURITY.md docs/ specs/ @arka6fx
+# Computer-use sandbox
+/apps/sandbox/                    @arka6fx
+
+# Web app (marketing site + dashboard)
+/apps/web/                        @arka6fx
+
+# CI/CD and repository config
+/.github/                         @arka6fx
+
+# Documentation
+/docs/                            @arka6fx
+/*.md                             @arka6fx

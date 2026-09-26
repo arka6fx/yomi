@@ -1,101 +1,77 @@
-# Yomi backend (FastAPI)
+# Yomi backend
 
-The canonical Yomi backend: **Python FastAPI in a Cloudflare Container**, with a
-shared Postgres schema in `packages/db` (`yomi-db`, SQLAlchemy 2 async). It
-deploys as a container (not a Worker) because `asyncpg` needs a real TCP socket.
+The FastAPI backend behind `api.getyomi.in`. It runs in a Cloudflare Container
+behind a thin Worker and stores data in D1, Vectorize, and R2 through a storage
+gateway Worker. See [`docs/architecture.md`](../../docs/architecture.md) for the
+full picture.
 
 ## Layout
 
-- `src/yomi/` — FastAPI app (routers, services, agent loop, Telegram gateway)
-- `src/yomi/db_session.py` — async engine/session factory (asyncpg → Neon)
-- `src/yomi/run.py` — production entrypoint (uvicorn on :8080)
-- `migrations/` — Alembic scripts; the schema itself is owned by the
-  SQLAlchemy models in `packages/db/src/yomi/db/`
-- `containers/` + `wrangler.toml` + `Dockerfile` — Cloudflare Containers deploy
-  (thin Worker that routes all requests to the FastAPI container image)
+```text
+apps/api/
+├── src/yomi/
+│   ├── app/            FastAPI app, dependencies, and REST routes (/api/*)
+│   ├── gateway/        Telegram webhook
+│   ├── services/       Agent loop, memory, RAG, billing, D1 data access
+│   ├── connectors/     Gmail, Calendar, Drive tool sets and the Composio bridge
+│   ├── conf.py         Settings (read from the environment)
+│   └── run.py          Production entrypoint (uvicorn on :8080)
+├── containers/         Cloudflare Workers: backend router and storage gateway
+├── migrations-d1/      D1 schema, as numbered SQL migrations
+├── migrations/         Alembic scripts for the legacy Postgres path
+├── scripts/            One-off tooling (schema generation, data migration)
+├── tests/              pytest suite
+├── Dockerfile          Container image
+├── wrangler.toml                 Backend Worker + Container
+├── wrangler.storage.toml         Storage gateway (staging)
+└── wrangler.storage-prod.toml    Storage gateway (production)
+```
 
-## Run (dev)
+## Development
 
 ```bash
 uv sync --dev
+cp .env.example .env
 uv run uvicorn yomi.run:app --reload --port 8080
 ```
 
-Set required values in `.env` (see `src/yomi/conf.py` and
-[`.env.example`](./.env.example)).
+Settings and their defaults are in [`src/yomi/conf.py`](./src/yomi/conf.py).
+Local development needs at least the Cloudflare account ID and API token
+(Workers AI) and a storage gateway URL and secret. The staging gateway works for
+this.
 
-## Run (production image)
-
-```bash
-uv sync --frozen --no-dev
-uv run python -m yomi.run        # uvicorn on 0.0.0.0:8080, redacted logs
-```
-
-## Test / lint
+## Tests and lint
 
 ```bash
-uv run pytest
-uv run ruff check
+uv run pytest -q
+uv run ruff check .
 ```
 
-## Deploying to Cloudflare Containers
+Tests run against an in-memory SQLite database that mirrors the D1 schema
+(`tests/d1_sqlite.py`). They make no real network or model calls.
 
-The backend image (uvicorn, TCP asyncpg -> Neon) runs as a **Cloudflare
-Container** — not a Worker — because asyncpg needs a real socket; Workers'
-Python runtime is Pyodide-based and can't run it. Cloudflare Containers builds
-`Dockerfile` (linux/amd64, non-root, HEALTHCHECK on `/health`), and
-`wrangler.toml` + `containers/worker.ts` route every request to one named
-instance (the Worker is named `yomi-backend`, same as the counter-domain it
-serves). `ENVIRONMENT=production` and `CLOUDFLARE_ACCOUNT_ID` are the only
-values in `wrangler.toml` `[vars]`; everything else arrives as a Worker
-Secret, forwarded to the container through `envVars` in `worker.ts`.
+## Adding a D1 migration
 
-First-time setup (manual):
+1. Add the next numbered file to `migrations-d1/`, such as
+   `0014_add_widgets.sql`. Keep it additive.
+2. Update the tests that exercise the new tables.
+3. Apply it to staging and then production **before** deploying the code (see
+   the [runbook](../../docs/runbook.md#database-migrations-d1)).
 
-```bash
-cd apps/api
-npm install --prefix containers
-npx wrangler login
-npx wrangler deploy                                     # creates yomi-backend Worker
-npx wrangler secret put STORAGE_BACKEND
-npx wrangler secret put STORAGE_GATEWAY_URL
-npx wrangler secret put STORAGE_GATEWAY_SECRET
-npx wrangler secret put BETTER_AUTH_SECRET
-npx wrangler secret put ENCRYPTION_KEY
-npx wrangler secret put INTERNAL_API_KEY
-npx wrangler secret put DODO_API_KEY
-```
+## Deployment
 
-Secrets needed: `STORAGE_BACKEND`, `STORAGE_GATEWAY_URL`,
-`STORAGE_GATEWAY_SECRET`, `BETTER_AUTH_SECRET`, `INTERNAL_API_KEY`,
-`ENCRYPTION_KEY`, `ENCRYPTION_KEY_FALLBACKS`, `DODO_API_KEY`, `DODO_ENV`,
-`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and any connector
-credentials (Google integrations, Composio) the ported routes touch. Optional, each off
-until set: `SENTRY_DSN` (error monitoring), `LANGFUSE_PUBLIC_KEY` +
-`LANGFUSE_SECRET_KEY` (LLM call metadata, never content), `RESEND_API_KEY` +
-`EMAIL_FROM` (welcome email; the sender domain must be verified in Resend).
-Character lookup (AniList, TVMaze) and location names (OpenStreetMap
-Nominatim) are keyless. Repo
-secrets used by the deploy workflow: `CLOUDFLARE_API_TOKEN`,
-`CLOUDFLARE_ACCOUNT_ID`, and optional `YOMI_SERVER_URL` (enables the post-
-deploy `/health` check). Retired: `DATABASE_URL` (Neon), `OPENAI_*`.
+Pushing to `main` deploys the backend through
+`.github/workflows/deploy-backend.yml`. The storage gateway, D1 migrations, and
+secrets are managed by hand. Everything is in the
+[production runbook](../../docs/runbook.md).
 
-After the first deploy, wait a few minutes for provisioning, then verify:
+## Status
 
-```bash
-npx wrangler containers list
-curl https://yomi-backend.<subdomain>.workers.dev/health
-```
-
-Production is already cut over: `api.getyomi.in` is a custom domain bound
-to the `yomi-backend` Worker, which routes every request to the container.
-`/health/db` doubles as the schema-drift canary against `packages/db`.
-
-## In progress
-
-- **First-class connector tool sets** (Gmail, Calendar, Drive, GitHub, Slack,
-  Notion, Linear) — Python ports in progress; Composio covers the long tail.
-- **Better Auth OAuth handler** — Python only *validates* session cookies via
-  `yomi/app/deps.py`; the OAuth endpoint still runs on the landing app until it
-  is ported.
-- **R2 file storage** — `services/storage.py` is a stub awaiting R2 secrets.
+| Area                                        | State                                                    |
+| ------------------------------------------- | -------------------------------------------------------- |
+| Telegram gateway, agent loop, approvals     | Production                                               |
+| Auth (Telegram sign-in, Google, GitHub)     | Production                                               |
+| Billing and credits (Dodo Payments)         | Production                                               |
+| Memory, RAG, routines, vault, email         | Production                                               |
+| Computer use (Browser Run, sandbox desktop) | Production                                               |
+| First-class connectors                      | Gmail, Calendar, Drive native; the rest through Composio |
