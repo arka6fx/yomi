@@ -41,9 +41,9 @@ export function PageIntro({
   )
   if (!mascot) return intro
   return (
-    <div className="flex items-end justify-between gap-8">
+    <div className="flex flex-col-reverse gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
       {intro}
-      <Mascot pose={mascot} float className="hidden w-32 shrink-0 sm:block lg:w-40" />
+      <Mascot pose={mascot} float className="w-20 shrink-0 sm:w-32 lg:w-40" />
     </div>
   )
 }

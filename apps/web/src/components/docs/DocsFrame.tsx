@@ -26,6 +26,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react"
+import { Mascot, type MascotPose } from "@/components/Mascot"
 import { cn } from "@/lib/utils"
 import {
   DOCS_GROUPS,
@@ -35,6 +36,24 @@ import {
   type DocsIcon,
   type DocsPage,
 } from "./docs-pages"
+
+// Which mascot pose sits beside each page's title.
+const POSES: Record<DocsIcon, MascotPose> = {
+  hand: "waving",
+  rocket: "astronaut",
+  plug: "laptop",
+  message: "waving",
+  globe: "astronaut",
+  shield: "cool",
+  repeat: "celebrate",
+  search: "reading",
+  brain: "thinking",
+  mail: "laptop",
+  users: "heart",
+  sparkles: "cool",
+  card: "celebrate",
+  lock: "cool",
+}
 
 const ICONS: Record<DocsIcon, LucideIcon> = {
   hand: Hand,
@@ -415,13 +434,26 @@ export function DocsFrame({ children }: { children: React.ReactNode }) {
                 transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
                 className="docs-prose min-w-0 max-w-[660px] flex-1"
               >
-                <h1 className="text-[15px] font-semibold text-[#1d1b18]">{page.title}</h1>
+                <h1 className="flex items-end gap-2 text-[15px] font-semibold text-[#1d1b18]">
+                  <Mascot pose={POSES[page.icon]} float className="w-12 sm:w-14" />
+                  <span className="pb-1">{page.title}</span>
+                </h1>
                 {children}
               </motion.article>
             </AnimatePresence>
             <aside className="hidden w-52 shrink-0 xl:block">
               <div className="sticky top-8">
                 <OnThisPage page={page} />
+                <Link
+                  href="/support"
+                  className="mt-8 flex items-center gap-3 rounded-2xl border border-black/10 bg-white/60 p-3 text-sm text-[#1d1b18]/80 transition-colors hover:bg-white"
+                >
+                  <Mascot pose="thinking" className="w-12 shrink-0" />
+                  <span>
+                    <span className="block font-medium text-[#1d1b18]">stuck?</span>
+                    ask a human
+                  </span>
+                </Link>
               </div>
             </aside>
           </div>

@@ -7,6 +7,7 @@ import { Reveal } from "@/components/dashboard/shell/motion"
 import { CharacterCard, toCard } from "@/components/characters/CharacterParts"
 import { CHARACTERS, CHARACTER_TAGS, getTag } from "@/lib/characters"
 import { pageMetadata } from "@/lib/site"
+import { Mascot } from "@/components/Mascot"
 
 export const dynamicParams = false
 
@@ -47,6 +48,7 @@ export default async function CharacterTagPage({ params }: { params: Promise<{ t
           <span className="text-foreground">{tag.label}</span>
         </nav>
 
+        <Mascot pose="cool" float className="float-right ml-4 mt-4 w-20 sm:w-28" />
         <h1 className="mt-5 text-4xl font-semibold leading-[1.05] tracking-[-0.04em] sm:text-6xl">
           {tag.title}
         </h1>

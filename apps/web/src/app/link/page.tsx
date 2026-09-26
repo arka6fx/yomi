@@ -4,9 +4,10 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { ArrowRight, Check, Loader2, MessageCircle } from "lucide-react"
+import { ArrowRight, Loader2, MessageCircle } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { QRCodeSVG } from "qrcode.react"
+import { Mascot } from "@/components/Mascot"
 
 type PlatformLink = { platform: string }
 
@@ -133,7 +134,12 @@ function LinkPageContent() {
     }
   }
 
-  if (isPending || !session) return null
+  if (isPending || !session)
+    return (
+      <main className="grid min-h-screen place-items-center">
+        <Mascot pose="laptop" float priority className="w-24" />
+      </main>
+    )
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
@@ -172,9 +178,7 @@ function LinkPageContent() {
         >
           {connected ? (
             <>
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-500/10">
-                <Check size={28} className="text-emerald-400" />
-              </div>
+              <Mascot pose="celebrate" priority className="mx-auto w-28" />
               <div className="space-y-2">
                 <h1
                   className="text-2xl font-light text-foreground"
@@ -205,9 +209,7 @@ function LinkPageContent() {
             </>
           ) : waitingForTelegram ? (
             <>
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-sky-500/10">
-                <Loader2 size={28} className="text-sky-400 animate-spin" />
-              </div>
+              <Mascot pose="thinking" float priority className="mx-auto w-28" />
               <div className="space-y-2">
                 <h1
                   className="text-2xl font-light text-foreground"
@@ -255,9 +257,7 @@ function LinkPageContent() {
             </>
           ) : (
             <>
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-sky-500/10">
-                <MessageCircle size={28} className="text-sky-400" />
-              </div>
+              <Mascot pose="laptop" float priority className="mx-auto w-28" />
               <div className="space-y-2">
                 <h1
                   className="text-2xl font-light text-foreground"

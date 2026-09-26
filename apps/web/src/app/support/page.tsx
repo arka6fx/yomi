@@ -39,7 +39,7 @@ export default function SupportPage() {
   return (
     <SitePage>
       <section className="mx-auto max-w-5xl px-4 pb-24 pt-16 sm:px-6 sm:pt-24">
-        <PageIntro eyebrow="contact" title="how can we help?">
+        <PageIntro eyebrow="contact" title="how can we help?" mascot="heart">
           <p className="max-w-2xl">
             Send a note with the email on your account, what you expected to happen, what happened
             instead, and any screenshots or logs that do not contain secrets.

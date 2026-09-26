@@ -19,7 +19,7 @@ export default function CharactersPage() {
   return (
     <SitePage>
       <section className="mx-auto max-w-7xl px-4 pb-24 pt-12 sm:px-6 sm:pt-16">
-        <div className="mb-10 flex items-end justify-between gap-8 lg:ml-[280px]">
+        <div className="mb-10 flex flex-col-reverse gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-8 lg:ml-[280px]">
           <div>
             <h1 className="text-4xl font-semibold leading-[1.05] tracking-[-0.04em] sm:text-5xl">
               AI characters you can text on Telegram
@@ -35,7 +35,7 @@ export default function CharactersPage() {
               already on yomi? open your characters
             </Link>
           </div>
-          <Mascot pose="cool" float className="hidden w-28 shrink-0 sm:block lg:w-32" />
+          <Mascot pose="cool" float className="w-20 shrink-0 sm:w-28 lg:w-32" />
         </div>
         <CharacterBrowser characters={CHARACTERS.map(toCard)} tags={CHARACTER_TAGS} />
       </section>

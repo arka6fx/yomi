@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { pageMetadata } from "@/lib/site"
 import { SitePage } from "@/components/SitePage"
+import { Mascot } from "@/components/Mascot"
 
 export const metadata: Metadata = pageMetadata({
   title: "Character guidelines",
@@ -14,6 +15,7 @@ export default function CharacterGuidelinesPage() {
   return (
     <SitePage>
       <div className="mx-auto max-w-3xl px-6 pb-24 pt-16">
+        <Mascot pose="heart" float className="float-right -mt-2 ml-4 w-20 sm:w-28" />
         <p className="eyebrow mb-4">Characters</p>
         <h1 className="mb-3 text-5xl font-semibold tracking-[-0.04em] text-foreground sm:text-6xl">
           Character guidelines

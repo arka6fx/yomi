@@ -23,7 +23,7 @@ export function BrandMark({ withText = true, size = "md", className = "" }: Bran
         // 128x128 covers the largest rendered size (lg, 56px) at 2x
         src="/brand-mark-128.png"
         alt=""
-        className={`${sizes[size].img} rounded-full shadow-[0_4px_12px_-4px_rgba(16,24,40,0.45)]`}
+        className={`${sizes[size].img} object-contain drop-shadow-[0_3px_4px_rgba(16,24,40,0.25)]`}
         width={48}
         height={48}
       />

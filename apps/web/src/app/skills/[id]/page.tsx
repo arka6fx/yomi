@@ -7,6 +7,7 @@ import { Byline, SkillOrb } from "@/components/skills/SkillCard"
 import { TelegramIcon } from "@/components/TelegramIcon"
 import { APP_NAMES, SKILL_CATALOG, getCatalogSkill, skillTryLink } from "@/lib/skills-catalog"
 import { pageMetadata } from "@/lib/site"
+import { Mascot } from "@/components/Mascot"
 
 export const dynamicParams = false
 
@@ -42,7 +43,13 @@ export default async function SkillPage({ params }: { params: Promise<{ id: stri
           </Link>
         </div>
 
-        <div className="surface mt-8 flex flex-col items-center px-6 py-10 text-center sm:px-10">
+        <div className="surface relative mt-14 flex flex-col items-center px-6 py-10 text-center sm:px-10">
+          {/* the mascot perched on the card, reading up on the skill */}
+          <Mascot
+            pose="reading"
+            float
+            className="absolute -top-14 right-3 w-16 sm:-top-16 sm:right-6 sm:w-20"
+          />
           <SkillOrb emoji={skill.emoji} size={84} />
           <p className="mt-4 text-sm text-muted-foreground">a skill for yomi · {skill.category}</p>
           <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1 text-xs font-semibold">

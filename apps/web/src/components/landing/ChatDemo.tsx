@@ -211,7 +211,7 @@ export function ChatDemo() {
             alt=""
             width={40}
             height={40}
-            className="size-10 shrink-0 rounded-full"
+            className="size-10 shrink-0 rounded-full bg-[#3fb0f0] object-contain p-0.5"
           />
           <div className="min-w-0 flex-1 leading-tight">
             <p className="text-[15px] font-semibold">yomi</p>

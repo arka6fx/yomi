@@ -26,6 +26,7 @@ import { SURFACE } from "@/components/dashboard/shell/ui"
 import { matchesSearch } from "@/lib/search"
 import { TELEGRAM_BOT_URL } from "@/lib/site"
 import { cn } from "@/lib/utils"
+import { Mascot } from "@/components/Mascot"
 
 type Character = {
   id: string
@@ -1303,13 +1304,7 @@ export function CharactersView({ token }: { token: string }) {
             {data.active ? (
               <Avatar character={data.active} size={56} />
             ) : (
-              <img
-                src="/brand-mark-128.png"
-                alt=""
-                width={56}
-                height={56}
-                className="size-14 rounded-[28%]"
-              />
+              <Mascot pose="waving" className="w-14 shrink-0" />
             )}
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-muted-foreground">who yomi is right now</p>

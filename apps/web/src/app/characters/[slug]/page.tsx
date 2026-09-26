@@ -19,6 +19,7 @@ import {
   tagForName,
 } from "@/lib/characters"
 import { pageMetadata } from "@/lib/site"
+import { Mascot } from "@/components/Mascot"
 
 export const dynamicParams = false
 
@@ -161,6 +162,16 @@ export default async function CharacterPage({ params }: { params: Promise<{ slug
             </div>
           </section>
         )}
+
+        <div className="surface mt-12 flex items-center gap-4 p-5">
+          <Mascot pose="waving" className="w-16 shrink-0" />
+          <p className="text-[15px] text-muted-foreground">
+            <span className="font-semibold text-foreground">yomi is still underneath.</span>{" "}
+            {character.name} keeps yomi&apos;s memory, apps and approvals. send{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5 text-[13px]">/yomi</code> any time to
+            switch back.
+          </p>
+        </div>
 
         <section className="mt-12">
           <h2 className="text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
