@@ -7,6 +7,7 @@ import { authClient } from "@/lib/auth-client"
 import { BrandMark } from "@/components/BrandMark"
 import { TelegramIcon } from "@/components/TelegramIcon"
 import { Mascot } from "@/components/Mascot"
+import { AutoThread } from "@/components/auth/AutoThread"
 
 type Login = { token: string; code: string; url: string; expiresAt: string }
 type Phase = "idle" | "starting" | "waiting" | "done" | "expired" | "cancelled"
@@ -129,17 +130,8 @@ export function TelegramSignIn({ mode }: { mode: "signin" | "signup" }) {
           <div aria-hidden className="mt-10 flex flex-1 flex-col items-center">
             <Mascot pose="waving" float className="w-20" />
             <p className="mt-1.5 text-xs font-semibold text-muted-foreground">yomi</p>
-            <div className="mt-6 w-full max-w-sm space-y-2.5">
-              <p className="bubble-in w-fit max-w-[80%] px-4 py-2.5 text-[15px] font-medium">
-                {mode === "signup"
-                  ? "it’s 9pm. you said you’d finish the deck today 👀"
-                  : "morning! 3 meetings today and sarah replied 📬"}
-              </p>
-              <p className="bubble-out ml-auto w-fit max-w-[80%] px-4 py-2.5 text-[15px] font-medium">
-                {mode === "signup"
-                  ? "i know 😭 block 2 hours tomorrow?"
-                  : "draft a reply for me pls"}
-              </p>
+            <div className="mt-4 flex w-full justify-center">
+              <AutoThread start={mode === "signup" ? 0 : 1} />
             </div>
           </div>
         )}
