@@ -5,7 +5,9 @@ import Link from "next/link"
 import { ArrowRight, Check, Lock, Shield } from "lucide-react"
 
 import LandingFooter from "@/components/landing/LandingFooter"
+import { ApprovalDemo } from "@/components/landing/ApprovalDemo"
 import { ChatDemo } from "@/components/landing/ChatDemo"
+import { Manifesto } from "@/components/landing/Manifesto"
 import { CharacterAvatar } from "@/components/characters/CharacterAvatar"
 import { OauthErrorRedirect } from "@/components/landing/OauthErrorRedirect"
 import { Mascot } from "@/components/Mascot"
@@ -80,6 +82,14 @@ const HERO_CHARACTERS = [
   const character = getCharacter(spot.slug)
   return character ? [{ ...spot, character }] : []
 })
+
+// Everything that changes something outside the chat waits for a tap.
+const GATED = [
+  { emoji: "📨", label: "sending", example: "emails, slack messages, texts to other yomis" },
+  { emoji: "📅", label: "booking", example: "meetings, invites, reservations" },
+  { emoji: "💳", label: "paying", example: "checkout, subscriptions, anything with a card" },
+  { emoji: "🗑️", label: "deleting", example: "files, events, emails, memories" },
+]
 
 const TRY_THESE = SKILL_CATALOG.slice(0, 8)
 const FEATURED = ["morning-brief", "meal-log", "deadline-watch"].map((id) => getCatalogSkill(id)!)
@@ -414,6 +424,62 @@ export function LandingPage() {
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Manifesto ────────────────────────────────────────────────────── */}
+        <section id="manifesto" className="px-4 py-24 sm:px-6 sm:py-32">
+          <Manifesto />
+        </section>
+
+        {/* ── Approvals ────────────────────────────────────────────────────── */}
+        <section id="approvals" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+          <div className="grid items-center gap-14 lg:grid-cols-[1fr_minmax(0,420px)] lg:gap-20">
+            <div>
+              <p className="eyebrow">approvals</p>
+              <h2 className="mt-3 text-balance text-4xl font-semibold leading-[1.05] tracking-[-0.04em] sm:text-5xl">
+                nothing leaves without your ok.
+              </h2>
+              <p className="mt-5 max-w-lg text-[17px] leading-relaxed text-muted-foreground">
+                yomi drafts, researches and fills things in on its own. the moment something would
+                change the world outside your chat, it stops and shows you exactly what will happen.
+                one tap to approve, one to reject.
+              </p>
+
+              <ul className="mt-8 grid gap-3 sm:grid-cols-2">
+                {GATED.map((item) => (
+                  <li key={item.label} className="surface flex items-start gap-3 p-4">
+                    <span className="text-2xl leading-none" aria-hidden>
+                      {item.emoji}
+                    </span>
+                    <span>
+                      <span className="block font-semibold">{item.label}</span>
+                      <span className="block text-[13px] text-muted-foreground">
+                        {item.example}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-6 flex items-start gap-3 rounded-2xl border border-dashed border-foreground/15 p-4">
+                <Lock size={18} className="mt-0.5 shrink-0 text-muted-foreground" />
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  <span className="font-semibold text-foreground">the vault.</span> cards and
+                  passwords are encrypted with AES-256-GCM. give a card a monthly limit and yomi
+                  refuses anything over it, even if you approve.
+                </p>
+              </div>
+            </div>
+
+            <div className="relative mx-auto w-full max-w-[420px] pt-10">
+              <Mascot
+                pose="cool"
+                float
+                className="absolute -top-6 right-2 z-10 w-24 sm:-right-6 sm:w-28"
+              />
+              <ApprovalDemo />
             </div>
           </div>
         </section>
