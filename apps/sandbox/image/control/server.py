@@ -184,7 +184,12 @@ class Handler(BaseHTTPRequestHandler):
             elif self.path == "/browser/start":
                 import chrome
 
-                self._send_json(200, {"ok": chrome.start()})
+                from browser_driver import driver
+
+                ok = chrome.start()
+                if ok:
+                    driver().snapshot()  # connects, which loads saved cookies
+                self._send_json(200, {"ok": ok})
             elif self.path == "/browser/stop":
                 import chrome
                 from browser_driver import driver

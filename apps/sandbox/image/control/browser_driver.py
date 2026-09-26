@@ -11,6 +11,8 @@ thread; HTTP handler threads just submit jobs and wait.
 
 from __future__ import annotations
 
+import json
+import os
 import queue
 import threading
 import time
@@ -18,6 +20,7 @@ from collections.abc import Callable
 from typing import Any
 
 CDP_URL = "http://127.0.0.1:9222"
+COOKIE_FILE = "/home/yomi/chrome-profile/yomi-cookies.json"
 MAX_ELEMENTS = 160
 MAX_TEXT = 4000
 SETTLE_S = 0.8
@@ -122,6 +125,8 @@ class BrowserDriver:
         for _ in range(20):  # Chrome may still be starting after a boot
             try:
                 self._browser = self._pw.chromium.connect_over_cdp(CDP_URL)
+                if chrome.take_fresh_launch():
+                    self._restore_cookies(self._browser)
                 return self._browser
             except Exception as exc:  # noqa: BLE001
                 last = exc
@@ -166,8 +171,12 @@ class BrowserDriver:
 
     # -- public API (called from HTTP threads) --------------------------------
     def close_chrome(self) -> None:
-        """Quit Chrome the way its own menu does, so cookies and local storage are
-        written to disk. A SIGTERM skips that and loses fresh logins."""
+        """Save every cookie, then quit Chrome.
+
+        Chrome writes cookies to disk only about every 30 seconds and loses the
+        pending ones when it's stopped, which is exactly when someone has just
+        signed in. So cookies are exported over DevTools into the profile folder
+        (part of the snapshot) and loaded back on the next start."""
         import chrome
 
         def job():
@@ -175,6 +184,11 @@ class BrowserDriver:
                 try:
                     browser = self._connect()
                     session = browser.new_browser_cdp_session()
+                    cookies = session.send("Storage.getCookies").get("cookies") or []
+                    tmp = COOKIE_FILE + ".tmp"
+                    with open(tmp, "w", encoding="utf-8") as handle:
+                        json.dump(cookies, handle)
+                    os.replace(tmp, COOKIE_FILE)
                     session.send("Browser.close")
                 except Exception:  # noqa: BLE001 — chrome.stop() still ends it
                     pass
@@ -182,6 +196,26 @@ class BrowserDriver:
             self._page = None
 
         self._call(job, timeout=20)
+
+    def _restore_cookies(self, browser) -> None:
+        if not os.path.exists(COOKIE_FILE):
+            return
+        try:
+            with open(COOKIE_FILE, encoding="utf-8") as handle:
+                saved = json.load(handle)
+            keep = ("name", "value", "domain", "path", "expires", "httpOnly", "secure",
+                    "sameSite", "priority", "sourceScheme", "sourcePort", "partitionKey")
+            params = []
+            for cookie in saved:
+                param = {k: cookie[k] for k in keep if k in cookie and cookie[k] is not None}
+                if param.get("expires", -1) in (-1, 0):
+                    param.pop("expires", None)  # session cookie
+                params.append(param)
+            session = browser.new_browser_cdp_session()
+            for start in range(0, len(params), 200):
+                session.send("Storage.setCookies", {"cookies": params[start:start + 200]})
+        except Exception:  # noqa: BLE001 — a bad file means signing in again
+            pass
 
     def snapshot(self) -> dict[str, Any]:
         return self._call(lambda: self._snapshot(self._current()))

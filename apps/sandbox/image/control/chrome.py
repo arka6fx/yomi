@@ -24,6 +24,14 @@ _ENV = {
     "HOME": "/home/yomi",
 }
 _process: subprocess.Popen | None = None
+_fresh_launch = False
+
+
+def take_fresh_launch() -> bool:
+    """True once after each launch, so saved cookies are loaded exactly once."""
+    global _fresh_launch
+    fresh, _fresh_launch = _fresh_launch, False
+    return fresh
 
 
 def running() -> bool:
@@ -36,7 +44,7 @@ def running() -> bool:
 
 def start(timeout: float = 20.0) -> bool:
     """Launch Chrome on the visible display if it isn't already up."""
-    global _process
+    global _process, _fresh_launch
     if running():
         return True
     os.makedirs(PROFILE_DIR, exist_ok=True)
@@ -58,6 +66,7 @@ def start(timeout: float = 20.0) -> bool:
         stdout=open("/tmp/chrome.log", "ab"),  # noqa: SIM115 — lives as long as Chrome
         stderr=subprocess.STDOUT,
     )
+    _fresh_launch = True
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if running():
