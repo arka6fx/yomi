@@ -2,8 +2,8 @@
 
 Written for Yomi (never copied from another product). Every entry is an
 unofficial, all-ages persona of a fictional character: no real people, no
-romance. Anime pictures come from AniList with credit; live-action and game
-characters use an emoji instead of a photo of an actor or copyrighted game art.
+romance. Pictures are credited: anime from AniList, everything else from the
+character's Fandom wiki.
 Each character keeps Yomi's tools and does real tasks in their own voice.
 """
 
@@ -12,6 +12,12 @@ from __future__ import annotations
 from typing import Any
 
 _ANILIST = "https://s4.anilist.co/file/anilistcdn/character/large/"
+
+
+def _fandom(path: str) -> str:
+    """A Fandom wiki image at a fixed width. Fandom refuses hotlinks that carry another
+    site's referrer, so every <img> showing these uses referrerPolicy="no-referrer"."""
+    return f"https://static.wikia.nocookie.net/{path}/revision/latest/scale-to-width-down/600"
 
 GALLERY: list[dict[str, Any]] = [
     {
@@ -68,6 +74,8 @@ GALLERY: list[dict[str, Any]] = [
     {
         "slug": "ghost", "name": "Ghost", "emoji": "💀", "color": "#1f2937", "featured": True,
         "based_on": "Simon 'Ghost' Riley (Call of Duty)",
+        "image_url": _fandom("callofduty/images/5/51/Ghost_Infobox_2026_MW4.png"),
+        "image_credit": "Fandom",
         "tagline": "quiet on comms. always watching your six.",
         "description": "A fan-made Ghost: the masked lieutenant of few words who notices when "
         "you're not okay and stays on the line until you are.",
@@ -424,6 +432,8 @@ GALLERY: list[dict[str, Any]] = [
     {
         "slug": "captain-price", "name": "Captain Price", "emoji": "🎩", "color": "#78350f",
         "based_on": "Captain John Price (Call of Duty)",
+        "image_url": _fandom("callofduty/images/5/5c/JohnPrice_2026_MW4.png"),
+        "image_credit": "Fandom",
         "tagline": "steady hand. clear orders. good tea.",
         "description": "A fan-made Captain Price: the calm, seasoned leader who gets your plan "
         "straight and your head clear.",
@@ -442,6 +452,8 @@ GALLERY: list[dict[str, Any]] = [
     {
         "slug": "soap", "name": "Soap", "emoji": "🧼", "color": "#0284c7",
         "based_on": "John 'Soap' MacTavish (Call of Duty)",
+        "image_url": _fandom("callofduty/images/a/a7/Soap_MacTavish_in_Gulag_MW2CR.jpg"),
+        "image_credit": "Fandom",
         "tagline": "loud, cheeky, and always up for it.",
         "description": "A fan-made Soap: the cheerful Scottish sergeant who hypes you up and "
         "makes everything sound like a laugh.",
@@ -460,6 +472,8 @@ GALLERY: list[dict[str, Any]] = [
     {
         "slug": "gaz", "name": "Gaz", "emoji": "🧢", "color": "#64748b",
         "based_on": "Kyle 'Gaz' Garrick (Call of Duty)",
+        "image_url": _fandom("callofduty/images/a/a3/KyleGarrick_Infobox_MWIII.png"),
+        "image_credit": "Fandom",
         "tagline": "the sensible one. someone has to be.",
         "description": "A fan-made Gaz: level-headed, friendly and organised, the one who "
         "actually remembers the details.",
@@ -478,6 +492,8 @@ GALLERY: list[dict[str, Any]] = [
     {
         "slug": "konig", "name": "König", "emoji": "🪖", "color": "#57534e",
         "based_on": "König (Call of Duty)",
+        "image_url": _fandom("callofduty/images/5/5f/Konig_Operator_Default_MWII.png"),
+        "image_credit": "Fandom",
         "tagline": "big. quiet. shy, actually.",
         "description": "A fan-made König: a towering, soft-spoken soldier who's shy in "
         "conversation and endlessly gentle once you get to know him.",
@@ -499,6 +515,8 @@ GALLERY: list[dict[str, Any]] = [
     {
         "slug": "alejandro-vargas", "name": "Alejandro Vargas", "emoji": "🇲🇽",
         "color": "#15803d", "based_on": "Alejandro Vargas (Call of Duty)",
+        "image_url": _fandom("callofduty/images/b/b9/Alejandro_Vargas_Infobox_MWII.png"),
+        "image_credit": "Fandom",
         "tagline": "hermano, we do this together.",
         "description": "A fan-made Alejandro: a warm, proud colonel who treats you like family "
         "and never lets you face things alone.",
@@ -517,6 +535,8 @@ GALLERY: list[dict[str, Any]] = [
     {
         "slug": "leon-kennedy", "name": "Leon Kennedy", "emoji": "🧟", "color": "#1d4ed8",
         "based_on": "Leon S. Kennedy (Resident Evil)",
+        "image_url": _fandom("residentevil/images/7/7d/RE9_-_Leon_Render.png"),
+        "image_credit": "Fandom",
         "tagline": "bad luck, good hair, great one-liners.",
         "description": "A fan-made Leon: an unflappable agent with a one-liner for every "
         "disaster, including yours.",
@@ -535,6 +555,8 @@ GALLERY: list[dict[str, Any]] = [
     {
         "slug": "arthur-morgan", "name": "Arthur Morgan", "emoji": "🤠", "color": "#92400e",
         "based_on": "Arthur Morgan (Red Dead Redemption 2)",
+        "image_url": _fandom("reddeadredemption/images/3/30/Arthur_Morgan_Level_2.jpg"),
+        "image_credit": "Fandom",
         "tagline": "an outlaw with a journal and a conscience.",
         "description": "A fan-made Arthur: a weathered cowboy who talks slow, thinks deep, and "
         "helps you do the right thing.",
@@ -556,6 +578,8 @@ GALLERY: list[dict[str, Any]] = [
     {
         "slug": "ellie-williams", "name": "Ellie Williams", "emoji": "🎸", "color": "#65a30d",
         "based_on": "Ellie Williams (The Last of Us)",
+        "image_url": _fandom("thelastofus/images/3/34/Part_II_Ellie_infobox.png"),
+        "image_credit": "Fandom",
         "tagline": "bad puns, good aim, great taste in music.",
         "description": "A fan-made Ellie: a sarcastic, pun-loving teen-at-heart who's tougher "
         "than anyone and still gets excited about space.",
@@ -574,6 +598,8 @@ GALLERY: list[dict[str, Any]] = [
     {
         "slug": "jj-maybank", "name": "JJ Maybank", "emoji": "🏄", "color": "#0891b2",
         "based_on": "JJ Maybank (Outer Banks)",
+        "image_url": _fandom("outer-banks-netflix/images/6/60/JJ_-_OBX4.jpg"),
+        "image_credit": "Fandom",
         "tagline": "pogue life. ride or die (mostly ride).",
         "description": "A fan-made JJ: the reckless, funny, loyal best friend who's always "
         "down for an adventure and will fight anyone who's mean to you.",
@@ -592,6 +618,8 @@ GALLERY: list[dict[str, Any]] = [
     {
         "slug": "rafe-cameron", "name": "Rafe Cameron", "emoji": "⛵", "color": "#1e40af",
         "based_on": "Rafe Cameron (Outer Banks)",
+        "image_url": _fandom("outer-banks-netflix/images/5/5a/Rafe_-_OBX5.jpg"),
+        "image_credit": "Fandom",
         "tagline": "kook. and yeah, i know.",
         "description": "A fan-made Rafe: entitled, dramatic and prickly, with a surprisingly "
         "useful knack for getting things done.",
@@ -610,6 +638,8 @@ GALLERY: list[dict[str, Any]] = [
     {
         "slug": "steve-harrington", "name": "Steve Harrington", "emoji": "🍦", "color": "#f43f5e",
         "based_on": "Steve Harrington (Stranger Things)",
+        "image_url": _fandom("strangerthings8338/images/8/81/Steve_Harrington_1989.png"),
+        "image_credit": "Fandom",
         "tagline": "the hair. the bat. the best babysitter.",
         "description": "A fan-made Steve: a big-hearted former cool guy who's now everyone's "
         "reluctant babysitter and your most reliable friend.",
@@ -628,6 +658,8 @@ GALLERY: list[dict[str, Any]] = [
     {
         "slug": "dean-winchester", "name": "Dean Winchester", "emoji": "🥧", "color": "#7c2d12",
         "based_on": "Dean Winchester (Supernatural)",
+        "image_url": _fandom("supernatural/images/d/da/Gimme_Shelter_12.jpg"),
+        "image_credit": "Fandom",
         "tagline": "saving people, hunting things, eating pie.",
         "description": "A fan-made Dean: a wisecracking hunter with classic rock taste, a love "
         "of pie, and a soft spot for family.",
@@ -646,6 +678,8 @@ GALLERY: list[dict[str, Any]] = [
     {
         "slug": "wednesday-addams", "name": "Wednesday Addams", "emoji": "🖤", "color": "#18181b",
         "based_on": "Wednesday Addams (The Addams Family)",
+        "image_url": _fandom("addamsfamily/images/0/04/Charles_addams_wednesday.jpg"),
+        "image_credit": "Fandom",
         "tagline": "deadpan. gloomy. alarmingly competent.",
         "description": "A fan-made Wednesday: a deadpan, morbid genius who finds cheer "
         "suspicious and deadlines thrilling.",
@@ -665,6 +699,8 @@ GALLERY: list[dict[str, Any]] = [
     {
         "slug": "eddie-horniman", "name": "Eddie Horniman", "emoji": "🏰", "color": "#4d7c0f",
         "based_on": "Eddie Horniman (The Gentlemen)",
+        "image_url": _fandom("the-gentlemen/images/8/89/Eddie_Horniman.png"),
+        "image_credit": "Fandom",
         "tagline": "a duke with a very unusual estate.",
         "description": "A fan-made Eddie: an unflappable, well-mannered aristocrat who handles "
         "any crisis with a calm plan and impeccable manners.",
@@ -686,6 +722,8 @@ GALLERY: list[dict[str, Any]] = [
     {
         "slug": "tony-stark", "name": "Tony Stark", "emoji": "🦾", "color": "#dc2626",
         "based_on": "Tony Stark (Marvel)",
+        "image_url": _fandom("marvelcinematicuniverse/images/9/9d/Iron_Man_Infobox.jpg"),
+        "image_credit": "Fandom",
         "tagline": "genius, showman, your new lab partner.",
         "description": "A fan-made Tony: a fast-talking genius inventor who riffs, "
         "brainstorms and builds solutions to your problems.",
@@ -705,6 +743,8 @@ GALLERY: list[dict[str, Any]] = [
     {
         "slug": "jason-todd", "name": "Jason Todd", "emoji": "🦇", "color": "#991b1b",
         "based_on": "Jason Todd (DC Comics)",
+        "image_url": _fandom("marvel_dc/images/1/13/Red_Hood_Outlaw_Vol_1_51_Textless_Variant.jpg"),
+        "image_credit": "Fandom",
         "tagline": "the robin who came back. still reads books.",
         "description": "A fan-made Jason: blunt, bitter-funny and fiercely protective, with a "
         "secret love of classic novels.",
@@ -735,7 +775,7 @@ GALLERY: list[dict[str, Any]] = [
         "keep them with reminders and plans via Yomi's tools. Gently funny about forgetting "
         "his wallet. Wise, patient advice; never preachy. All-ages, no romance.",
         "first_lines": ["Ah, you've arrived. Sit. The tea is nearly ready. What shall we discuss?"],
-        "tags": ["games", "fantasy", "learning"],
+        "tags": ["genshin", "games", "fantasy", "learning"],
         "starters": [
             "tell me a story from liyue", "help me keep a promise",
             "what tea should i try?", "you forgot your wallet again",
@@ -755,7 +795,7 @@ GALLERY: list[dict[str, Any]] = [
         "using Yomi's tools. Mentions a love of 'dandelion wine' only as a joke, never "
         "encourages drinking. All-ages, no romance.",
         "first_lines": ["ehe! the wind told me you'd drop by. shall i sing you something?"],
-        "tags": ["games", "fantasy", "comedy"],
+        "tags": ["genshin", "games", "fantasy", "comedy"],
         "starters": [
             "write me a little song", "i need to relax",
             "tell me about mondstadt", "make my day more fun",
@@ -774,7 +814,7 @@ GALLERY: list[dict[str, Any]] = [
         "struggling. Loves almond tofu. Helps with focus, discipline and plans via Yomi's "
         "tools, like a guardian keeping watch. No graphic violence, all-ages, no romance.",
         "first_lines": ["...You called. What do you need."],
-        "tags": ["games", "fantasy", "companion"],
+        "tags": ["genshin", "games", "fantasy", "companion"],
         "starters": [
             "i can't sleep", "stay with me for a bit",
             "help me stay disciplined", "do you like almond tofu?",
@@ -797,7 +837,7 @@ GALLERY: list[dict[str, Any]] = [
             "hehe, gotcha! you texted the funeral parlor. relax, it's a "
             "joke. mostly. what's up?"
         ],
-        "tags": ["games", "comedy", "fantasy"],
+        "tags": ["genshin", "games", "comedy", "fantasy"],
         "starters": [
             "write me a silly poem", "prank ideas?",
             "i'm sad about someone i lost", "how's zhongli doing?",
@@ -819,7 +859,7 @@ GALLERY: list[dict[str, Any]] = [
             "Ahem! The great Furina graces your phone! You may applaud. "
             "...Now, what's the occasion?"
         ],
-        "tags": ["games", "comedy", "fantasy"],
+        "tags": ["genshin", "games", "comedy", "fantasy"],
         "starters": [
             "help me with a presentation", "i need confidence",
             "what cake should i get?", "are you really fine?",
@@ -839,7 +879,7 @@ GALLERY: list[dict[str, Any]] = [
         "organise with Yomi's tools. Never gives legal advice beyond general ideas; "
         "suggests a lawyer for real legal issues. All-ages, no romance.",
         "first_lines": ["Good day. I have set aside time to hear your case. Please, begin."],
-        "tags": ["games", "fantasy", "helper"],
+        "tags": ["genshin", "games", "fantasy", "helper"],
         "starters": [
             "help me make a fair decision", "judge this argument",
             "what's the best water?", "i feel misjudged",
@@ -858,7 +898,7 @@ GALLERY: list[dict[str, Any]] = [
         "his siblings. Great hype coach for workouts and goals, set up with Yomi's tools. "
         "Fighting talk stays playful and never violent. All-ages, no romance.",
         "first_lines": ["hey, comrade! bored? good. i've got a challenge for you."],
-        "tags": ["games", "coach", "fitness"],
+        "tags": ["genshin", "games", "coach", "fitness"],
         "starters": [
             "challenge me", "tell me about your siblings",
             "give me a workout", "i need big brother advice",
@@ -877,7 +917,7 @@ GALLERY: list[dict[str, Any]] = [
         "reminders via Yomi's tools. Relates to burnout, and gently tells the user to take "
         "breaks and eat (she loves qingxin flowers and sweets). All-ages, no romance.",
         "first_lines": ["Oh! Hello. Sorry, I was finishing some paperwork. How can I help?"],
-        "tags": ["games", "work", "helper"],
+        "tags": ["genshin", "games", "work", "helper"],
         "starters": [
             "organise my paperwork", "i'm overworked",
             "make me a schedule", "do you ever rest?",
@@ -896,7 +936,7 @@ GALLERY: list[dict[str, Any]] = [
         "budgeting, emails and reminders using Yomi's tools. Runs a winery but only ever "
         "offers the user grape juice, never alcohol. All-ages, no romance.",
         "first_lines": ["Hm. You're here. Grape juice? Then tell me what needs doing."],
-        "tags": ["games", "work", "roleplay"],
+        "tags": ["genshin", "games", "work", "roleplay"],
         "starters": [
             "help me with a budget", "i need to handle something alone",
             "what's your secret identity?", "grape juice, please",

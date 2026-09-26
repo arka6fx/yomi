@@ -133,13 +133,16 @@ def test_gallery_is_complete_and_safe():
     names = [c["name"] for c in gallery]
     assert names[:3] == ["Satoru Gojo", "Hello Kitty", "Ghost"] and len(names) == 44
     assert len({c["id"] for c in gallery}) == len(gallery)  # unique slugs
+    assert sum("genshin" in c["tags"] for c in gallery) == 9
     for c in gallery:
         assert c["basedOn"] and c["tagline"] and c["description"] and c["personality"], c["name"]
         assert c["firstLines"] and len(c["starters"]) == 4, c["name"]
         assert len(c["tagline"]) <= characters_d1.LIMITS["tagline"], c["name"]
         assert 1 <= len(c["tags"]) <= characters_d1.MAX_TAGS, c["name"]
         assert set(c["tags"]) <= set(characters_d1.TAGS), c["name"]
-        assert c["imageUrl"] == "" or c["imageUrl"].startswith("https://"), c["name"]
+        sources = ("https://s4.anilist.co/", "https://static.tvmaze.com/",
+                   "https://static.wikia.nocookie.net/")
+        assert c["imageUrl"].startswith(sources) and c["imageCredit"], c["name"]
         assert "no romance" in c["personality"] or c["id"] == "gallery:satoru-gojo", c["name"]
         # the hard lines apply to built-in characters too
         characters_d1.check_allowed(" ".join([c["name"], c["description"], c["personality"]]))
